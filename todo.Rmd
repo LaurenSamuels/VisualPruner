@@ -61,6 +61,8 @@ This might help with the "rollback" too.
 
 * Move the PS formula example to farther down
 
+* Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
+
 * Put in some sort of handling for numeric vars w/ few unique values in PS modeling--- convert to factors earlier? (move the "treat as continuous" to first page, and move the processing)
 
 * Find a way to jitter the rug plots for cat. vars, or else do them some other way. 
