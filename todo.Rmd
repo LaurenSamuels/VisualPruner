@@ -1,13 +1,13 @@
 ---
 title: "Visual Pruner todo"
-author: "LS"
-date: "March 23, 2016"
+author: ""
+date: ""
 output: html_document
 ---
 
 * The version that's currently on the server is updating covariate graphs immediately, w/o button click. Is this what we want? I didn't think that's what was supposed to be happening...
 
-* from RG, 13 Jan 2016: on the R tab, include a short paragraph on running it locally
+* from RG, 13 Jan 2016: on the R tab, include a short paragraph on running it locally (update: this is now on the wiki)
 
 * Make it a package
 
@@ -23,6 +23,10 @@ If a variable is largely only missing for one group, then it may make sense to p
 The warning/error (vars not in dset, etc.) messages need to be in red too**
 
 * **Upload new version to server. Remember to change version # and Cairo. Might need to ask Dale to update packages on server. Check the readme and description files too.**
+
+* Consider mirror histograms
+
+* Consider plots of x vs PS as an alternative to histograms. The points could be colored (or use alpha) by in or outside of brush. This wouldn't nec. work for v large datasets (too many points)
 
 * For barplots, put the labels at an angle, or maybe even switch to horizontal/dotplots?
 
