@@ -81,6 +81,9 @@ This might help with the "rollback" too.
 
 * Maybe: add KDE & % overlap (Tomarken)
 
+* Maybe: add weighted histograms
+
+
 
 * Add standardized diff plot?
     + Thoughts about standardized difference plot
