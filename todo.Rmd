@@ -16,6 +16,10 @@ The idea is to facilitate examining the patterns of missingness. Imagine if VP h
 If checking allow missing, it does mean imputation for any missing values (effectively nullifying them from the PS model) and automatically creates indicators for all the variables with missingness (as recommended by D'Agostino and Rubin and as better explained by Sarah and Jeffrey). 
 Then VP would show the indicator variables as covariates. 
 If a variable is largely only missing for one group, then it may make sense to prune on that variable being missing.
+Note that for histograms, we do not want to show the imputed values.
+Do print N missing for histograms.
+Pruning is then more complicated: prune on "missing or between X and Y" or missing v not missing, etc.
+ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys & dias. bp)
  
 * **Continue switching to data.table**
 
