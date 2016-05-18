@@ -5,7 +5,10 @@ shinyUI(navbarPage("Visual Pruner",
     tabPanel("Upload",
         fluidRow(
             column(6,
-                radioButtons('useExampleData', 'Data',
+                h4('Data:'),
+                #actionButton('useExample', "Use example data"),
+                #actionButton('uploadData', "Upload data (.csv or .rds)"),
+                radioButtons('useExampleData', NULL,
                     c("Use example data" = 1,
                     "Upload data (.csv or .rds)" = 0),
                     1
@@ -37,17 +40,26 @@ shinyUI(navbarPage("Visual Pruner",
                 #    #    #'application/octet-stream'
                 #    #    )
                 #)
-                uiOutput("chooseDatafile")
-            ), # end column
-            column(6,
-                h4('Dataset dimensions:'),
+                uiOutput("changeUploadedFile"),
+                uiOutput("chooseDatafile"),
+                tags$hr(),
+                #h4('Dataset dimensions:'),
                 textOutput("dataDimText"),
                 tags$hr(),
-                h4('Which variable is the treatment indicator?'),
+                h4('Treatment indicator:'),
                 uiOutput("chooseGroup"),
                 tags$hr(),
-                h4('The treatment indicator has the following values:'),
-                textOutput("groupLevelText")
+                textOutput("groupLevelText1"),
+                textOutput("groupLevelText2")
+            ), # end column
+            column(6,
+                h4('Preferences for graphs:'),
+                numericInput('numCont', 
+                    'Treat numeric variables as continuous if they have at least __ distinct values',
+                    value= 10, min= 1),
+                numericInput('xDigits', 
+                    'Starting number of decimal places to show for covariates:',
+                    value= 2, min= 1, max= 10)
             ) # end column
         ) # end fluidRow 
     ), # end data-import panel
@@ -92,14 +104,7 @@ shinyUI(navbarPage("Visual Pruner",
                 textOutput("dataNonmissingDimText"), 
                 tags$hr(),
                 h4("Model-fitting check:"),
-                textOutput('psFitProblemTextPrePruning'),
-                tags$hr(),
-                numericInput('numCont', 
-                    'Treat numeric variables as continuous if they have at least __ distinct values',
-                    value= 10, min= 1),
-                numericInput('xDigits', 
-                    'Starting number of decimal places to show for covariates:',
-                    value= 2, min= 1, max= 10)
+                textOutput('psFitProblemTextPrePruning')
             ) # end column
         ) # end fluidRow 
     ), # end variable-selection panel

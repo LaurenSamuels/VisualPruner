@@ -49,14 +49,32 @@ shinyServer(function(input, output, session) {
     ############################################################
     ## Datasets 
     
-    inFile <- reactive({
-        if (input$useExampleData == 1) return(NULL)
-        input$datafile
+    datInfo <- reactiveValues()
+    datInfo$inFileInfo <- NULL
+    observe ({
+        if (input$useExampleData == 0) {
+            datInfo$inFileInfo <- input$dataInfo 
+        }
+    })
+    
+    output$changeUploadedFile <- renderUI({
+        if (input$useExampleData == 1 | is.null(datInfo$inFileInfo)) return(NULL)
+        actionButton("changeUpFile", "Upload different file")
     })
     
     output$chooseDatafile <- renderUI({
-        if (input$useExampleData == 1) return(NULL)
-        fileInput('datafile', 
+        #if (input$useExampleData == 1) return(NULL)
+        if (input$useExampleData == 1 |
+                (input$useExampleData == 0 & !is.null(datInfo$inFileInfo))) return(NULL)
+        
+        # File input from example on shiny website
+        # input$dataInfo will be NULL initially. 
+        # After the user selects
+        # and uploads a file, it will be a data frame with 'name',
+        # 'size', 'type', and 'datapath' columns. The 'datapath'
+        # column will contain the local filenames where the data can
+        # be found.
+        fileInput('dataInfo', 
             label= 'Upload file (.csv or .rds only):',
             accept= NULL
             # as far as I can tell, 'accept' does not actually limit anything
@@ -68,38 +86,37 @@ shinyServer(function(input, output, session) {
             #    )
         )
     })
+    
+    # from http://stackoverflow.com/questions/18816666/shiny-change-data-input-of-buttons
+    # Create a reactiveValues object, to let us use settable reactive values
+    buttonvalues<- reactiveValues()
+    # To start out, lastActionData == NULL, meaning nothing clicked yet
+    buttonvalues$lastActionData <- NULL
+    # An observe block for each button, to record that the action happened
+    observeEvent(input$changeUpFile, {
+        datInfo$inFileInfo <- NULL
+    })    
+    
     dset.orig <- reactive({
-        # File input from example on shiny website
-        # input$datafile will be NULL initially. 
-        # After the user selects
-        # and uploads a file, it will be a data frame with 'name',
-        # 'size', 'type', and 'datapath' columns. The 'datapath'
-        # column will contain the local filenames where the data can
-        # be found.
-        
-        if (input$useExampleData == 0 & is.null(inFile())) return(NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
     
         if (input$useExampleData == 1) {
-            nt <- 300
-            nc <- 700
-            group <- rep(c("Exposed", "Unexposed"), times= c(nt, nc))
-            height_ft <- c(rnorm(nt, 5.4, .3), rnorm(nc, 5.6, .2))
-            gender <- c(rbinom(nt, 1, .66), rbinom(nc, 1, .5))
-            gender[gender == 0] <- "Male"
-            gender[gender == 1] <- "Female"
-            age <- c(rnorm(nt, 45, 5), rnorm(nc, 50, 10))
-            systolic_bp <- c(rnorm(nt, 115, 5), rnorm(nc, 110, 7)) 
-            mydat <- data.table(group, height_ft, gender, age, systolic_bp)
-        }  else if (!is.null(inFile())) {
-            if (grepl("\\.csv\\>", inFile()$name)) {
-                mydat <- fread(inFile()$datapath,
+            mydat <- fread("exampleData.csv",
+                sep= ",",
+                header= TRUE,
+                data.table= TRUE
+            )
+        }  else if (!is.null(datInfo$inFileInfo)) {
+            if (grepl("\\.csv\\>", datInfo$inFileInfo$name)) {
+                mydat <- fread(datInfo$inFileInfo$datapath,
                     sep= ",",
                     header= TRUE,
                     data.table= TRUE
                 )
-            } else if (grepl("\\.rds\\>", inFile()$name)){
-                # todo: add error handling
-                mydat <- as.data.table(readRDS(inFile()$datapath))
+            } else if (grepl("\\.rds\\>", datInfo$inFileInfo$name)){
+                # todo: add error handling. 
+                # Also: can it handle data.tables?
+                mydat <- as.data.table(readRDS(datInfo$inFileInfo$datapath))
             }    
         }
         mydat
@@ -107,8 +124,9 @@ shinyServer(function(input, output, session) {
     
     idvarName <- reactive({
         # The name produced by this function will be used as
-        # the name of the id var
+        #   the name of the id var
         if(is.null(dset.orig())) return (NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
         proposedName <- "MY__ID"
         while(proposedName %in% names(dset.orig())) {
@@ -138,12 +156,9 @@ shinyServer(function(input, output, session) {
         # Add a factor version of the treatment indicator, for plotting
         if (!is.null(groupvarFactorName())){
             if (groupvarname() %in% names(dset.orig())) {
-                print("A")
                 if (!is.factor(dset.orig()[[groupvarname()]])) {
-                    print("A2")
                     dset.orig()[, groupvarFactorName() := factor(dset.orig()[[groupvarname()]])]
                 }
-                print("B")
             }
         }
     })
@@ -152,9 +167,7 @@ shinyServer(function(input, output, session) {
         # Add an ID variable so we can match obsns w/ the PS dataset
         if (!is.null(idvarName())) { 
             if (!(idvarName() %in% names(dset.orig()))) {
-                print("C")
                 dset.orig()[, idvarName() := 1:nrow(dset.orig())]
-                print("D")
                 setkeyv(dset.orig(), idvarName())
             }
         }
@@ -187,15 +200,11 @@ shinyServer(function(input, output, session) {
         if (!is.null(varsToView())) {
             for (varname in varsToView()) {
                 if (is.numeric(dset.orig()[[varname]]) & 
-                    length(unique(dset.orig()[[varname]])) < input$numCont) {
-                    print("E")
+                        !(varIsContinuous()[varname])) {
                     # todo: make sure levels are transferring right
                     if (!is.factor(dset.orig()[[varname]])) {
-                        print("E2")
                         dset.orig()[, eval(varname) := factor(dset.orig()[[varname]])]
-                        print("E3")
                     }
-                    print("F")
                 }
             }
         }    
@@ -237,10 +246,18 @@ shinyServer(function(input, output, session) {
     })
     
     groupvarname <- reactive({
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+        
         input$treatmentVarName
     })
     
-    output$groupLevelText <- renderText({
+    output$groupLevelText1 <- renderText({
+        if (is.null(groupvarname())) return(NULL)
+
+        "The treatment indicator has the following levels:"        
+    })
+
+    output$groupLevelText2 <- renderText({
         if (is.null(groupvarname())) return(NULL)
         
         # the as.character lets this print right if var is already a factor
@@ -510,6 +527,7 @@ shinyServer(function(input, output, session) {
                 length(unique(dset.orig()[[varname]])) >= 
                 input$numCont) myvec[i] <- TRUE
         }
+        names(myvec) <- varsToView()
         myvec
     })    
 
@@ -518,9 +536,6 @@ shinyServer(function(input, output, session) {
         input$xDigits
     })
 
-    # from http://stackoverflow.com/questions/18816666/shiny-change-data-input-of-buttons
-    # Create a reactiveValues object, to let us use settable reactive values
-    buttonvalues <- reactiveValues()
     # To start out, lastActionX == NULL, meaning nothing clicked yet
     buttonvalues$lastActionX <- NULL
     # An observe block for each button, to record that the action happened
