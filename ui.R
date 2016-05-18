@@ -66,6 +66,13 @@ shinyUI(navbarPage("Visual Pruner",
     tabPanel("Specify",
         fluidRow(
             column(6,
+                h4('Handling missing values:'),
+                radioButtons('completeCasesOnly', NULL,
+                    c("Use complete cases only" = 1,
+                    "Impute missing values using mean or mode" = 0),
+                    1
+                ),
+                tags$hr(),
                 h4('Propensity score model:'),
                 helpText('Type RHS of R formula* for lrm(), e.g.'),
                 verbatimTextOutput("psHelpText"),

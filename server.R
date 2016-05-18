@@ -49,6 +49,8 @@ shinyServer(function(input, output, session) {
     ############################################################
     ## Datasets 
     
+    # I'm using reactiveValues() here so I can set the fileInfo
+    #   to NULL when the user decides to upload a new file.
     datInfo <- reactiveValues()
     datInfo$inFileInfo <- NULL
     observe ({
@@ -61,6 +63,11 @@ shinyServer(function(input, output, session) {
         if (input$useExampleData == 1 | is.null(datInfo$inFileInfo)) return(NULL)
         actionButton("changeUpFile", "Upload different file")
     })
+    
+    observeEvent(input$changeUpFile, {
+        datInfo$inFileInfo <- NULL
+    })    
+    
     
     output$chooseDatafile <- renderUI({
         #if (input$useExampleData == 1) return(NULL)
@@ -89,13 +96,8 @@ shinyServer(function(input, output, session) {
     
     # from http://stackoverflow.com/questions/18816666/shiny-change-data-input-of-buttons
     # Create a reactiveValues object, to let us use settable reactive values
+    # We'll use this later on
     buttonvalues<- reactiveValues()
-    # To start out, lastActionData == NULL, meaning nothing clicked yet
-    buttonvalues$lastActionData <- NULL
-    # An observe block for each button, to record that the action happened
-    observeEvent(input$changeUpFile, {
-        datInfo$inFileInfo <- NULL
-    })    
     
     dset.orig <- reactive({
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
@@ -143,13 +145,21 @@ shinyServer(function(input, output, session) {
             # but this is here in case model not specified yet
             groupvarname(), varnamesFromModel()))
     })
+    # todo: this will need to change!
     output$isnaCopyText <- renderText(paste(corevarnames(), collapse= ", "))
     
     nonMissingIDs <- reactive({
-        if (is.null(corevarnames())) return(NULL)
+        #if (is.null(corevarnames())) return(NULL)
+        if (is.null(varnamesFromModel())) return(NULL)
         
         # todo: offer option to impute & add vars
-        na.omit(dset.orig()[, c(corevarnames(), idvarName()), with= FALSE])[[idvarName()]]
+        #na.omit(dset.orig()[, c(corevarnames(), idvarName()), with= FALSE])[[idvarName()]]
+        if (input$completeCasesOnly == 1) {
+            #na.omit(dset.orig()[, c(corevarnames(), idvarName()), with= FALSE])[[idvarName()]]
+            na.omit(dset.orig()[, c(varnamesFromModel(), idvarName()), with= FALSE])[[idvarName()]]
+        } else {
+            dset.orig()[[idvarName()]]
+        }
     })
     
     observe({
@@ -328,8 +338,8 @@ shinyServer(function(input, output, session) {
     })    
     
     output$dataNonmissingDimText <- renderText({
-        if (is.null(nonMissingIDs())) return(NULL)
-        paste0("After removal of rows with missing values for the variables selected for the PS and/or for viewing, ",
+        if (is.null(nonMissingIDs()) | input$completeCasesOnly == 0) return(NULL)
+        paste0("After removal of rows with missing values for the variables selected for the PS model, ",
             "the dataset has ", length(nonMissingIDs()), " rows.")
     })
     
@@ -431,9 +441,16 @@ shinyServer(function(input, output, session) {
     lrmfit <- reactive({
         if (is.null(psForm()) | is.null(varnamesFromModel())) return(NULL)
         
-        tryCatch({lrm(psForm(), 
-            data= dset.orig()[PSIDs()])},
-            error= function(e) {return(NULL)})
+        if (input$completeCasesOnly == 1) {
+            tryCatch({lrm(psForm(), 
+                data= dset.orig()[PSIDs()])},
+                error= function(e) {return(NULL)})
+        } else {
+            # todo: change! Add imputation   
+            tryCatch({lrm(psForm(), 
+                data= dset.orig()[PSIDs()])},
+                error= function(e) {return(NULL)})
+        }    
     })
 
     output$psCopyText <- renderText({
@@ -803,8 +820,8 @@ shinyServer(function(input, output, session) {
                                 " Separate the min and max by a space:"),
                             # make min & max slightly more extreme than rounded min and max in data, so that we don't get accidental pruning using the default values
                             value= paste(
-                                floor(10^xdig() *   min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]))) / 10^xdig(),
-                                ceiling(10^xdig() * max(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]))) / 10^xdig(),
+                                floor(10^xdig() *   min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
+                                ceiling(10^xdig() * max(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
                                 collapse= ", ")
                         )
                     } else { # we have categorical var, either factor or char
