@@ -176,6 +176,7 @@ shinyServer(function(input, output, session) {
         )
         dat <- merge(dat1, dat2, by= "id")  # keep only subjects with values in both 
         names(dat)[names(dat) == "id"] <- idvarName()
+        
         dat <- as.data.table(dat)  
         setkeyv(dat, idvarName())
         dat
@@ -486,12 +487,10 @@ shinyServer(function(input, output, session) {
     idsForRug <- reactive({
         if (is.null(dset.psgraphs())) return(NULL)
         
-        # todo: fix syntax (do all as data.table)
-        #ids <- dset.psgraphs()[round(eval(scorename()), psdig) < psbrushmin() |
-        #    round(eval(scorename()), psdig) > psbrushmax(), eval(idvarName())]
-        outside <- round(dset.psgraphs()[[scorename()]], psdig) < psbrushmin() |
-            round(dset.psgraphs()[[scorename()]], psdig) > psbrushmax()
-        ids <- as.data.table(as.data.frame(dset.psgraphs())[outside, ])[[idvarName()]]
+        ids <- dset.psgraphs()[round(get(scorename()), psdig) < psbrushmin() |
+            round(get(scorename()), psdig) > psbrushmax()][[idvarName()]]
+        
+        intersect(ids, xgraphs.ids())
     })  
     
 
@@ -616,11 +615,11 @@ shinyServer(function(input, output, session) {
         if (is.null(nonMissingIDs())) return(NULL)
 
         if (is.null(exprToKeepAfterPruning())) return(nonMissingIDs())
-
-        # todo: fix syntax (do all in data.table)
-        dat <- as.data.frame(dset.orig()[nonMissingIDs()])
-        tryCatch(as.data.table(dat[with(dat, eval(parse(text= 
-            exprToKeepAfterPruning()))), ])[[idvarName()]],
+        
+        # TODO: I don't remember why I have this error handling here.
+        #    Doesn't seem like the best idea.
+        tryCatch(dset.orig()[nonMissingIDs()][eval(parse(text= 
+            exprToKeepAfterPruning()))][[idvarName()]],
             error= function(e) nonMissingIDs())
     })    
     
