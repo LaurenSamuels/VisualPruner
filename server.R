@@ -152,8 +152,6 @@ shinyServer(function(input, output, session) {
         #if (is.null(corevarnames())) return(NULL)
         if (is.null(varnamesFromModel())) return(NULL)
         
-        # todo: offer option to impute & add vars
-        #na.omit(dset.orig()[, c(corevarnames(), idvarName()), with= FALSE])[[idvarName()]]
         if (input$completeCasesOnly == 1) {
             #na.omit(dset.orig()[, c(corevarnames(), idvarName()), with= FALSE])[[idvarName()]]
             na.omit(dset.orig()[, c(varnamesFromModel(), idvarName()), with= FALSE])[[idvarName()]]
@@ -308,31 +306,11 @@ shinyServer(function(input, output, session) {
         )
     })
  
-    varsToViewText <- reactive({
+    
+    varsToView <- reactive({
         input$varsToRestrict
     })
     
-    varsToView <- reactive({
-        #dependencies
-        if (input$selVarsButton == 0) return(NULL)            
-
-        isolate(varsToViewText())
-    })
-    
-    selVarsNotChecked <- reactive({
-        if (input$selVarsButton == 0 | is.null(varsToViewText()) 
-            | is.null(varsToView()) ) return (TRUE)
-
-        if(!identical(varsToViewText(), varsToView())) TRUE else FALSE
-    })
-
-    output$selVarsNeedCheckingText <- renderText({
-        if (selVarsNotChecked()) {
-            "Remember to click the button when you're done!"
-        } else NULL   
-    })
-
-
     numvarsToView <- reactive({
         length(varsToView())    
     })    
@@ -365,7 +343,7 @@ shinyServer(function(input, output, session) {
     formRHS <- reactive({
         # Do nothing if button has never been clicked or if no dset
         # Dependencies
-        if (input$psButton == 0 | is.null(dset.orig())) return(NULL) 
+        if (input$psTypedButton == 0 | is.null(dset.orig())) return(NULL) 
         
         isolate(input$formulaRHS)
     })
@@ -391,9 +369,10 @@ shinyServer(function(input, output, session) {
     })
     
     psNotChecked <- reactive({
-        if (input$psButton == 0 |
+        if (input$psTypedButton == 0 |
             paste0(groupvarname(), ' ~ ', input$formulaRHS) != stringFormula()) TRUE else FALSE
     })
+    
 
     output$psFormulaProblemText <- renderText({
         # dependencies
@@ -409,7 +388,8 @@ shinyServer(function(input, output, session) {
     PSIDs <- reactive({
         # dependencies
         if (input$PSCalcUpdateButton == 0) return(nonMissingIDs()) 
-        input$psButton # in case model changed after pruning
+        input$psTypedButton # in case model changed after pruning
+        input$completeCasesOnly # in case model changed after pruning
             
         intersect(nonMissingIDs(), isolate(idsToKeepAfterPruning()))
     })
@@ -445,10 +425,11 @@ shinyServer(function(input, output, session) {
             tryCatch({lrm(psForm(), 
                 data= dset.orig()[PSIDs()])},
                 error= function(e) {return(NULL)})
-        } else {
-            # todo: change! Add imputation   
+        } else { # impute
             tryCatch({lrm(psForm(), 
-                data= dset.orig()[PSIDs()])},
+                data= dset.orig()[PSIDs(), 
+                    (varnamesFromModel()) := lapply(.SD, function(x) impute(x, fun= mean)),
+                    .SDcols = varnamesFromModel()])},
                 error= function(e) {return(NULL)})
         }    
     })
@@ -462,7 +443,8 @@ shinyServer(function(input, output, session) {
 
     output$psFitProblemTextPrePruning <- renderText({
         # dependencies
-        if (psNotChecked() | is.null(varsToView())) return(" ")
+        if (psNotChecked()) return(" ")
+        input$completeCasesOnly
 
         if (is.null(isolate(lrmfit()))) {
             "The propensity score formula can't be fit using the current dataset. Please modify the model and/or the variables selected for viewing."   
@@ -562,7 +544,7 @@ shinyServer(function(input, output, session) {
         }
     })
     observe({
-        if (input$psButton != 0 | input$selVarsButton != 0) {
+        if (input$psTypedButton != 0) {
             buttonvalues$lastActionX <- 'specify'
         }
     })
