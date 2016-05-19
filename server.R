@@ -682,6 +682,8 @@ shinyServer(function(input, output, session) {
         myColorScale[1:length(unique(dset.orig()[[groupvarFactorName()]]))]
     })
     
+    #############################################################
+    # TODO: is it possible to get these four down to two, using a switch?
     output$psPlot <- renderPlot({
         # todo: change if I eliminate dset.psgraphs
         if (is.null(dset.psgraphs())) return(NULL)
@@ -691,6 +693,7 @@ shinyServer(function(input, output, session) {
             geom_histogram(
                 alpha    = alpha1, 
                 position = 'identity', 
+                bins     = 30,
                 aes(fill= group)) +
             scale_fill_manual(groupvarname(), values= colorScale.mod()) +
             xlab(paste0("PS (n= ", nrow(dset.psgraphs()), ")")) +
@@ -725,6 +728,7 @@ shinyServer(function(input, output, session) {
             geom_histogram(
                 alpha    = alpha1, 
                 position = 'identity', 
+                bins     = 30,
                 aes(fill= group)) +
             scale_fill_manual(groupvarname(), values= colorScale.mod()) +
             xlab(paste0("Logit PS (n= ", nrow(dset.psgraphs()), ")")) +
@@ -750,6 +754,7 @@ shinyServer(function(input, output, session) {
             } else NULL
         )
     })
+    #############################################################
     
 
     # modified from https://gist.github.com/wch/5436415/, with
@@ -766,6 +771,7 @@ shinyServer(function(input, output, session) {
                 my_i <- i
                 varname <- varsToView()[my_i]
                 plotname <- paste0("plot", my_i)
+                plot2name <- paste0("plot2", my_i)
                 prunername <- paste0("pruner", my_i)
                 inputname <- paste0("pruningChoices_", my_i)
                 textCheckName <- paste0("textcheck", my_i)
@@ -776,7 +782,7 @@ shinyServer(function(input, output, session) {
                 # Call renderPlot for each selected variable. 
                 output[[plotname]] <- renderPlot({
                     p <- ggplot(
-                        data= dset.orig()[xgraphs.ids()],
+                        data= dset.orig()[xgraphs.ids()][!is.na(eval(varname)),],
                         aes_string(
                             x      = varname,
                             fill   = groupvarFactorName(),
@@ -787,14 +793,13 @@ shinyServer(function(input, output, session) {
                         scale_colour_manual(groupvarname(), 
                             values= colorScale.mod(), 
                             guide= FALSE)
-                        xlab(paste0(varname, 
-                            " (n= ", length(xgraphs.ids()), ")"))
                     
                     # Histogram or bar chart
                     if (varIsContinuous()[my_i]) {    
                         p <- p + geom_histogram(
                             alpha    = alpha1, 
-                            position = 'identity') 
+                            position = 'identity',
+                            bins= 30) 
                     } else {
                         p <- p + geom_bar(
                             alpha= alpha1, 
@@ -813,9 +818,47 @@ shinyServer(function(input, output, session) {
                     # add the rug plots
                     if (!is.null(idsForRug())) { 
                         p <- p + geom_rug(
-                            data= dset.orig()[idsForRug()],  # keep aes() from above
+                            data= dset.orig()[idsForRug()][!is.na(eval(varname)),],  # keep aes() from above
                             sides= "b") 
                     }    
+                    # just p here!  not print(p)!
+                    p
+                }) # end renderPlot
+
+                # Call renderPlot again for each selected variable. 
+                output[[plot2name]] <- renderPlot({
+                    # TODO: to make these I will want the PS or logitPS merged in.
+                    # Do the merge using data.table.
+                    p <- ggplot(
+                        data= dset.orig()[xgraphs.ids()][!is.na(eval(varname)),],
+                        aes_string(
+                            x      = varname,
+                            fill   = groupvarFactorName(),
+                            colour = groupvarFactorName()
+                        )) +
+                        scale_fill_manual(groupvarname(), 
+                            values= colorScale.mod()) +
+                        scale_colour_manual(groupvarname(), 
+                            values= colorScale.mod(), 
+                            guide= FALSE)
+                    
+                    # Histogram or bar chart
+                    if (varIsContinuous()[my_i]) {    
+                        p <- p + geom_histogram(
+                            alpha    = alpha1, 
+                            position = 'identity',
+                            bins= 30) 
+                    } else {
+                        p <- p + geom_bar(
+                            alpha= alpha1, 
+                            position= position_dodge()) #+
+                            #scale_x_discrete(breaks= mylevels,
+                            #    labels= mylevels)
+                    }    
+                    
+                    # no legend
+                    p <- p + theme(legend.position= "none")
+                    
                     # just p here!  not print(p)!
                     p
                 }) # end renderPlot
@@ -911,7 +954,8 @@ shinyServer(function(input, output, session) {
                         uiOutput(textcheckname),
                         uiOutput(naTableName),
                         uiOutput(keepNAName)
-                    ) # end column
+                    ) ,# end column
+                    tags$hr()
                 )# end fluidRow
         } 
         plot_and_input_list
