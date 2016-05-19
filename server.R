@@ -575,6 +575,17 @@ shinyServer(function(input, output, session) {
         }
         mylist
     })
+    keepNARawList <- reactive({
+        if (is.null(varsToView())) return(NULL)
+
+        mylist <- vector("list", numvarsToView())
+
+        for (i in 1:numvarsToView()) {
+            mylist[[i]]  <- input[[paste0("keepNAInput", i)]] == "1"
+            print(mylist[[i]])
+        }
+        mylist
+    })
 
     pruneValTextList <- reactive({
         # dependencies
@@ -588,27 +599,41 @@ shinyServer(function(input, output, session) {
         
         for(i in 1:numvarsToView()) {
             myvals  <- isolate(pruneValRawList())[[i]]
+            keepna  <- isolate(keepNARawList())[[i]]
             varname <- varsToView()[i]
             
             # We are coding for the ones to KEEP
-            mylist[[i]] <- if (varIsContinuous()[i]) {
-                myvals_numeric <- suppressWarnings(as.numeric(
-                    unlist(strsplit(as.character(myvals), " "))))
-                if (length(na.omit(myvals_numeric)) == 2) {
-                    paste0(varname, " >= ", myvals_numeric[1], 
-                    " & ", varname, " <= ", myvals_numeric[2])
-                } else { # user entered invalid text
-                    TRUE
-                }
-            } else { # var is not continuous
-                if (is.numeric(dset.orig()[[varname]])) {
-                    paste0(varname, " %in% c(", paste(myvals, collapse= ","),")") 
-                } else { # character var
-                    paste0("(", paste(varname, " == ", 
-                        paste0("'", myvals, "'"), collapse= " | "),
-                        ")")
-                }    
-            }
+            mylist[[i]] <-  paste0(
+                "((",
+                if (keepna) "is.na(" else "!is.na(",
+                varname, 
+                if (keepna) ")) | " else  ")) & ",
+                if (varIsContinuous()[i]) {
+                    myvals_numeric <- suppressWarnings(as.numeric(
+                        unlist(strsplit(as.character(myvals), " "))))
+                    if (length(na.omit(myvals_numeric)) == 2) {
+                        paste0(
+                            "(", varname, " >= ", myvals_numeric[1], 
+                            " & ", varname, " <= ", myvals_numeric[2], ")"
+                        )
+                    } else { # user entered invalid text
+                        TRUE
+                    }
+                } else { # var is not continuous
+                    if (is.numeric(dset.orig()[[varname]])) {
+                        paste0(
+                            "(", varname, " %in% c(", paste(myvals, collapse= ","),"))"
+                        ) 
+                    } else { # character var
+                        paste0(
+                            "(", paste(varname, " == ", 
+                            paste0("'", myvals, "'"), collapse= " | "),
+                            ")"
+                        )
+                    }    
+                }, 
+                ")"
+            )
         } # next i
         mylist
     })    
@@ -745,6 +770,8 @@ shinyServer(function(input, output, session) {
                 prunername <- paste0("pruner", my_i)
                 inputname <- paste0("pruningChoices_", my_i)
                 textCheckName <- paste0("textcheck", my_i)
+                keepNAName <- paste0("keepNA", my_i)
+                keepNAInputName <- paste0("keepNAInput", my_i)
      
                 # Call renderPlot for each selected variable. 
                 output[[plotname]] <- renderPlot({
@@ -830,6 +857,18 @@ shinyServer(function(input, output, session) {
                         return(NULL)
                     }
                  }) # end renderText
+                
+                # Create "keep NA?" input function for each variable
+                output[[keepNAName]] <- renderUI({
+                    radioButtons(keepNAInputName, NULL,
+                        c("Keep" = 1,
+                        "Exclude" = 0),
+                        1
+                    )
+                 }) # end renderUI
+
+                
+                
             }) # end local
         } # end for
     }) # end observe    
@@ -843,6 +882,7 @@ shinyServer(function(input, output, session) {
             plotname <- paste0("plot", i)
             prunername <- paste0("pruner", i)
             textcheckname <- paste0("textcheck", i)
+            keepNAName <- paste0("keepNA", i)
             
             plot_and_input_list[[i]] <-
                 fluidRow(
@@ -855,7 +895,9 @@ shinyServer(function(input, output, session) {
                     ), # end column
                     column(6, 
                         uiOutput(prunername),
-                        uiOutput(textcheckname)
+                        uiOutput(textcheckname),
+                        h6("Keep units with missing values for this variable?"),
+                        uiOutput(keepNAName)
                     ) # end column
                 )# end fluidRow
         } 
