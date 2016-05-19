@@ -821,8 +821,7 @@ shinyServer(function(input, output, session) {
                     if (varIsContinuous()[my_i]) {
                         textInput(
                             inputname, 
-                            paste0(varname, ": Keep only observations in this range (inclusive).",
-                                " Separate the min and max by a space:"),
+                            NULL,
                             # make min & max slightly more extreme than rounded min and max in data, so that we don't get accidental pruning using the default values
                             value= paste(
                                 floor(10^xdig() *   min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
@@ -832,7 +831,7 @@ shinyServer(function(input, output, session) {
                     } else { # we have categorical var, either factor or char
                         checkboxGroupInput(
                             inputname, 
-                            paste0(varname, ': Keep only observations with the following value(s):'),
+                            NULL,
                             # as.character corrects the printing of factor levels
                             choices=  as.character(sort(unique(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE])))),
                             selected= as.character(sort(unique(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]))))
@@ -857,8 +856,8 @@ shinyServer(function(input, output, session) {
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
                     radioButtons(keepNAInputName, NULL,
-                        c("Keep" = 1,
-                        "Exclude" = 0),
+                        c("Keep units with missing values for this variable" = 1,
+                        "Exclude units with missing values for this variable" = 0),
                         1
                     )
                 }) # end renderUI
@@ -881,6 +880,7 @@ shinyServer(function(input, output, session) {
         
         plot_and_input_list <- vector("list", numvarsToView())
         for(i in 1:numvarsToView()) {
+            varname <- varsToView()[i]
             plotname <- paste0("plot", i)
             prunername <- paste0("pruner", i)
             textcheckname <- paste0("textcheck", i)
@@ -897,11 +897,16 @@ shinyServer(function(input, output, session) {
                         ) # end plotOutput   
                     ), # end column
                     column(6, 
+                        h4(varname),
+                        if (varIsContinuous()[i]) {
+                            h5("Keep only units in this range (inclusive). Separate min and max by a space:") 
+                        } else {
+                            h5('Keep only units with the following value(s):')
+                        },
                         uiOutput(prunername),
                         uiOutput(textcheckname),
-                        h6("Keep units with missing values for this variable?"),
-                        uiOutput(keepNAName),
-                        uiOutput(naTableName)
+                        uiOutput(naTableName),
+                        uiOutput(keepNAName)
                     ) # end column
                 )# end fluidRow
         } 
