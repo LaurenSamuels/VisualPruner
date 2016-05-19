@@ -162,8 +162,6 @@ shinyUI(navbarPage("Visual Pruner",
     tabPanel("Copy",
         fluidRow(
             column(6,
-                h4('Visual Pruner dropped rows with missing values in any of the following variables:'),
-                textOutput("isnaCopyText"),
                 h4('The following R expression can be copied to select rows to KEEP:'),
                 htmlOutput("keepAfterPruningCopyText"),
                 tags$hr(),

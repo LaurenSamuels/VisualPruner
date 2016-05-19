@@ -136,24 +136,10 @@ shinyServer(function(input, output, session) {
         }    
         proposedName
     })    
-    corevarnames <- reactive({
-        # Vector of core variable names for determining missingness.
-        if (is.null(varnamesFromModel()) & is.null(varsToView())) return(NULL)
-
-        unique(c(varsToView(), 
-            # groupvarname() is part of varnamesFromModel(),
-            # but this is here in case model not specified yet
-            groupvarname(), varnamesFromModel()))
-    })
-    # todo: this will need to change!
-    output$isnaCopyText <- renderText(paste(corevarnames(), collapse= ", "))
-    
     nonMissingIDs <- reactive({
-        #if (is.null(corevarnames())) return(NULL)
         if (is.null(varnamesFromModel())) return(NULL)
         
         if (input$completeCasesOnly == 1) {
-            #na.omit(dset.orig()[, c(corevarnames(), idvarName()), with= FALSE])[[idvarName()]]
             na.omit(dset.orig()[, c(varnamesFromModel(), idvarName()), with= FALSE])[[idvarName()]]
         } else {
             dset.orig()[[idvarName()]]
@@ -418,6 +404,16 @@ shinyServer(function(input, output, session) {
         } else NULL   
     })
 
+    dset.imputed <- reactive({
+        if (is.null(varnamesFromModel())) return(NULL)
+        if (input$completeCasesOnly == 1) return(NULL)
+        
+        dat <- copy(dset.orig()[PSIDs(), varnamesFromModel(), with= FALSE])
+        dat[, (varnamesFromModel()) := lapply(.SD, function(x) impute(x, fun= mean)),
+            .SDcols = varnamesFromModel()]
+        dat
+    })
+    
     lrmfit <- reactive({
         if (is.null(psForm()) | is.null(varnamesFromModel())) return(NULL)
         
@@ -426,10 +422,9 @@ shinyServer(function(input, output, session) {
                 data= dset.orig()[PSIDs()])},
                 error= function(e) {return(NULL)})
         } else { # impute
+            
             tryCatch({lrm(psForm(), 
-                data= dset.orig()[PSIDs(), 
-                    (varnamesFromModel()) := lapply(.SD, function(x) impute(x, fun= mean)),
-                    .SDcols = varnamesFromModel()])},
+                data= dset.imputed())},
                 error= function(e) {return(NULL)})
         }    
     })
@@ -772,6 +767,7 @@ shinyServer(function(input, output, session) {
                 textCheckName <- paste0("textcheck", my_i)
                 keepNAName <- paste0("keepNA", my_i)
                 keepNAInputName <- paste0("keepNAInput", my_i)
+                naTableName <- paste0("naTable", my_i)
      
                 # Call renderPlot for each selected variable. 
                 output[[plotname]] <- renderPlot({
@@ -842,7 +838,7 @@ shinyServer(function(input, output, session) {
                             selected= as.character(sort(unique(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]))))
                         )
                     }
-                 }) # end renderUI
+                }) # end renderUI
 
                 # Check the textInput for each variable
                 output[[textCheckName]] <- renderText({
@@ -856,7 +852,7 @@ shinyServer(function(input, output, session) {
                     } else { # categorical var, nothing to check
                         return(NULL)
                     }
-                 }) # end renderText
+                }) # end renderText
                 
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
@@ -865,8 +861,14 @@ shinyServer(function(input, output, session) {
                         "Exclude" = 0),
                         1
                     )
-                 }) # end renderUI
+                }) # end renderUI
 
+                # Create a missing-by-group table each variable
+                output[[naTableName]] <- renderTable({
+                    dat <- dset.orig()[xgraphs.ids(), .(prop.missing = mean(is.na(get(varname)))), by= eval(groupvarFactorName())]
+                    setnames(dat, old = groupvarFactorName(), new = groupvarname())
+                    dat
+                }, include.rownames= FALSE) # end renderTable
                 
                 
             }) # end local
@@ -883,6 +885,7 @@ shinyServer(function(input, output, session) {
             prunername <- paste0("pruner", i)
             textcheckname <- paste0("textcheck", i)
             keepNAName <- paste0("keepNA", i)
+            naTableName <- paste0("naTable", i)
             
             plot_and_input_list[[i]] <-
                 fluidRow(
@@ -897,7 +900,8 @@ shinyServer(function(input, output, session) {
                         uiOutput(prunername),
                         uiOutput(textcheckname),
                         h6("Keep units with missing values for this variable?"),
-                        uiOutput(keepNAName)
+                        uiOutput(keepNAName),
+                        uiOutput(naTableName)
                     ) # end column
                 )# end fluidRow
         } 
