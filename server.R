@@ -659,16 +659,20 @@ shinyServer(function(input, output, session) {
     
     output$pruneTable <- renderTable({
         if (is.null(nonMissingIDs())) return(NULL)
-
-        dat <- data.frame(addmargins(table(
-            unlist(dset.orig()[xgraphs.ids(), groupvarFactorName(), with= FALSE]), 
-            dnn= groupvarname())))
-        rownames(dat) <- dat[, 1]
-        rownames(dat)[rownames(dat) == "Sum"] <- "Total"
-        names(dat)[2] <- "n"
-        dat[, 2, drop= FALSE]
-    }, display= c("s", "d"))
-
+    
+        dat <- dset.orig()[xgraphs.ids(), .N, by= eval(groupvarFactorName())]
+        setnames(dat, old = groupvarFactorName(), new = groupvarname())
+        rbind(dat, list("Total", dset.orig()[ , .N]))
+        
+        #dat <- data.frame(addmargins(table(
+        #    unlist(dset.orig()[xgraphs.ids(), groupvarFactorName(), with= FALSE]), 
+        #    dnn= groupvarname())))
+        #rownames(dat) <- dat[, 1]
+        #rownames(dat)[rownames(dat) == "Sum"] <- "Total"
+        #names(dat)[2] <- "n"
+        #dat[, 2, drop= FALSE]
+    #}, display= c("s", "d"))
+    }, include.rownames = FALSE)
     ############################################################
     ############################################################
     ## Plotting 
