@@ -934,7 +934,8 @@ shinyServer(function(input, output, session) {
                     radioButtons(keepNAInputName, NULL,
                         c("Keep units with missing values for this variable" = 1,
                         "Exclude units with missing values for this variable" = 0),
-                        1
+                        selected = 1,
+                        width = '100%'
                     )
                 }) # end renderUI
 
