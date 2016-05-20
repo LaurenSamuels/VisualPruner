@@ -1,4 +1,4 @@
-#######################################################
+######################################################
 #TODO:
 # Remember: when updating on server, use library(Cairo)
 #######################################################
@@ -348,6 +348,15 @@ shinyServer(function(input, output, session) {
         tryCatch(as.formula(stringFormula()),
             error= function(e) {return(NULL)})
     })    
+    psFormSyntaxOK <- reactive({
+        if (psNotChecked()) return(NULL)
+        
+        if (is.null(psForm())) {
+            FALSE
+        } else {
+            TRUE
+        }
+    })
  
     output$noPSText <- renderText({
         if (is.null(psForm())) {
@@ -364,15 +373,16 @@ shinyServer(function(input, output, session) {
             paste0(groupvarname(), ' ~ ', input$formulaRHS) != stringFormula()) TRUE else FALSE
     })
     
-
-    output$psFormulaProblemText <- renderText({
-        # dependencies
-        if (psNotChecked()) return(" ")
-
-        if (is.null(psForm())) {
-            "That is not a usable RHS. Please try again."   
+    output$psFormulaProblemText <- renderUI({
+        # todo: this was in here before & I can't figure out why.
+        #    I think it has something to do with re-fitting after pruning? but I don't know
+        #if (is.null(pruneValTextList())) {
+        if (psNotChecked()) {
+            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+        } else if (!psFormSyntaxOK()) {
+            HTML(paste0(tags$span(style="color:red", "That is not a usable RHS. Please try again.")))
         } else {
-            "Passed"   
+            HTML(paste0(tags$span(style="color:green", "Syntax is OK.")))
         }
     })
 
@@ -391,17 +401,28 @@ shinyServer(function(input, output, session) {
         allvars <- all.vars(psForm())
         if (all(allvars %in% names(dset.orig()))) allvars else NULL
     })    
-
-    output$psVarsProblemText <- renderText({
-        # dependencies
-        if (psNotChecked()) return(" ")
-
+    varnamesFromModelOK <- reactive({
+        if (psNotChecked()) return(NULL)
+        if (is.null(psFormSyntaxOK())) return(NULL)
+        
         if (is.null(isolate(varnamesFromModel()))) {
-            "The formula uses variables that are not in the dataset. Please try again."   
+            FALSE
         } else {
-            "Passed"
-        }    
+            TRUE
+        }
     })
+    
+    output$psVarsProblemText <- renderUI({
+        if (psNotChecked() | is.null(psFormSyntaxOK())) {
+            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+        } else if (!psFormSyntaxOK()) {
+            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+        } else if (!varnamesFromModelOK()) {
+            HTML(paste0(tags$span(style="color:red", "The formula uses variables that are not in the dataset. Please try again.")))
+        } else {
+            HTML(paste0(tags$span(style="color:green", "All OK.")))
+        }
+    })    
 
     output$psNeedsCheckingText <- renderText({
         if (psNotChecked()) {
@@ -441,17 +462,21 @@ shinyServer(function(input, output, session) {
         isolate(stringFormula())
     })
 
-    output$psFitProblemTextPrePruning <- renderText({
+    output$psFitProblemTextPrePruning <- renderUI({
         # dependencies
-        if (psNotChecked()) return(" ")
         input$completeCasesOnly
-
-        if (is.null(isolate(lrmfit()))) {
-            "The propensity score formula can't be fit using the current dataset. Please modify the model and/or the variables selected for viewing."   
+        
+        if (psNotChecked() | is.null(varnamesFromModelOK())) {
+            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+        } else if (!varnamesFromModelOK()) { # couldn't combine this with above
+            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+        } else if (is.null(isolate(lrmfit()))) {
+            HTML(paste0(tags$span(style="color:red", "The propensity score formula can't be fit using the current dataset. Please modify the model and/or the variables selected for viewing.")))
         } else {
-            "PS model successfully fit."
-        }    
+            HTML(paste0(tags$span(style="color:green", "PS model successfully fit.")))
+        }
     })
+
     output$psFitProblemTextPostPruning <- renderText({
         # dependencies
         if (psNotChecked() | is.null(varsToView()) | 

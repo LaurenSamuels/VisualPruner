@@ -80,14 +80,14 @@ shinyUI(navbarPage("Visual Pruner",
                 actionButton('psTypedButton', "I have finished typing"),
                 textOutput('psNeedsCheckingText'),
                 tags$head(tags$style(
-                    "#psNeedsCheckingText{color: red; font-size: 10px; }" )),
+                    "#psNeedsCheckingText{color: magenta; font-size: 10px; }" )),
                 tags$hr(),
-                h4("Syntax check:"),
-                textOutput('psFormulaProblemText'),
-                h4("Variable-name check:"),
-                textOutput('psVarsProblemText'),
-                h4("Model-fitting check:"),
-                textOutput('psFitProblemTextPrePruning'),
+                h4("Syntax:"),
+                uiOutput('psFormulaProblemText'),
+                h4("Variable names:"),
+                uiOutput('psVarsProblemText'),
+                h4("Model fit:"),
+                uiOutput('psFitProblemTextPrePruning'),
                 tags$hr(),
                 tags$br(),
                 tags$br(),
@@ -115,7 +115,7 @@ shinyUI(navbarPage("Visual Pruner",
             h2("Estimated propensity score distributions"),
             textOutput('noPSText'),
             tags$head(tags$style(
-                "#noPSText{color: red; font-size: 20px; }" )), 
+                "#noPSText{color: magenta; font-size: 20px; }" )), 
             column(6,
                 uiOutput("psPlotui")
             ), # end column
@@ -134,7 +134,7 @@ shinyUI(navbarPage("Visual Pruner",
         h2("Covariate distributions"),
         textOutput('noSelectedVarsText'),
         tags$head(tags$style(
-            "#noSelectedVarsText{color: red; font-size: 20px; }" )), 
+            "#noSelectedVarsText{color: magenta; font-size: 20px; }" )), 
         fluidRow(
             column(width= 4, offset= 4,
                 actionButton('xgraphsUpdateButton', 
@@ -145,7 +145,7 @@ shinyUI(navbarPage("Visual Pruner",
                     HTML("Recalculate PS for pruned sample<br/>(will update all graphs)")),
                 textOutput('psFitProblemTextPostPruning'),
                 tags$head(tags$style(
-                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" )) 
+                    "#psFitProblemTextPostPruning{color: magenta; font-size: 12px; }" )) 
             ), # end column
             column(4,
                 h4("Current sample size"),

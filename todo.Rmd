@@ -12,16 +12,9 @@ output: html_document
 * Make it a package
 
 * Handle missing data: From RG, 16 Feb 2016 email:
-The idea is to facilitate examining the patterns of missingness. Imagine if VP had a check box for _complete case / _ allow missing. 
 If checking allow missing, it does mean imputation for any missing values (effectively nullifying them from the PS model) and automatically creates indicators for all the variables with missingness (as recommended by D'Agostino and Rubin and as better explained by Sarah and Jeffrey). 
 Then VP would show the indicator variables as covariates. 
-If a variable is largely only missing for one group, then it may make sense to prune on that variable being missing.
-Note that for histograms, we do not want to show the imputed values.
-Do print N missing for histograms.
-Pruning is then more complicated: prune on "missing or between X and Y" or missing v not missing, etc.
 ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys & dias. bp)
- 
-* **Continue switching to data.table**
 
 * **Make the text related to the checks stand out more (esp.: make it clear when the user should be expecting text.  Show empty box? phrase in red?)
 The warning/error (vars not in dset, etc.) messages need to be in red too**
@@ -39,6 +32,7 @@ The warning/error (vars not in dset, etc.) messages need to be in red too**
 * Consider doing something like the histograms on p. 230 of Li and Greene (matching wts)--- leaving the orig. histogram there as a shell (would mean specifying the breaks in advance) and/or doing the mirroring thing
 
 * Add a tab for scatterplots?
+
 * Think about the example dset included w/ pkg.  
 Should it be the same as the one in the documentation? 
 That one is slow.
@@ -57,21 +51,17 @@ This is all to avoid the outlining problem.
 * Add option to save a file of all the steps (written every time PS is recalculated).  
 This might help with the "rollback" too.
 
-* Add Robert's 'default pruning' idea
+* Add Robert's 'default pruning' idea?
 
 * Could try to center range-choosing text vertically
 
 * Later: allow > 2 tx groups
-
-* deal with histogram warnings from ggplot?
 
 * Maybe show a list of variables for making PS model?
 
 * Move the PS formula example to farther down
 
 * Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
-
-* Put in some sort of handling for numeric vars w/ few unique values in PS modeling--- convert to factors earlier? (move the "treat as continuous" to first page, and move the processing)
 
 * Find a way to jitter the rug plots for cat. vars, or else do them some other way. 
 
@@ -86,8 +76,6 @@ This might help with the "rollback" too.
 * Maybe: add KDE & % overlap (Tomarken)
 
 * Maybe: add weighted histograms
-
-
 
 * Add standardized diff plot?
     + Thoughts about standardized difference plot
@@ -119,7 +107,6 @@ ggplot(aes(x= smd, y= Var, colour= Sample, shape= Sample), data= smdsAll) +
 
     geom_vline(aes(xintercept= 0.1), colour="*999999", linetype="dashed")
 
-   
 idvars <- Cs(map.id, enrolled.dx.factor)
 MyReshape <- function(dat, widevars, idvars) {
     longdat <- reshape(dat[ c(idvars, widevars)],

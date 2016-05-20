@@ -116,8 +116,7 @@ $(document).ready(function () {
 <li><p>The version that’s currently on the server is updating covariate graphs immediately, w/o button click. Is this what we want? I didn’t think that’s what was supposed to be happening…</p></li>
 <li><p>from RG, 13 Jan 2016: on the R tab, include a short paragraph on running it locally (update: this is now on the wiki)</p></li>
 <li><p>Make it a package</p></li>
-<li><p>Handle missing data: From RG, 16 Feb 2016 email: The idea is to facilitate examining the patterns of missingness. Imagine if VP had a check box for <em>complete case / </em> allow missing. If checking allow missing, it does mean imputation for any missing values (effectively nullifying them from the PS model) and automatically creates indicators for all the variables with missingness (as recommended by D’Agostino and Rubin and as better explained by Sarah and Jeffrey). Then VP would show the indicator variables as covariates. If a variable is largely only missing for one group, then it may make sense to prune on that variable being missing. Note that for histograms, we do not want to show the imputed values. Do print N missing for histograms. Pruning is then more complicated: prune on “missing or between X and Y” or missing v not missing, etc. ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys &amp; dias. bp)</p></li>
-<li><p><strong>Continue switching to data.table</strong></p></li>
+<li><p>Handle missing data: From RG, 16 Feb 2016 email: If checking allow missing, it does mean imputation for any missing values (effectively nullifying them from the PS model) and automatically creates indicators for all the variables with missingness (as recommended by D’Agostino and Rubin and as better explained by Sarah and Jeffrey). Then VP would show the indicator variables as covariates. ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys &amp; dias. bp)</p></li>
 <li><p><strong>Make the text related to the checks stand out more (esp.: make it clear when the user should be expecting text. Show empty box? phrase in red?) The warning/error (vars not in dset, etc.) messages need to be in red too</strong></p></li>
 <li><p><strong>Upload new version to server. Remember to change version # and Cairo. Might need to ask Dale to update packages on server. Check the readme and description files too.</strong></p></li>
 <li><p>Consider mirror histograms</p></li>
@@ -125,7 +124,7 @@ $(document).ready(function () {
 <li><p>For barplots, put the labels at an angle, or maybe even switch to horizontal/dotplots?</p></li>
 <li><p>Add estimated densities to histograms?</p></li>
 <li><p>Consider doing something like the histograms on p. 230 of Li and Greene (matching wts)— leaving the orig. histogram there as a shell (would mean specifying the breaks in advance) and/or doing the mirroring thing</p></li>
-<li>Add a tab for scatterplots?</li>
+<li><p>Add a tab for scatterplots?</p></li>
 <li><p>Think about the example dset included w/ pkg.<br />
 Should it be the same as the one in the documentation? That one is slow. If I’m going to use it, how reference from w/in app?</p></li>
 <li><p>Try always making the smaller group the second group, and using a lighter color.<br />
@@ -136,14 +135,12 @@ This is all to avoid the outlining problem.</p></li>
 <li><p>Incorporate some sort of “rollback” button or a temporary “test PS” button so that graphs aren’t totally lost when PS model can’t be fit on new sample</p></li>
 <li><p>Add option to save a file of all the steps (written every time PS is recalculated).<br />
 This might help with the “rollback” too.</p></li>
-<li><p>Add Robert’s ‘default pruning’ idea</p></li>
+<li><p>Add Robert’s ‘default pruning’ idea?</p></li>
 <li><p>Could try to center range-choosing text vertically</p></li>
 <li><p>Later: allow &gt; 2 tx groups</p></li>
-<li><p>deal with histogram warnings from ggplot?</p></li>
 <li><p>Maybe show a list of variables for making PS model?</p></li>
 <li><p>Move the PS formula example to farther down</p></li>
 <li><p>Add to formula help: use ~1 if you don’t want to bother/ just want to see covariate distribution</p></li>
-<li><p>Put in some sort of handling for numeric vars w/ few unique values in PS modeling— convert to factors earlier? (move the “treat as continuous” to first page, and move the processing)</p></li>
 <li><p>Find a way to jitter the rug plots for cat. vars, or else do them some other way.</p></li>
 <li><p>Add option to use prognostic score instead?</p></li>
 <li><p>Maybe try marking high-leverage points in PS fitting</p></li>
