@@ -103,11 +103,16 @@ shinyServer(function(input, output, session) {
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
     
         if (input$useExampleData == 1) {
-            mydat <- fread("exampleData.csv",
-                sep= ",",
-                header= TRUE,
-                data.table= TRUE
-            )
+            nt <- 300
+            nc <- 700
+            group <- rep(c("Exposed", "Unexposed"), times= c(nt, nc))
+            height_ft <- c(rnorm(nt, 5.4, .3), rnorm(nc, 5.6, .2))
+            gender <- c(rbinom(nt, 1, .66), rbinom(nc, 1, .5))
+            gender[gender == 0] <- "Male"
+            gender[gender == 1] <- "Female"
+            age <- c(rnorm(nt, 45, 5), rnorm(nc, 50, 10))
+            systolic_bp <- c(rnorm(nt, 115, 5), rnorm(nc, 110, 7)) 
+            mydat <- data.table(group, height_ft, gender, age, systolic_bp)
         }  else if (!is.null(datInfo$inFileInfo)) {
             if (grepl("\\.csv\\>", datInfo$inFileInfo$name)) {
                 mydat <- fread(datInfo$inFileInfo$datapath,
