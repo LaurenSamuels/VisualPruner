@@ -607,7 +607,6 @@ shinyServer(function(input, output, session) {
 
         for (i in 1:numvarsToView()) {
             mylist[[i]]  <- input[[paste0("keepNAInput", i)]] == "1"
-            print(mylist[[i]])
         }
         mylist
     })
