@@ -59,8 +59,6 @@ shinyUI(navbarPage("Visual Pruner",
                     "#psNeedsCheckingText{color: magenta; font-size: 10px; }" )),
                 tags$br(),
                 tags$br(),
-                tags$br(),
-                tags$br(),
                 helpText(a("*R formula help online", 
                     href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html", 
                     target="_blank"))
@@ -120,7 +118,6 @@ shinyUI(navbarPage("Visual Pruner",
                 tableOutput("pruneTable")
             ) # end column
         ), # end fluidRow 
-        tags$hr(),
         uiOutput("univariatePlotsAndInputs")
     ), # end variable-selection panel
     tabPanel("Copy",

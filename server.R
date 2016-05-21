@@ -94,10 +94,6 @@ shinyServer(function(input, output, session) {
         )
     })
     
-    # from http://stackoverflow.com/questions/18816666/shiny-change-data-input-of-buttons
-    # Create a reactiveValues object, to let us use settable reactive values
-    # We'll use this later on
-    buttonvalues<- reactiveValues()
     
     dset.orig <- reactive({
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
@@ -555,24 +551,35 @@ shinyServer(function(input, output, session) {
             identical(buttonvalues$lastActionRug, 'choosePlot')) return(NULL)
         if (useLogit()) input$logitpsPlot_brush$xmin else input$psPlot_brush$xmin
     })
-    
     psbrushmax <- reactive({
         if (is.null(dset.psgraphs()) |
             identical(buttonvalues$lastActionRug, 'choosePlot')) return(NULL)
         if (useLogit()) input$logitpsPlot_brush$xmax else input$psPlot_brush$xmax
     })
-    
     scorename <- reactive({
         ifelse(useLogit(), "logit.ps", "ps")
     })
-    idsForRug <- reactive({
+    hasScoreOutside <- reactive({
         if (is.null(dset.psgraphs())) return(NULL)
+
+        round(dset.psgraphs()[[scorename()]], psdig) < psbrushmin() |
+            round(dset.psgraphs()[[scorename()]], psdig) > psbrushmax()
+    })
+    idsForRug <- reactive({
+        if (is.null(hasScoreOutside())) return(NULL)
         
-        ids <- dset.psgraphs()[round(get(scorename()), psdig) < psbrushmin() |
-            round(get(scorename()), psdig) > psbrushmax()][[idvarName()]]
+        ids <- dset.psgraphs()[hasScoreOutside(), ][[idvarName()]]
         
         intersect(ids, xgraphs.ids())
     })  
+    # todo: is there a way to do this w/o making a third dataset?
+    # todo: continue here. won't be used till called.
+    dset.psgraphs.plus <- reactive({
+        if (is.null(hasScoreOutside())) return(NULL)
+        dat <- cbind(dset.psgraphs(), hasScoreOutside())
+        print(names(dat))
+        dat
+    })
     
 
     ############################################################
@@ -600,6 +607,10 @@ shinyServer(function(input, output, session) {
         input$xDigits
     })
 
+    # from http://stackoverflow.com/questions/18816666/shiny-change-data-input-of-buttons
+    # Create a reactiveValues object, to let us use settable reactive values
+    # We'll use this later on
+    buttonvalues <- reactiveValues()
     # To start out, lastActionX == NULL, meaning nothing clicked yet
     buttonvalues$lastActionX <- NULL
     # An observe block for each button, to record that the action happened
@@ -630,6 +641,7 @@ shinyServer(function(input, output, session) {
     })
 
 
+    # Create the expression to use for pruning
     pruneValRawList <- reactive({
         if (is.null(varsToView())) return(NULL)
 
@@ -650,7 +662,6 @@ shinyServer(function(input, output, session) {
         }
         mylist
     })
-
     pruneValTextList <- reactive({
         # dependencies
         if (is.null(varsToView())) return(NULL)
@@ -701,19 +712,17 @@ shinyServer(function(input, output, session) {
         } # next i
         mylist
     })    
-
     exprToKeepAfterPruning <- reactive({
         if (is.null(pruneValTextList())) return(NULL)
         
         do.call("paste", list(pruneValTextList(), collapse= " & " ))
     })    
-    
     output$keepAfterPruningCopyText <- renderUI({
         if (is.null(pruneValTextList())) return(NULL)
 
         HTML(do.call("paste", list(pruneValTextList(), collapse= " & <br/>" )))
     })    
-    
+
     idsToKeepAfterPruning <- reactive({
         if (is.null(nonMissingIDs())) return(NULL)
 
@@ -732,16 +741,8 @@ shinyServer(function(input, output, session) {
         dat <- dset.orig()[xgraphs.ids(), .N, by= eval(groupvarFactorName())]
         setnames(dat, old = groupvarFactorName(), new = groupvarname())
         rbind(dat, list("Total", dset.orig()[ , .N]))
-        
-        #dat <- data.frame(addmargins(table(
-        #    unlist(dset.orig()[xgraphs.ids(), groupvarFactorName(), with= FALSE]), 
-        #    dnn= groupvarname())))
-        #rownames(dat) <- dat[, 1]
-        #rownames(dat)[rownames(dat) == "Sum"] <- "Total"
-        #names(dat)[2] <- "n"
-        #dat[, 2, drop= FALSE]
-    #}, display= c("s", "d"))
     }, include.rownames = FALSE)
+
     ############################################################
     ############################################################
     ## Plotting 
@@ -752,9 +753,7 @@ shinyServer(function(input, output, session) {
     })
     
     #############################################################
-    # TODO: is it possible to get these four down to two, using a switch?
     output$psPlot <- renderPlot({
-        # todo: change if I eliminate dset.psgraphs
         if (is.null(dset.psgraphs())) return(NULL)
         
         p <- ggplot(data= dset.psgraphs(),
@@ -831,28 +830,29 @@ shinyServer(function(input, output, session) {
     # also from http://stackoverflow.com/questions/19130455/create-dynamic-number-of-input-elements-with-r-shiny
     observe({
         for (i in 1:numvarsToView()) {
-            # My sources say:
+            # My sources (above) say:
             # Need local so that each item gets its own number. 
             # Without it, the value # of i in the renderPlot() 
             # will be the same across all instances, 
             # because of when the expression is evaluated.
             local({
                 my_i <- i
-                varname <- varsToView()[my_i]
-                plotname <- paste0("plot", my_i)
-                plot2name <- paste0("plot2", my_i)
-                prunername <- paste0("pruner", my_i)
-                inputname <- paste0("pruningChoices_", my_i)
-                textCheckName <- paste0("textcheck", my_i)
-                keepNAName <- paste0("keepNA", my_i)
+
+                varname         <- varsToView()[my_i]
+                plotname        <- paste0("plot", my_i)
+                plot2name       <- paste0("plot2", my_i)
+                prunername      <- paste0("pruner", my_i)
+                inputname       <- paste0("pruningChoices_", my_i)
+                textCheckName   <- paste0("textcheck", my_i)
+                keepNAName      <- paste0("keepNA", my_i)
                 keepNAInputName <- paste0("keepNAInput", my_i)
-                naTableName <- paste0("naTable", my_i)
+                naTableName     <- paste0("naTable", my_i)
      
                 # Call renderPlot for each selected variable. 
                 output[[plotname]] <- renderPlot({
                     p <- ggplot(
-                        data= dset.orig()[xgraphs.ids()][!is.na(eval(varname)),],
-                        aes_string(
+                        data= dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ],
+                        mapping= aes_string(
                             x      = varname,
                             fill   = groupvarFactorName(),
                             colour = groupvarFactorName()
@@ -868,13 +868,13 @@ shinyServer(function(input, output, session) {
                         p <- p + geom_histogram(
                             alpha    = alpha1, 
                             position = 'identity',
-                            bins= 30) 
+                            bins     = 30) 
                     } else {
                         p <- p + geom_bar(
-                            alpha= alpha1, 
-                            position= position_dodge()) #+
-                            #scale_x_discrete(breaks= mylevels,
-                            #    labels= mylevels)
+                            alpha    = alpha1, 
+                            position = position_dodge()) +
+                            theme(axis.text.x = element_text(angle = 45,
+                                hjust = 0.5, vjust = 0.5))
                     }    
                     
                     # legend
@@ -886,9 +886,16 @@ shinyServer(function(input, output, session) {
                     
                     # add the rug plots
                     if (!is.null(idsForRug())) { 
-                        p <- p + geom_rug(
-                            data= dset.orig()[idsForRug()][!is.na(eval(varname)),],  # keep aes() from above
-                            sides= "b") 
+                        if (varIsContinuous()[my_i]) {    
+                            p <- p + geom_rug(
+                                data= dset.orig()[idsForRug()][!is.na(eval(varname)),],  
+                                # keep aes() from above
+                                position = 'identity',
+                                sides= "b") 
+                        } else {
+                            # todo: keep working on this.
+                            # see http://stackoverflow.com/questions/30287334/how-to-add-marginal-rugs-above-bars-of-a-bar-chart-with-ggplot2
+                        }
                     }    
                     # just p here!  not print(p)!
                     p
@@ -898,8 +905,10 @@ shinyServer(function(input, output, session) {
                 output[[plot2name]] <- renderPlot({
                     # TODO: to make these I will want the PS or logitPS merged in.
                     # Do the merge using data.table.
+                    dat <- dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ]
+
                     p <- ggplot(
-                        data= dset.orig()[xgraphs.ids()][!is.na(eval(varname)),],
+                        data= dat[dset.psgraphs.plus()],
                         aes_string(
                             x      = varname,
                             fill   = groupvarFactorName(),
@@ -1006,6 +1015,7 @@ shinyServer(function(input, output, session) {
             
             plot_and_input_list[[i]] <-
                 fluidRow(
+                    tags$hr(),
                     column(6, 
                         plotOutput(plotname, 
                             # first plot taller to accomodate legend
@@ -1024,8 +1034,7 @@ shinyServer(function(input, output, session) {
                         uiOutput(textcheckname),
                         uiOutput(naTableName),
                         uiOutput(keepNAName)
-                    ) ,# end column
-                    tags$hr()
+                    ) # end column
                 )# end fluidRow
         } 
         plot_and_input_list

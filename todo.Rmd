@@ -30,7 +30,7 @@ ALSO: before PS calc, need processing to get rid of redundant (collinear) missin
 
 * Consider plots of x vs PS as an alternative to histograms. The points could be colored (or use alpha) by in or outside of brush. This wouldn't nec. work for v large datasets (too many points)
 
-* For barplots, put the labels at an angle, or maybe even switch to horizontal/dotplots?
+* For barplots, put the labels at an angle, or maybe even switch to horizontal/dotplots? I have now angled the labels; need to check w/ dataset w/ long level names
 
 * Add estimated densities to histograms? 
 
