@@ -117,7 +117,10 @@ $(document).ready(function () {
 <li><p>from RG, 13 Jan 2016: on the R tab, include a short paragraph on running it locally (update: this is now on the wiki)</p></li>
 <li><p>Make it a package</p></li>
 <li><p>Handle missing data: From RG, 16 Feb 2016 email: If checking allow missing, it does mean imputation for any missing values (effectively nullifying them from the PS model) and automatically creates indicators for all the variables with missingness (as recommended by D’Agostino and Rubin and as better explained by Sarah and Jeffrey). Then VP would show the indicator variables as covariates. ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys &amp; dias. bp)</p></li>
-<li><p><strong>Make the text related to the checks stand out more (esp.: make it clear when the user should be expecting text. Show empty box? phrase in red?) The warning/error (vars not in dset, etc.) messages need to be in red too</strong></p></li>
+<li><p>On Specify tab, make the appearance of the plot-related text and checkbox conditional (i.e. they should appear only after scores have been estimated). Same for the plots?</p></li>
+<li><p>Have some sort of smart model adjustment, where if we’re down to one value of a variable, that variable is dropped from model? This seems like a good idea, but I think it might have implications I haven’t thought through.</p></li>
+<li><p>change remaining tags$head’s to uiOutput— I think it’s clearer that way</p></li>
+<li><p>clean up the naming!</p></li>
 <li><p><strong>Upload new version to server. Remember to change version # and Cairo. Might need to ask Dale to update packages on server. Check the readme and description files too.</strong></p></li>
 <li><p>Consider mirror histograms</p></li>
 <li><p>Consider plots of x vs PS as an alternative to histograms. The points could be colored (or use alpha) by in or outside of brush. This wouldn’t nec. work for v large datasets (too many points)</p></li>
@@ -178,7 +181,6 @@ ggplot(aes(x= smd, y= Var, colour= Sample, shape= Sample), data= smdsAll) +
 
     geom_vline(aes(xintercept= 0.1), colour=&quot;*999999&quot;, linetype=&quot;dashed&quot;)
 
-   
 idvars &lt;- Cs(map.id, enrolled.dx.factor)
 MyReshape &lt;- function(dat, widevars, idvars) {
     longdat &lt;- reshape(dat[ c(idvars, widevars)],

@@ -6,53 +6,17 @@ shinyUI(navbarPage("Visual Pruner",
         fluidRow(
             column(6,
                 h4('Data:'),
-                #actionButton('useExample', "Use example data"),
-                #actionButton('uploadData', "Upload data (.csv or .rds)"),
                 radioButtons('useExampleData', NULL,
                     c("Use example data" = 1,
                     "Upload data (.csv or .rds)" = 0),
                     1
                 ),
-                #h4('Specify attributes:'),
-                #checkboxInput('header', 'Header', TRUE),
-                #radioButtons('sep', 'Separator',
-                #    c(Comma = ',',
-                #    Semicolon = ';',
-                #    Tab = '\t'),
-                #    ','
-                #),
-                #radioButtons('quote', 'Quote',
-                #    c(None='',
-                #    'Double Quote'='"',
-                #    'Single Quote'="'"),
-                #    '"'
-                #),
-                #tags$hr(),
-                #h4('Upload file (.csv or .rds only):'),
-                #fileInput('datafile', 
-                #    label= NULL,
-                #    accept= NULL
-                #    # as far as I can tell, 'accept' does not actually limit anything
-                #    #accept= c(
-                #    #    'text/csv', 
-                #    #    'text/comma-separated-values,text/plain', 
-                #    #    '.csv'#,
-                #    #    #'application/octet-stream'
-                #    #    )
-                #)
                 uiOutput("changeUploadedFile"),
                 uiOutput("chooseDatafile"),
-                tags$hr(),
-                #h4('Dataset dimensions:'),
-                textOutput("dataDimText"),
-                tags$hr(),
+                tags$br(),
                 h4('Treatment indicator:'),
                 uiOutput("chooseGroup"),
-                tags$hr(),
-                textOutput("groupLevelText1"),
-                textOutput("groupLevelText2")
-            ), # end column
-            column(6,
+                tags$br(),
                 h4('Preferences for graphs:'),
                 numericInput('numCont', 
                     'Treat numeric variables as continuous if they have at least __ distinct values',
@@ -60,6 +24,18 @@ shinyUI(navbarPage("Visual Pruner",
                 numericInput('xDigits', 
                     'Starting number of decimal places to show for covariates:',
                     value= 2, min= 1, max= 10)
+            ), # end column
+            column(6,
+                h4('Dataset information:'),
+                uiOutput("noDataChosenText"),
+                uiOutput("dataFnameText1"),
+                uiOutput("dataFnameText2"),
+                uiOutput("dataFnameText3"),
+                uiOutput("dataDimText1"),
+                uiOutput("dataDimText2"),
+                tags$br(),
+                uiOutput("groupLevelText1"),
+                textOutput("groupLevelText2")
             ) # end column
         ) # end fluidRow 
     ), # end data-import panel
@@ -72,7 +48,7 @@ shinyUI(navbarPage("Visual Pruner",
                     "Impute missing values using mean or mode" = 0),
                     1
                 ),
-                tags$hr(),
+                tags$br(),
                 h4('Propensity score model:'),
                 helpText('Type RHS of R formula* for lrm(), e.g.'),
                 verbatimTextOutput("psHelpText"),
@@ -81,12 +57,10 @@ shinyUI(navbarPage("Visual Pruner",
                 textOutput('psNeedsCheckingText'),
                 tags$head(tags$style(
                     "#psNeedsCheckingText{color: magenta; font-size: 10px; }" )),
-                tags$hr(),
-                tags$hr(),
                 tags$br(),
                 tags$br(),
                 tags$br(),
-                tags$hr(),
+                tags$br(),
                 helpText(a("*R formula help online", 
                     href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html", 
                     target="_blank"))
@@ -100,17 +74,18 @@ shinyUI(navbarPage("Visual Pruner",
                 uiOutput('psFitProblemTextPrePruning'),
                 tags$br(),
                 tags$br(),
-                tags$hr(),
-                textOutput("dataNonmissingDimText")
+                uiOutput("dataNonmissingDimText1"),
+                uiOutput("dataNonmissingDimText2"),
+                textOutput("dataNonmissingDimText3")
             ) # end column
-        ) # end fluidRow 
-    ), # end variable-selection panel
-    tabPanel("Prune",
+        ), # end fluidRow 
+        tags$hr(),
         fluidRow(
             h2("Estimated propensity score distributions"),
-            textOutput('noPSText'),
-            tags$head(tags$style(
-                "#noPSText{color: magenta; font-size: 20px; }" )), 
+            uiOutput('psGraphsNotReady'),
+            column(12, 
+                h4("After brushing, points OUTSIDE the brushed area will be shown in rug plots on next tab.")
+            ), # end column
             column(6,
                 uiOutput("psPlotui")
             ), # end column
@@ -119,17 +94,11 @@ shinyUI(navbarPage("Visual Pruner",
             ), # end column
             checkboxInput('useProbScale', 
                 'Use probability-scale plot for brushing', FALSE)
-        ), # end fluidRow 
-        fluidRow(
-            column(width= 6, offset= 3,
-                h4("After brushing, points OUTSIDE the brushed area will be shown in rug plots below.")
-            ) # end column
-        ), # end fluidRow 
-        tags$hr(),
+        ) # end fluidRow 
+    ), # end Specify panel
+    tabPanel("Prune",
         h2("Covariate distributions"),
-        textOutput('noSelectedVarsText'),
-        tags$head(tags$style(
-            "#noSelectedVarsText{color: magenta; font-size: 20px; }" )), 
+        tags$hr(),
         fluidRow(
             column(4,
                 h4('Variables to view and restrict:'),
@@ -144,18 +113,14 @@ shinyUI(navbarPage("Visual Pruner",
                     HTML("Recalculate PS for pruned sample<br/>(will update all graphs)")),
                 textOutput('psFitProblemTextPostPruning'),
                 tags$head(tags$style(
-                    "#psFitProblemTextPostPruning{color: magenta; font-size: 12px; }" )) 
+                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" )) 
             ), # end column
             column(4,
                 h4("Current sample size"),
                 tableOutput("pruneTable")
             ) # end column
         ), # end fluidRow 
-        fluidRow(
-            column(12,
-                tags$hr()
-            ) # end column
-        ), # end fluidRow 
+        tags$hr(),
         uiOutput("univariatePlotsAndInputs")
     ), # end variable-selection panel
     tabPanel("Copy",

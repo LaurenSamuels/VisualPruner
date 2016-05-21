@@ -225,13 +225,6 @@ shinyServer(function(input, output, session) {
     varnames.orig <- reactive({
         names(dset.orig())  
     })
-        
-    output$dataDimText <- renderText({
-        if (is.null(dset.orig())) return(NULL)
-        paste0("The dataset has ", ncol(dset.orig()), 
-            " columns and ", nrow(dset.orig()), " rows.")
-    })
-
     output$chooseGroup <- renderUI({
         if (is.null(dset.orig())) return(NULL)
         selectizeInput('treatmentVarName', 
@@ -243,26 +236,11 @@ shinyServer(function(input, output, session) {
             multiple= FALSE
             )
     })
-    
     groupvarname <- reactive({
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
         input$treatmentVarName
     })
-    
-    output$groupLevelText1 <- renderText({
-        if (is.null(groupvarname())) return(NULL)
-
-        "The treatment indicator has the following levels:"        
-    })
-
-    output$groupLevelText2 <- renderText({
-        if (is.null(groupvarname())) return(NULL)
-        
-        # the as.character lets this print right if var is already a factor
-        as.character(sort(unique(dset.orig()[[groupvarname()]])))
-    })
-
     groupvarFactorName <- reactive({
         # The name produced by this function will be used as
         # the name of the treatment group var 
@@ -278,6 +256,52 @@ shinyServer(function(input, output, session) {
         }    
         proposedName
     })    
+    
+        
+    output$noDataChosenText <- renderUI({
+        if (is.null(dset.orig())) {
+            HTML(paste0(tags$span(style="color:orange", "No dataset selected.")))
+        } else return(NULL)
+    })
+    output$dataFnameText1 <- renderUI({
+        if (is.null(dset.orig()) | input$useExampleData == 1) return(NULL)
+
+        HTML(paste0(tags$h5("Filename:")))
+    })
+    output$dataFnameText2 <- renderUI({
+        if (is.null(dset.orig()) | input$useExampleData == 1) return(NULL)
+
+        HTML(paste0(tags$span(paste0(datInfo$inFileInfo$name))))
+    })
+    output$dataFnameText3 <- renderUI({
+        if (is.null(dset.orig()) | input$useExampleData == 1) return(NULL)
+
+        HTML(paste0(tags$br()))
+    })
+    output$dataDimText1 <- renderUI({
+        if (is.null(dset.orig())) return(NULL)
+
+        HTML(paste0(tags$h5("Dimensions:")))
+    })
+    output$dataDimText2 <- renderUI({
+        if (is.null(dset.orig())) return(NULL)
+
+        HTML(paste0(tags$span(paste0("The dataset has ", ncol(dset.orig()), 
+            " columns and ", nrow(dset.orig()), " rows."))))
+    })
+
+    output$groupLevelText1 <- renderUI({
+        if (is.null(groupvarname())) return(NULL)
+
+        HTML(paste0(tags$h5("The treatment indicator has the following levels:")))
+    })
+    output$groupLevelText2 <- renderText({
+        if (is.null(groupvarname())) return(NULL)
+        
+        # the as.character lets this print right if var is already a factor
+        as.character(sort(unique(dset.orig()[[groupvarname()]])))
+    })
+
 
 
     possVarsToRestrict <- reactive({
@@ -301,13 +325,26 @@ shinyServer(function(input, output, session) {
     varsToView <- reactive({
         input$varsToRestrict
     })
-    
     numvarsToView <- reactive({
         length(varsToView())    
     })    
     
-    output$dataNonmissingDimText <- renderText({
+    output$dataNonmissingDimText1  <- renderUI({
         if (is.null(nonMissingIDs()) | input$completeCasesOnly == 0) return(NULL)
+        if (psNotChecked() | is.null(varnamesFromModelOK())) return(NULL)
+
+        HTML(paste0(tags$hr()))
+    })
+    output$dataNonmissingDimText2  <- renderUI({
+        if (is.null(nonMissingIDs()) | input$completeCasesOnly == 0) return(NULL)
+        if (psNotChecked() | is.null(varnamesFromModelOK())) return(NULL)
+
+        HTML(paste0(tags$h4("N after excluding rows:")))
+    })
+    output$dataNonmissingDimText3 <- renderText({
+        if (is.null(nonMissingIDs()) | input$completeCasesOnly == 0) return(NULL)
+        if (psNotChecked() | is.null(varnamesFromModelOK())) return(NULL)
+
         paste0("After removal of rows with missing values for the variables selected for the PS model, ",
             "the dataset has ", length(nonMissingIDs()), " rows.")
     })
@@ -357,12 +394,6 @@ shinyServer(function(input, output, session) {
             TRUE
         }
     })
- 
-    output$noPSText <- renderText({
-        if (is.null(psForm())) {
-            "To specify a PS model, please return to the Specify tab."
-        } else NULL
-    })
 
     output$psHelpText <- renderText({
         "    age + gender"
@@ -382,7 +413,7 @@ shinyServer(function(input, output, session) {
         } else if (!psFormSyntaxOK()) {
             HTML(paste0(tags$span(style="color:red", "That is not a usable RHS. Please try again.")))
         } else {
-            HTML(paste0(tags$span(style="color:green", "Syntax is OK.")))
+            HTML(paste0(tags$span(style="color:green", "Formula syntax is OK.")))
         }
     })
 
@@ -420,7 +451,7 @@ shinyServer(function(input, output, session) {
         } else if (!varnamesFromModelOK()) {
             HTML(paste0(tags$span(style="color:red", "The formula uses variables that are not in the dataset. Please try again.")))
         } else {
-            HTML(paste0(tags$span(style="color:green", "All OK.")))
+            HTML(paste0(tags$span(style="color:green", "All variable names are OK.")))
         }
     })    
 
@@ -476,14 +507,23 @@ shinyServer(function(input, output, session) {
             HTML(paste0(tags$span(style="color:green", "PS model successfully fit.")))
         }
     })
-
+    output$psGraphsNotReady <- renderUI({
+        # dependencies
+        input$completeCasesOnly
+        
+        if (is.null(dset.psgraphs())) {
+            HTML(paste0(tags$span(style="color:orange", "Scores not yet estimated.")))
+        } else {
+            NULL
+        }
+    })
     output$psFitProblemTextPostPruning <- renderText({
         # dependencies
         if (psNotChecked() | is.null(varsToView()) | 
             input$PSCalcUpdateButton  == 0) return (NULL)
 
         if (is.null(isolate(lrmfit()))) {
-            "The propensity score formula can't be fit using the current dataset. Please modify the model, the variables selected for viewing, and/or the pruning criteria."   
+            "The propensity score formula can't be fit using the pruned dataset. Please modify the model and/or the pruning criteria."   
         } else {
             NULL
         }    

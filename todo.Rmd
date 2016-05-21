@@ -16,8 +16,13 @@ If checking allow missing, it does mean imputation for any missing values (effec
 Then VP would show the indicator variables as covariates. 
 ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys & dias. bp)
 
-* **Make the text related to the checks stand out more (esp.: make it clear when the user should be expecting text.  Show empty box? phrase in red?)
-The warning/error (vars not in dset, etc.) messages need to be in red too**
+* On Specify tab, make the appearance of the plot-related text and checkbox conditional (i.e. they should appear only after scores have been estimated). Same for the plots?
+
+* Have some sort of smart model adjustment, where if we're down to one value of a variable, that variable is dropped from model? This seems like a good idea, but I think it might have implications I haven't thought through.
+
+* change remaining tags$head's to uiOutput--- I think it's clearer that way
+
+* clean up the naming!
 
 * **Upload new version to server. Remember to change version # and Cairo. Might need to ask Dale to update packages on server. Check the readme and description files too.**
 
@@ -52,8 +57,6 @@ This is all to avoid the outlining problem.
 This might help with the "rollback" too.
 
 * Add Robert's 'default pruning' idea?
-
-* Could try to center range-choosing text vertically
 
 * Later: allow > 2 tx groups
 
