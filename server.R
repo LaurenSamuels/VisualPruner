@@ -191,11 +191,16 @@ shinyServer(function(input, output, session) {
     })    
 
     observe({
-        # for bar plots, need to turn discrete numeric vars into factors
-        if (!is.null(varsToView())) {
-            for (varname in varsToView()) {
-                if (is.numeric(dset.orig()[[varname]]) & 
-                        !(varIsContinuous()[varname])) {
+        # for bar plots & psCalc, need to turn discrete numeric vars into factors
+        #   also character vars (for impute())
+        if (!(is.null(varsToView()) & is.null(varnamesFromModel()))) {
+            print("here")
+            for (varname in unique(c(varnamesFromModel(), varsToView()))) {
+                print("there")
+                if (is.character(dset.orig()[[varname]]) | 
+                        (is.numeric(dset.orig()[[varname]]) & 
+                        !is.null(varIsContinuous()) &
+                        !(varIsContinuous()[varname]))) {
                     # todo: make sure levels are transferring right
                     if (!is.factor(dset.orig()[[varname]])) {
                         dset.orig()[, eval(varname) := factor(dset.orig()[[varname]])]
@@ -316,7 +321,6 @@ shinyServer(function(input, output, session) {
             multiple= TRUE
         )
     })
- 
     
     varsToView <- reactive({
         input$varsToRestrict
@@ -515,7 +519,7 @@ shinyServer(function(input, output, session) {
     })
     output$psFitProblemTextPostPruning <- renderText({
         # dependencies
-        if (psNotChecked() | is.null(varsToView()) | 
+        if (psNotChecked() |  
             input$PSCalcUpdateButton  == 0) return (NULL)
 
         if (is.null(isolate(lrmfit()))) {
