@@ -192,14 +192,11 @@ shinyServer(function(input, output, session) {
 
     observe({
         # for bar plots & psCalc, need to turn discrete numeric vars into factors
-        #   also character vars (for impute())
-        if (!(is.null(varsToView()) & is.null(varnamesFromModel()))) {
-            print("here")
-            for (varname in unique(c(varnamesFromModel(), varsToView()))) {
-                print("there")
+        #    We handle vars for ps calc separately
+        if (!is.null(varsToView()) & !is.null(varIsContinuous())) {
+            for (varname in varsToView()) {
                 if (is.character(dset.orig()[[varname]]) | 
                         (is.numeric(dset.orig()[[varname]]) & 
-                        !is.null(varIsContinuous()) &
                         !(varIsContinuous()[varname]))) {
                     # todo: make sure levels are transferring right
                     if (!is.factor(dset.orig()[[varname]])) {
@@ -317,7 +314,8 @@ shinyServer(function(input, output, session) {
             NULL, 
             choices= possVarsToRestrict(), 
             selected= if (is.null(varnamesFromModel())) NULL else 
-                setdiff(varnamesFromModel(), groupvarname()),
+                #setdiff(varnamesFromModel(), groupvarname()),
+                varnamesFromModel(),
             multiple= TRUE
         )
     })
@@ -429,7 +427,7 @@ shinyServer(function(input, output, session) {
     varnamesFromModel <- reactive({
         if (is.null(psForm())) return(NULL)
         
-        allvars <- all.vars(psForm())
+        allvars <- setdiff(all.vars(psForm()), groupvarname())
         if (all(allvars %in% names(dset.orig()))) allvars else NULL
     })    
     varnamesFromModelOK <- reactive({
@@ -441,6 +439,10 @@ shinyServer(function(input, output, session) {
         } else {
             TRUE
         }
+    })
+    numvarsFromModel <- reactive({
+        if (is.null(varnamesFromModel())) return(NULL)
+        length(varnamesFromModel())
     })
     
     output$psVarsProblemText <- renderUI({
@@ -465,9 +467,25 @@ shinyServer(function(input, output, session) {
         if (is.null(varnamesFromModel())) return(NULL)
         if (input$completeCasesOnly == 1) return(NULL)
         
-        dat <- copy(dset.orig()[PSIDs(), varnamesFromModel(), with= FALSE])
-        dat[, (varnamesFromModel()) := lapply(.SD, function(x) impute(x, fun= mean)),
-            .SDcols = varnamesFromModel()]
+        if (!is.null(varIsContinuous())) {
+            for (varname in varnamesFromModel()) {
+                if (is.character(dset.orig()[[varname]]) | 
+                        (is.numeric(dset.orig()[[varname]]) & 
+                        !(varIsContinuous()[varname]))) {
+                    # todo: make sure levels are transferring right
+                    if (!is.factor(dset.orig()[[varname]])) {
+                        dset.orig()[, eval(varname) := factor(dset.orig()[[varname]])]
+                    }
+                }
+            }
+        }    
+        
+        
+        
+        myvars <- c(varnamesFromModel(), groupvarname())
+        dat <- copy(dset.orig()[PSIDs(), myvars, with= FALSE])
+        dat[, (myvars) := lapply(.SD, function(x) impute(x, fun= mean)),
+            .SDcols = myvars]
         dat
     })
     
@@ -591,18 +609,19 @@ shinyServer(function(input, output, session) {
     ## Reactive text related to covariate graphs
         
     varIsContinuous <- reactive({
-        if (is.null(varsToView())) return(NULL)
+        if (is.null(varsToView()) & is.null(varnamesFromModel())) return(NULL)
         
-        myvec <- rep(FALSE, numvarsToView())
+        vnames <- unique(c(varsToView(), varnamesFromModel()))
+        myvec <- rep(FALSE, length(vnames))
         
-        for(i in 1:numvarsToView()) {
-            varname <- varsToView()[i]
+        for(i in seq_along(vnames)) {
+            varname <- vnames[i]
             
             if (is.numeric(dset.orig()[[varname]]) & 
                 length(unique(dset.orig()[[varname]])) >= 
                 input$numCont) myvec[i] <- TRUE
         }
-        names(myvec) <- varsToView()
+        names(myvec) <- vnames
         myvec
     })    
 
@@ -687,7 +706,7 @@ shinyServer(function(input, output, session) {
                 if (keepna) "is.na(" else "!is.na(",
                 varname, 
                 if (keepna) ")) | " else  ")) & ",
-                if (varIsContinuous()[i]) {
+                if (varIsContinuous()[varname]) {
                     myvals_numeric <- suppressWarnings(as.numeric(
                         unlist(strsplit(as.character(myvals), " "))))
                     if (length(na.omit(myvals_numeric)) == 2) {
@@ -868,7 +887,7 @@ shinyServer(function(input, output, session) {
                             guide= FALSE)
                     
                     # Histogram or bar chart
-                    if (varIsContinuous()[my_i]) {    
+                    if (varIsContinuous()[varname]) {    
                         p <- p + geom_histogram(
                             alpha    = alpha1, 
                             position = 'identity',
@@ -890,7 +909,7 @@ shinyServer(function(input, output, session) {
                     
                     # add the rug plots
                     if (!is.null(idsForRug())) { 
-                        if (varIsContinuous()[my_i]) {    
+                        if (varIsContinuous()[varname]) {    
                             p <- p + geom_rug(
                                 data= dset.orig()[idsForRug()][!is.na(eval(varname)),],  
                                 # keep aes() from above
@@ -925,7 +944,7 @@ shinyServer(function(input, output, session) {
                             guide= FALSE)
                     
                     # Histogram or bar chart
-                    if (varIsContinuous()[my_i]) {    
+                    if (varIsContinuous()[varname]) {    
                         p <- p + geom_histogram(
                             alpha    = alpha1, 
                             position = 'identity',
@@ -947,7 +966,7 @@ shinyServer(function(input, output, session) {
 
                 # Create input function for each variable
                 output[[prunername]] <- renderUI({
-                    if (varIsContinuous()[my_i]) {
+                    if (varIsContinuous()[varname]) {
                         textInput(
                             inputname, 
                             NULL,
@@ -971,7 +990,7 @@ shinyServer(function(input, output, session) {
                 # Check the textInput for each variable
                 output[[textCheckName]] <- renderText({
                     if (is.null(pruneValTextList())) return(NULL)
-                    if (varIsContinuous()[my_i]) {
+                    if (varIsContinuous()[varname]) {
                         if (pruneValTextList()[[my_i]] == TRUE) {
                             "Please type min and max, separated by one space."
                         } else { # no problem
@@ -1029,7 +1048,7 @@ shinyServer(function(input, output, session) {
                     ), # end column
                     column(6, 
                         h4(varname),
-                        if (varIsContinuous()[i]) {
+                        if (varIsContinuous()[varname]) {
                             h5("Keep only units in this range (inclusive). Separate min and max by a space:") 
                         } else {
                             h5('Keep only units with the following value(s):')
