@@ -137,6 +137,31 @@ shinyServer(function(input, output, session) {
         }    
         proposedName
     })    
+    psvarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the ps var in dset.psgraphs()
+        if(is.null(dset.orig())) return (NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+        
+        proposedName <- "MY__PS"
+        while(proposedName %in% names(dset.orig())) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    logitpsvarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the logit ps var in dset.psgraphs()
+        if(is.null(dset.orig())) return (NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+        
+        proposedName <- "MY__LOGITPS"
+        while(proposedName %in% names(dset.orig())) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+
     nonMissingIDs <- reactive({
         if (is.null(varnamesFromModel())) return(NULL)
         
@@ -184,6 +209,9 @@ shinyServer(function(input, output, session) {
         )
         dat <- merge(dat1, dat2, by= "id")  # keep only subjects with values in both 
         names(dat)[names(dat) == "id"] <- idvarName()
+        names(dat)[names(dat) == "ps"] <- psvarName()
+        names(dat)[names(dat) == "logit.ps"] <- logitpsvarName()
+        names(dat)[names(dat) == "group"] <- groupvarFactorName()
         
         dat <- as.data.table(dat)  
         setkeyv(dat, idvarName())
@@ -191,17 +219,16 @@ shinyServer(function(input, output, session) {
     })    
 
     observe({
-        # for bar plots & psCalc, need to turn discrete numeric vars into factors
-        #    We handle vars for ps calc separately
-        if (!is.null(varsToView()) & !is.null(varIsContinuous())) {
+        # for bar plots, need to turn discrete numeric vars into factors
+        if (!is.null(varsToView())) {
             for (varname in varsToView()) {
                 if (is.character(dset.orig()[[varname]]) | 
                         (is.numeric(dset.orig()[[varname]]) & 
                         !(varIsContinuous()[varname]))) {
                     # todo: make sure levels are transferring right
-                    if (!is.factor(dset.orig()[[varname]])) {
+                    #if (!is.factor(dset.orig()[[varname]])) {
                         dset.orig()[, eval(varname) := factor(dset.orig()[[varname]])]
-                    }
+                    #}
                 }
             }
         }    
@@ -293,13 +320,30 @@ shinyServer(function(input, output, session) {
 
         HTML(paste0(tags$h5("The treatment indicator has the following levels:")))
     })
-    output$groupLevelText2 <- renderText({
+    output$groupLevelTable <- renderTable({
         if (is.null(groupvarname())) return(NULL)
-        
-        # the as.character lets this print right if var is already a factor
-        as.character(sort(unique(dset.orig()[[groupvarname()]])))
-    })
 
+        # the as.character lets this print right if var is already a factor
+        dat <- data.frame(as.character(sort(unique(dset.orig()[[groupvarname()]])))) 
+        names(dat) <- groupvarname()
+        dat
+    }, include.rownames = FALSE)
+
+    output$othervarsText1 <- renderUI({
+        if (is.null(groupvarFactorName())) return(NULL)
+
+        HTML(paste0(tags$h5("Other variables in the dataset:")))
+    })
+    output$othervarsTable <- renderTable({
+        if (is.null(groupvarFactorName())) return(NULL)
+
+        namesToExclude <- c(idvarName(), groupvarname())
+        if (groupvarname() != groupvarFactorName()) {
+            namesToExclude <- c(namesToExclude, groupvarFactorName())
+        }
+
+        data.frame(Variables= setdiff(varnames.orig(), namesToExclude)) 
+    }, include.rownames = FALSE, include.colnames= FALSE)
 
 
     possVarsToRestrict <- reactive({
@@ -467,20 +511,15 @@ shinyServer(function(input, output, session) {
         if (is.null(varnamesFromModel())) return(NULL)
         if (input$completeCasesOnly == 1) return(NULL)
         
-        if (!is.null(varIsContinuous())) {
-            for (varname in varnamesFromModel()) {
-                if (is.character(dset.orig()[[varname]]) | 
-                        (is.numeric(dset.orig()[[varname]]) & 
-                        !(varIsContinuous()[varname]))) {
-                    # todo: make sure levels are transferring right
-                    if (!is.factor(dset.orig()[[varname]])) {
-                        dset.orig()[, eval(varname) := factor(dset.orig()[[varname]])]
-                    }
-                }
+        # have to convert character vars to factors before imputing
+        for (varname in varnamesFromModel()) {
+            if (is.character(dset.orig()[[varname]])) {
+                # todo: make sure levels are transferring right
+                #if (!is.factor(dset.orig()[[varname]])) {
+                    dset.orig()[, eval(varname) := factor(dset.orig()[[varname]])]
+                #}
             }
-        }    
-        
-        
+        }
         
         myvars <- c(varnamesFromModel(), groupvarname())
         dat <- copy(dset.orig()[PSIDs(), myvars, with= FALSE])
@@ -579,10 +618,14 @@ shinyServer(function(input, output, session) {
         if (useLogit()) input$logitpsPlot_brush$xmax else input$psPlot_brush$xmax
     })
     scorename <- reactive({
-        ifelse(useLogit(), "logit.ps", "ps")
+        #if (is.null(psvarName()) | is.null(logitpsvarName())) return(NULL)
+
+        ifelse(useLogit(), logitpsvarName(), psvarName())
     })
     hasScoreOutside <- reactive({
         if (is.null(dset.psgraphs())) return(NULL)
+
+        if (is.null(psbrushmin())) return(rep(FALSE, dset.psgraphs()[, .N]))
 
         round(dset.psgraphs()[[scorename()]], psdig) < psbrushmin() |
             round(dset.psgraphs()[[scorename()]], psdig) > psbrushmax()
@@ -594,12 +637,14 @@ shinyServer(function(input, output, session) {
         
         intersect(ids, xgraphs.ids())
     })  
+
     # todo: is there a way to do this w/o making a third dataset?
-    # todo: continue here. won't be used till called.
     dset.psgraphs.plus <- reactive({
         if (is.null(hasScoreOutside())) return(NULL)
-        dat <- cbind(dset.psgraphs(), hasScoreOutside())
-        print(names(dat))
+
+        dat <- copy(dset.psgraphs())
+
+        dat[, outside := hasScoreOutside()]
         dat
     })
     
@@ -609,9 +654,9 @@ shinyServer(function(input, output, session) {
     ## Reactive text related to covariate graphs
         
     varIsContinuous <- reactive({
-        if (is.null(varsToView()) & is.null(varnamesFromModel())) return(NULL)
+        if (is.null(varsToView())) return(NULL)
         
-        vnames <- unique(c(varsToView(), varnamesFromModel()))
+        vnames <- varsToView()
         myvec <- rep(FALSE, length(vnames))
         
         for(i in seq_along(vnames)) {
@@ -763,7 +808,7 @@ shinyServer(function(input, output, session) {
     
         dat <- dset.orig()[xgraphs.ids(), .N, by= eval(groupvarFactorName())]
         setnames(dat, old = groupvarFactorName(), new = groupvarname())
-        rbind(dat, list("Total", dset.orig()[ , .N]))
+        rbind(dat, list("Total", dset.orig()[xgraphs.ids(), .N]))
     }, include.rownames = FALSE)
 
     ############################################################
@@ -780,12 +825,13 @@ shinyServer(function(input, output, session) {
         if (is.null(dset.psgraphs())) return(NULL)
         
         p <- ggplot(data= dset.psgraphs(),
-            aes(x= ps)) +
+            aes_string(x= psvarName())) +
             geom_histogram(
                 alpha    = alpha1, 
                 position = 'identity', 
                 bins     = 30,
-                aes(fill= group)) +
+                aes_string(fill= groupvarFactorName())) +
+            theme_bw() +
             scale_fill_manual(groupvarname(), values= colorScale.mod()) +
             xlab(paste0("PS (n= ", nrow(dset.psgraphs()), ")")) +
             theme(legend.position= "right")
@@ -815,12 +861,13 @@ shinyServer(function(input, output, session) {
         if (is.null(dset.psgraphs())) return(NULL)
 
         p <- ggplot(data= dset.psgraphs(),
-            aes(x= logit.ps)) +
+            aes_string(x= logitpsvarName())) +
             geom_histogram(
                 alpha    = alpha1, 
                 position = 'identity', 
                 bins     = 30,
-                aes(fill= group)) +
+                aes_string(fill= groupvarFactorName())) +
+            theme_bw() +
             scale_fill_manual(groupvarname(), values= colorScale.mod()) +
             xlab(paste0("Logit PS (n= ", nrow(dset.psgraphs()), ")")) +
             theme(legend.position= "none")
@@ -880,6 +927,7 @@ shinyServer(function(input, output, session) {
                             fill   = groupvarFactorName(),
                             colour = groupvarFactorName()
                         )) +
+                        theme_bw() +
                         scale_fill_manual(groupvarname(), 
                             values= colorScale.mod()) +
                         scale_colour_manual(groupvarname(), 
@@ -911,7 +959,7 @@ shinyServer(function(input, output, session) {
                     if (!is.null(idsForRug())) { 
                         if (varIsContinuous()[varname]) {    
                             p <- p + geom_rug(
-                                data= dset.orig()[idsForRug()][!is.na(eval(varname)),],  
+                                data= dset.orig()[idsForRug()][!is.na(eval(varname)), ],  
                                 # keep aes() from above
                                 position = 'identity',
                                 sides= "b") 
@@ -928,37 +976,56 @@ shinyServer(function(input, output, session) {
                 output[[plot2name]] <- renderPlot({
                     # TODO: to make these I will want the PS or logitPS merged in.
                     # Do the merge using data.table.
-                    dat <- dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ]
+                    dat <- dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE][dset.psgraphs.plus()]
 
                     p <- ggplot(
-                        data= dat[dset.psgraphs.plus()],
-                        aes_string(
-                            x      = varname,
-                            fill   = groupvarFactorName(),
-                            colour = groupvarFactorName()
+                        data= na.omit(dat),
+                        mapping= aes_string(
+                            colour = groupvarFactorName(),
+                            fill = groupvarFactorName()#,
+                            #alpha  = 
                         )) +
-                        scale_fill_manual(groupvarname(), 
-                            values= colorScale.mod()) +
+                        theme_bw() +
                         scale_colour_manual(groupvarname(), 
+                            values= colorScale.mod(), 
+                            guide= FALSE) +
+                        scale_fill_manual(groupvarname(), 
                             values= colorScale.mod(), 
                             guide= FALSE)
                     
-                    # Histogram or bar chart
+                    # Scatterplot
                     if (varIsContinuous()[varname]) {    
-                        p <- p + geom_histogram(
-                            alpha    = alpha1, 
-                            position = 'identity',
-                            bins= 30) 
+                        p <- p + 
+                            geom_point(
+                                mapping= aes_string(
+                                    x = varname,
+                                    y = logitpsvarName()
+                                ),
+                                alpha= alpha1 
+                            ) +
+                            xlab(varname) +
+                            ylab("Logit PS") 
                     } else {
-                        p <- p + geom_bar(
-                            alpha= alpha1, 
-                            position= position_dodge()) #+
-                            #scale_x_discrete(breaks= mylevels,
-                            #    labels= mylevels)
+                        p <- p + 
+                            geom_jitter(
+                                mapping= aes_string(
+                                    y = varname,
+                                    x = logitpsvarName()
+                                ),
+                                width= 0,
+                                height= 0.3,
+                                alpha= alpha1 
+                            ) +
+                            ylab(varname) +
+                            xlab("Logit PS") 
                     }    
                     
-                    # no legend
-                    p <- p + theme(legend.position= "none")
+                    # legend
+                    if (my_i == 1) {
+                        p <- p + theme(legend.position= "top")
+                    } else {
+                        p <- p + theme(legend.position= "none")
+                    }  
                     
                     # just p here!  not print(p)!
                     p
@@ -1031,6 +1098,7 @@ shinyServer(function(input, output, session) {
         for(i in 1:numvarsToView()) {
             varname <- varsToView()[i]
             plotname <- paste0("plot", i)
+            plot2name <- paste0("plot2", i)
             prunername <- paste0("pruner", i)
             textcheckname <- paste0("textcheck", i)
             keepNAName <- paste0("keepNA", i)
@@ -1039,14 +1107,21 @@ shinyServer(function(input, output, session) {
             plot_and_input_list[[i]] <-
                 fluidRow(
                     tags$hr(),
-                    column(6, 
+                    column(4, 
                         plotOutput(plotname, 
                             # first plot taller to accomodate legend
                             height = ifelse(i == 1, 320, 280), 
                             width  = 400#,
                         ) # end plotOutput   
                     ), # end column
-                    column(6, 
+                    column(4, 
+                        plotOutput(plot2name, 
+                            # first plot taller to accomodate legend
+                            height = ifelse(i == 1, 320, 280), 
+                            width  = 400#,
+                        ) # end plotOutput   
+                    ), # end column
+                    column(4, 
                         h4(varname),
                         if (varIsContinuous()[varname]) {
                             h5("Keep only units in this range (inclusive). Separate min and max by a space:") 

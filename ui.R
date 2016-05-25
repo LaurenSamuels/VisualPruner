@@ -15,15 +15,7 @@ shinyUI(navbarPage("Visual Pruner",
                 uiOutput("chooseDatafile"),
                 tags$br(),
                 h4('Treatment indicator:'),
-                uiOutput("chooseGroup"),
-                tags$br(),
-                h4('Preferences for graphs:'),
-                numericInput('numCont', 
-                    'Treat numeric variables as continuous if they have at least __ distinct values',
-                    value= 10, min= 1),
-                numericInput('xDigits', 
-                    'Starting number of decimal places to show for covariates:',
-                    value= 2, min= 1, max= 10)
+                uiOutput("chooseGroup")
             ), # end column
             column(6,
                 h4('Dataset information:'),
@@ -35,7 +27,10 @@ shinyUI(navbarPage("Visual Pruner",
                 uiOutput("dataDimText2"),
                 tags$br(),
                 uiOutput("groupLevelText1"),
-                textOutput("groupLevelText2")
+                tableOutput("groupLevelTable"),
+                tags$br(),
+                uiOutput("othervarsText1"),
+                tableOutput("othervarsTable")
             ) # end column
         ) # end fluidRow 
     ), # end data-import panel
@@ -95,14 +90,22 @@ shinyUI(navbarPage("Visual Pruner",
         ) # end fluidRow 
     ), # end Specify panel
     tabPanel("Prune",
-        h2("Covariate distributions"),
-        tags$hr(),
         fluidRow(
-            column(4,
+            column(6,
                 h4('Variables to view and restrict:'),
-                uiOutput("chooseVarsToRestrict")
+                uiOutput("chooseVarsToRestrict"),
+                tags$br(),
+                h4('Preferences for graphs:'),
+                h5('Treat numeric variables as continuous if they have at least __ distinct values:'),
+                numericInput('numCont', 
+                    NULL,
+                    value= 10, min= 1),
+                h5('Number of decimal places to show for covariates:'),
+                numericInput('xDigits', 
+                    NULL,
+                    value= 2, min= 1, max= 10)
             ), # end column
-            column(width= 4,
+            column(width= 6,
                 actionButton('xgraphsUpdateButton', 
                     HTML("Update covariate graphs")),
                 tags$br(),
@@ -111,9 +114,8 @@ shinyUI(navbarPage("Visual Pruner",
                     HTML("Recalculate PS for pruned sample<br/>(will update all graphs)")),
                 textOutput('psFitProblemTextPostPruning'),
                 tags$head(tags$style(
-                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" )) 
-            ), # end column
-            column(4,
+                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" )),
+                tags$br(),
                 h4("Current sample size"),
                 tableOutput("pruneTable")
             ) # end column
