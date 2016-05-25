@@ -1060,7 +1060,7 @@ shinyServer(function(input, output, session) {
                                 alpha= alpha1 
                             ) +
                             theme(axis.text.x = element_text(angle = 45,
-                                hjust = 1, vjust = 0))
+                                hjust = 1, vjust = 1))
 
                         p2 <- p2 +
                             geom_bar(
