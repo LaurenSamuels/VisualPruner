@@ -981,17 +981,12 @@ shinyServer(function(input, output, session) {
                     p <- ggplot(
                         data= na.omit(dat),
                         mapping= aes_string(
-                            colour = groupvarFactorName(),
-                            fill = groupvarFactorName()#,
+                            colour = groupvarFactorName()#,
                             #alpha  = 
                         )) +
                         theme_bw() +
                         scale_colour_manual(groupvarname(), 
-                            values= colorScale.mod(), 
-                            guide= FALSE) +
-                        scale_fill_manual(groupvarname(), 
-                            values= colorScale.mod(), 
-                            guide= FALSE)
+                            values= colorScale.mod()) 
                     
                     # Scatterplot
                     if (varIsContinuous()[varname]) {    
