@@ -5,6 +5,7 @@
 
 library(shiny)
 library(ggplot2)
+library(gridExtra)
 library(rms)
 library(data.table)
 #library(Cairo) # for better graphics on Linux servers
@@ -42,6 +43,28 @@ alpha1 <- 0.7
 # from http://stackoverflow.com/questions/18037737/how-to-change-maximum-upload-size-exceeded-restriction-in-shiny-and-save-user
 # The first number is the number of MB
 options(shiny.maxRequestSize=30*1024^2)
+
+# from http://stackoverflow.com/questions/17370460/scatterplot-with-alpha-transparent-histograms-in-r?lq=1
+theme0 <- function(...) {
+    theme( 
+        legend.position = "none",
+        panel.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.margin = unit(0,"null"),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks.length = unit(0,"null"),
+        #axis.ticks.margin = unit(0,"null"),
+        axis.text.x = element_text(margin=margin(0,0,0,0,"null")),
+        axis.text.y = element_text(margin=margin(0,0,0,0,"null")),
+        panel.border=element_rect(color=NA),
+    ...)
+}
+
 
 
 shinyServer(function(input, output, session) {
@@ -365,7 +388,10 @@ shinyServer(function(input, output, session) {
     })
     
     varsToView <- reactive({
-        input$varsToRestrict
+        #dependency
+        input$varsToViewUpdateButton
+
+        isolate(input$varsToRestrict)
     })
     numvarsToView <- reactive({
         length(varsToView())    
@@ -976,55 +1002,93 @@ shinyServer(function(input, output, session) {
                 output[[plot2name]] <- renderPlot({
                     # TODO: to make these I will want the PS or logitPS merged in.
                     # Do the merge using data.table.
-                    dat <- dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE][dset.psgraphs.plus()]
+                    dat <- na.omit(dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE][dset.psgraphs.plus()])
 
                     p <- ggplot(
-                        data= na.omit(dat),
+                        data= dat,
                         mapping= aes_string(
+                            x = varname,
+                            y = logitpsvarName(),
                             colour = groupvarFactorName()#,
                             #alpha  = 
                         )) +
                         theme_bw() +
                         scale_colour_manual(groupvarname(), 
-                            values= colorScale.mod()) 
+                            values= colorScale.mod()) +
+                        scale_fill_manual(groupvarname(), 
+                            values= colorScale.mod(), guide= FALSE) +
+                        theme(
+                            plot.margin=unit(c(0,0,0,0),"points")
+                        ) +
+                        xlab(varname) +
+                        ylab("Logit PS") 
                     
+                        p2 <- ggplot(
+                            data= dat,
+                            mapping= aes_string(
+                                x = varname,
+                                fill = groupvarFactorName()
+                            )) +
+                            scale_fill_manual(groupvarname(), 
+                                values= colorScale.mod(), guide= FALSE) +
+                            # TODO: not sure what these do. see SO post
+                            #scale_x_continuous(breaks=NULL,expand=c(0.02,0)) +
+                            #scale_y_continuous(breaks=NULL,expand=c(0.02,0)) +
+                            theme_bw() +
+                            # t,r,b,l
+                            theme0(plot.margin = unit(c(1,0,0,2.2), "lines")) 
+
+
                     # Scatterplot
                     if (varIsContinuous()[varname]) {    
+                        # from http://stackoverflow.com/questions/17370460/scatterplot-with-alpha-transparent-histograms-in-r?lq=1
                         p <- p + 
-                            geom_point(
-                                mapping= aes_string(
-                                    x = varname,
-                                    y = logitpsvarName()
-                                ),
-                                alpha= alpha1 
-                            ) +
-                            xlab(varname) +
-                            ylab("Logit PS") 
+                            geom_point(alpha= alpha1) 
+
+                        p2 <- p2 + 
+                            #geom_density(alpha= 0.5)  
+                            geom_histogram(
+                                alpha    = alpha1, 
+                                position = 'identity',
+                                bins     = 30
+                            ) 
                     } else {
                         p <- p + 
                             geom_jitter(
-                                mapping= aes_string(
-                                    y = varname,
-                                    x = logitpsvarName()
-                                ),
-                                width= 0,
-                                height= 0.3,
+                                width= 0.3,
+                                height= 0,
                                 alpha= alpha1 
                             ) +
-                            ylab(varname) +
-                            xlab("Logit PS") 
+                            theme(axis.text.x = element_text(angle = 45,
+                                hjust = 1, vjust = 0))
+
+                        p2 <- p2 +
+                            geom_bar(
+                            alpha    = alpha1, 
+                            position = position_dodge())
                     }    
                     
                     # legend
                     if (my_i == 1) {
-                        p <- p + theme(legend.position= "top")
+                        p <- p + theme(legend.position= "bottom")
                     } else {
                         p <- p + theme(legend.position= "none")
                     }  
                     
-                    # just p here!  not print(p)!
-                    p
-                }) # end renderPlot
+                    if (varIsContinuous()[varname]) {    
+                        # just p here!  not print(p)!
+                        #p
+                        grid.arrange(arrangeGrob(p2,ncol=1),
+                                     arrangeGrob(p,ncol=1),
+                                     heights=c(1,3))
+                    } else {
+                        # just p here!  not print(p)!
+                        #p
+                        grid.arrange(arrangeGrob(p2,ncol=1),
+                                     arrangeGrob(p,ncol=1),
+                                     heights=c(1,3))
+                    }
+                }) # end renderPlot for second plot
 
                 # Create input function for each variable
                 output[[prunername]] <- renderUI({
