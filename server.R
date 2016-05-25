@@ -65,6 +65,13 @@ theme0 <- function(...) {
     ...)
 }
 
+# from http://stackoverflow.com/questions/12539348/ggplot-separate-legend-and-plot    
+g_legend <- function(a.gplot) {
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    legend
+}
 
 
 shinyServer(function(input, output, session) {
@@ -186,7 +193,8 @@ shinyServer(function(input, output, session) {
     })    
 
     nonMissingIDs <- reactive({
-        if (is.null(varnamesFromModel())) return(NULL)
+        # TODO: this line used to return NULL. trying this way instead.
+        if (is.null(varnamesFromModel())) return(dset.orig()[[idvarName()]])
         
         if (input$completeCasesOnly == 1) {
             na.omit(dset.orig()[, c(varnamesFromModel(), idvarName()), with= FALSE])[[idvarName()]]
@@ -196,6 +204,9 @@ shinyServer(function(input, output, session) {
     })
     
     observe({
+        # trying to get this to update sooner
+        #input$mainNavbarPage
+
         # Add a factor version of the treatment indicator, for plotting
         if (!is.null(groupvarFactorName())){
             if (groupvarname() %in% names(dset.orig())) {
@@ -278,8 +289,9 @@ shinyServer(function(input, output, session) {
         selectizeInput('treatmentVarName', 
             #'Which variable is the treatment indicator?', 
             label= NULL, 
-            choices= varnames.orig()[sapply(dset.orig(), 
-                function(vec) length(unique(vec)) == 2)], 
+            choices= c(#"Choose one" = "", 
+                varnames.orig()[sapply(dset.orig(), 
+                function(vec) length(unique(vec)) == 2)]), 
             selected= NULL,
             multiple= FALSE
             )
@@ -383,7 +395,8 @@ shinyServer(function(input, output, session) {
             selected= if (is.null(varnamesFromModel())) NULL else 
                 #setdiff(varnamesFromModel(), groupvarname()),
                 varnamesFromModel(),
-            multiple= TRUE
+            multiple= TRUE,
+            width= '100%'
         )
     })
     
@@ -432,7 +445,8 @@ shinyServer(function(input, output, session) {
         if (is.null(dset.orig()) | is.null(groupvarname())) return(NULL)
         textInput('formulaRHS', 
             label= paste0(groupvarname(), ' ~ '), 
-            value= ' '
+            value= ' ',
+            width= '100%'
         )
     })
 
@@ -600,12 +614,19 @@ shinyServer(function(input, output, session) {
             NULL
         }
     })
-    output$psFitProblemTextPostPruning <- renderText({
+    psFitProblemPostPruning <- reactive({
         # dependencies
         if (psNotChecked() |  
-            input$PSCalcUpdateButton  == 0) return (NULL)
+            input$PSCalcUpdateButton  == 0) return (FALSE)
 
         if (is.null(isolate(lrmfit()))) {
+            TRUE
+        } else {
+            FALSE
+        }    
+    })
+    output$psFitProblemTextPostPruning <- renderText({
+        if (psFitProblemPostPruning()) {
             "The propensity score formula can't be fit using the pruned dataset. Please modify the model and/or the pruning criteria."   
         } else {
             NULL
@@ -679,6 +700,18 @@ shinyServer(function(input, output, session) {
     ############################################################
     ## Reactive text related to covariate graphs
         
+    output$needPSText <- renderUI({
+        if (is.null(dset.psgraphs()) & !psFitProblemPostPruning()) {
+            HTML(paste0(
+                tags$span(style="color:red", "To see graphs,"),
+                    tags$span(style="color:red", "modify your last pruning decision and/or"),
+                tags$br(),
+                tags$span(style="color:red", "specify a propensity score model"),
+                tags$br(),
+                tags$span(style="color:red", "on the 'Specify' tab page.") ))
+        } else return(NULL)
+    })
+
     varIsContinuous <- reactive({
         if (is.null(varsToView())) return(NULL)
         
@@ -697,8 +730,10 @@ shinyServer(function(input, output, session) {
     })    
 
     # number of decimal places to use w/ covariate graphs
+    # TODO: get rid of this if not using brushing on PS
     xdig <- reactive({
-        input$xDigits
+        #input$xDigits
+        2
     })
 
     # from http://stackoverflow.com/questions/18816666/shiny-change-data-input-of-buttons
@@ -919,7 +954,39 @@ shinyServer(function(input, output, session) {
         )
     })
     #############################################################
-    
+
+    # plot just the legend, 
+    # from http://stackoverflow.com/questions/12539348/ggplot-separate-legend-and-plot    
+    output$legendPlot <- renderPlot({
+        if (is.null(dset.orig())) return(NULL)
+        if (is.null(xgraphs.ids())) return(NULL)
+        if (is.null(groupvarFactorName())) return(NULL)
+        #if (!(groupvarFactorName() %in% names(dset.orig()))) return(NULL)
+
+        p <- ggplot(data= dset.orig()[xgraphs.ids()],
+            mapping= aes_string(
+                x      = idvarName(),
+                fill   = groupvarFactorName()
+            )) +
+            # not a real plot
+            geom_histogram(bins= 30) +
+            scale_fill_manual(groupvarname(), 
+                values= colorScale.mod()) +
+                theme(
+                    legend.title = element_text(size = 16),
+                    legend.text  = element_text(size = 12),
+                    legend.key.width  = unit(1, "cm"),
+                    legend.key.height = unit(1, "cm")
+                )
+        
+        tmp <- ggplot_gtable(ggplot_build(p))
+        leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+        my.legend <- tmp$grobs[[leg]]
+
+        grid.arrange(my.legend, padding= 0)
+        #my.legend
+    })
+
 
     # modified from https://gist.github.com/wch/5436415/, with
     # help from a SO post I forgot to get the URL for
@@ -955,7 +1022,8 @@ shinyServer(function(input, output, session) {
                         )) +
                         theme_bw() +
                         scale_fill_manual(groupvarname(), 
-                            values= colorScale.mod()) +
+                            values= colorScale.mod(),
+                            guide= FALSE) +
                         scale_colour_manual(groupvarname(), 
                             values= colorScale.mod(), 
                             guide= FALSE)
@@ -975,11 +1043,11 @@ shinyServer(function(input, output, session) {
                     }    
                     
                     # legend
-                    if (my_i == 1) {
-                        p <- p + theme(legend.position= "top")
-                    } else {
-                        p <- p + theme(legend.position= "none")
-                    }  
+                    #if (my_i == 1) {
+                    #    p <- p + theme(legend.position= "top")
+                    #} else {
+                    #    p <- p + theme(legend.position= "none")
+                    #}  
                     
                     # add the rug plots
                     if (!is.null(idsForRug())) { 
@@ -1000,8 +1068,8 @@ shinyServer(function(input, output, session) {
 
                 # Call renderPlot again for each selected variable. 
                 output[[plot2name]] <- renderPlot({
-                    # TODO: to make these I will want the PS or logitPS merged in.
-                    # Do the merge using data.table.
+                    if (is.null(dset.psgraphs())) return(NULL)
+
                     dat <- na.omit(dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE][dset.psgraphs.plus()])
 
                     p <- ggplot(
@@ -1014,7 +1082,7 @@ shinyServer(function(input, output, session) {
                         )) +
                         theme_bw() +
                         scale_colour_manual(groupvarname(), 
-                            values= colorScale.mod()) +
+                            values= colorScale.mod(), guide= FALSE) +
                         scale_fill_manual(groupvarname(), 
                             values= colorScale.mod(), guide= FALSE) +
                         theme(
@@ -1031,9 +1099,6 @@ shinyServer(function(input, output, session) {
                             )) +
                             scale_fill_manual(groupvarname(), 
                                 values= colorScale.mod(), guide= FALSE) +
-                            # TODO: not sure what these do. see SO post
-                            #scale_x_continuous(breaks=NULL,expand=c(0.02,0)) +
-                            #scale_y_continuous(breaks=NULL,expand=c(0.02,0)) +
                             theme_bw() +
                             # t,r,b,l
                             theme0(plot.margin = unit(c(1,0,0,2.2), "lines")) 
@@ -1069,11 +1134,11 @@ shinyServer(function(input, output, session) {
                     }    
                     
                     # legend
-                    if (my_i == 1) {
-                        p <- p + theme(legend.position= "bottom")
-                    } else {
-                        p <- p + theme(legend.position= "none")
-                    }  
+                    #if (my_i == 1) {
+                    #    p <- p + theme(legend.position= "bottom")
+                    #} else {
+                    #    p <- p + theme(legend.position= "none")
+                    #}  
                     
                     if (varIsContinuous()[varname]) {    
                         # just p here!  not print(p)!
@@ -1155,33 +1220,34 @@ shinyServer(function(input, output, session) {
         
         plot_and_input_list <- vector("list", numvarsToView())
         for(i in 1:numvarsToView()) {
-            varname <- varsToView()[i]
-            plotname <- paste0("plot", i)
-            plot2name <- paste0("plot2", i)
-            prunername <- paste0("pruner", i)
+            varname       <- varsToView()[i]
+            plotname      <- paste0("plot", i)
+            plot2name     <- paste0("plot2", i)
+            prunername    <- paste0("pruner", i)
             textcheckname <- paste0("textcheck", i)
-            keepNAName <- paste0("keepNA", i)
-            naTableName <- paste0("naTable", i)
+            keepNAName    <- paste0("keepNA", i)
+            naTableName   <- paste0("naTable", i)
             
             plot_and_input_list[[i]] <-
                 fluidRow(
                     tags$hr(),
-                    column(4, 
-                        plotOutput(plotname, 
-                            # first plot taller to accomodate legend
-                            height = ifelse(i == 1, 320, 280), 
-                            width  = 400#,
-                        ) # end plotOutput   
-                    ), # end column
-                    column(4, 
+                    h4(paste0("Variable: ", varname)),
+                    #column(4, 
+                    #    plotOutput(plotname, 
+                    #        # first plot taller to accomodate legend
+                    #        height = ifelse(i == 1, 320, 280), 
+                    #        width  = 400#,
+                    #    ) # end plotOutput   
+                    #), # end column
+                    column(width= 5, offset= 1, 
                         plotOutput(plot2name, 
                             # first plot taller to accomodate legend
-                            height = ifelse(i == 1, 320, 280), 
-                            width  = 400#,
+                            #height = ifelse(i == 1, 320, 280), 
+                            height= 300,
+                            width  = "100%"#,
                         ) # end plotOutput   
                     ), # end column
-                    column(4, 
-                        h4(varname),
+                    column(6, 
                         if (varIsContinuous()[varname]) {
                             h5("Keep only units in this range (inclusive). Separate min and max by a space:") 
                         } else {

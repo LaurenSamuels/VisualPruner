@@ -1,7 +1,7 @@
 library(shiny)
 #library(shinythemes)
 
-shinyUI(navbarPage("Visual Pruner",
+shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     tabPanel("Upload",
         fluidRow(
             column(6,
@@ -94,18 +94,20 @@ shinyUI(navbarPage("Visual Pruner",
             column(6,
                 h4('Variables to view and restrict:'),
                 uiOutput("chooseVarsToRestrict"),
-                actionButton('varsToViewUpdateButton', 
-                    HTML("Make graphs")),
+                tags$br(),
                 tags$br(),
                 h4('Preferences for graphs:'),
                 h5('Treat numeric variables as continuous if they have at least __ distinct values:'),
                 numericInput('numCont', 
                     NULL,
-                    value= 10, min= 1),
-                h5('Number of decimal places to show for covariates:'),
-                numericInput('xDigits', 
-                    NULL,
-                    value= 2, min= 1, max= 10)
+                    value= 10, min= 1,
+                    width= '33%'),
+                #h5('Number of decimal places to show for covariates:'),
+                #numericInput('xDigits', 
+                #    NULL,
+                #    value= 2, min= 1, max= 10)
+                actionButton('varsToViewUpdateButton', 
+                    HTML("Make graphs"))
             ), # end column
             column(width= 6,
                 actionButton('xgraphsUpdateButton', 
@@ -120,6 +122,16 @@ shinyUI(navbarPage("Visual Pruner",
                 tags$br(),
                 h4("Current sample size"),
                 tableOutput("pruneTable")
+            ) # end column
+        ), # end fluidRow 
+        fluidRow(
+            tags$hr(),
+            h4('Legend for all plots:'),
+            column(width= 4, #offset= 1,
+                plotOutput("legendPlot", height= 100, width= '100%')
+            ), # end column
+            column(width= 7, offset= 1,
+                uiOutput('needPSText')
             ) # end column
         ), # end fluidRow 
         uiOutput("univariatePlotsAndInputs")
