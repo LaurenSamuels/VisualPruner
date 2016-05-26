@@ -39,9 +39,11 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6,
                 h4('Handling missing values in PS model:'),
                 radioButtons('completeCasesOnly', NULL,
-                    c("Use complete cases only" = 1,
-                    "Impute missing values using mean or mode" = 0),
-                    1
+                    c(
+                    "Impute missing values using mean or mode" = 0,
+                    "Use complete cases only" = 1
+                    ),
+                    0
                 ),
                 tags$br(),
                 h4('Propensity score model:'),
