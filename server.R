@@ -1076,11 +1076,12 @@ shinyServer(function(input, output, session) {
                     } else NA
 
                     # use dat2 for plot 1...
+                    # For dat2 we need a PS, which might not have
+                    #   been calculated for everyone
                     dat2 <- na.omit(dat1[dset.psgraphs.plus()])
                     # preserve any levels that might have been lost
                     if(is.factor(dat1[[varname]])) {
                         my.levels <- levels(dat1[[varname]])
-                        print(my.levels)
                         dat2[, eval(varname) := factor(get(varname),
                             levels= my.levels)]
                     }
