@@ -204,10 +204,10 @@ shinyServer(function(input, output, session) {
         # These are the IDs of people who can be used for PS calculation
 
         # TODO: this line used to return NULL. trying this way instead.
-        if (is.null(varnamesFromModel())) return(dset.orig()[[idvarName()]])
+        if (is.null(varnamesFromRHS())) return(dset.orig()[[idvarName()]])
         
         if (input$completeCasesOnly == 1) {
-            na.omit(dset.orig()[, c(varnamesFromModel(), idvarName()), with= FALSE])[[idvarName()]]
+            na.omit(dset.orig()[, c(varnamesFromRHS(), idvarName()), with= FALSE])[[idvarName()]]
         } else {
             dset.orig()[[idvarName()]]
         }
@@ -267,8 +267,7 @@ shinyServer(function(input, output, session) {
 
     observe({
         # for bar plots, need to turn discrete numeric vars 
-        #   into factors. Not sure whether we need to convert
-        #   character vars, but converting here anyway
+        #   and character vars into factors. 
         if (!is.null(varsToView())) {
             for (varname in varsToView()) {
                 if (is.character(dset.orig()[[varname]]) | 
@@ -283,9 +282,11 @@ shinyServer(function(input, output, session) {
     
     xgraphs.ids <- reactive({
         # IDs for making the covariate plots.
-        if (is.null(nonMissingIDs())) return(NULL)
+        #if (is.null(nonMissingIDs())) return(NULL)
+        if (is.null(idsToKeepAfterPruning())) return(dset.orig()[[idvarName()]])
 
-        intersect(nonMissingIDs(), idsToKeepAfterPruning())
+        #intersect(nonMissingIDs(), idsToKeepAfterPruning())
+        idsToKeepAfterPruning()
     })    
     
     
@@ -445,11 +446,7 @@ shinyServer(function(input, output, session) {
         "    age + gender"
     })
     
-    
     output$psFormulaProblemText <- renderUI({
-        # todo: this was in here before & I can't figure out why.
-        #    I think it has something to do with re-fitting after pruning? but I don't know
-        #if (is.null(pruneValTextList())) {
         if (psNotChecked()) {
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
         } else if (!psFormSyntaxOK()) {
@@ -462,39 +459,35 @@ shinyServer(function(input, output, session) {
     PSIDs <- reactive({
         # dependencies
         if (input$PSCalcUpdateButton == 0) return(nonMissingIDs()) 
-        input$psTypedButton # in case model changed after pruning
+        # this next one should be covered by nonMissingIDs,
+        #    but just in case:
         input$completeCasesOnly 
             
         intersect(nonMissingIDs(), isolate(idsToKeepAfterPruning()))
     })
 
-    varnamesFromModel <- reactive({
+    varnamesFromRHS <- reactive({
         if (is.null(psForm())) return(NULL)
         
         allvars <- setdiff(all.vars(psForm()), groupvarname())
         if (all(allvars %in% names(dset.orig()))) allvars else NULL
     })    
-    varnamesFromModelOK <- reactive({
+    varnamesFromRHSOK <- reactive({
         if (psNotChecked()) return(NULL)
         if (is.null(psFormSyntaxOK())) return(NULL)
         
-        if (is.null(isolate(varnamesFromModel()))) {
+        if (is.null(isolate(varnamesFromRHS()))) {
             FALSE
         } else {
             TRUE
         }
     })
-    numvarsFromModel <- reactive({
-        if (is.null(varnamesFromModel())) return(NULL)
-        length(varnamesFromModel())
-    })
-    
     output$psVarsProblemText <- renderUI({
         if (psNotChecked() | is.null(psFormSyntaxOK())) {
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
         } else if (!psFormSyntaxOK()) {
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
-        } else if (!varnamesFromModelOK()) {
+        } else if (!varnamesFromRHSOK()) {
             HTML(paste0(tags$span(style="color:red", "The formula uses variables that are not in the dataset. Please try again.")))
         } else {
             HTML(paste0(tags$span(style="color:green", "All variable names are OK.")))
@@ -508,38 +501,35 @@ shinyServer(function(input, output, session) {
     })
 
     dset.imputed <- reactive({
-        if (is.null(varnamesFromModel())) return(NULL)
+        if (is.null(varnamesFromRHS())) return(NULL)
         if (input$completeCasesOnly == 1) return(NULL)
         
+        myvars <- c(varnamesFromRHS(), groupvarname())
+        dat <- copy(dset.orig()[PSIDs(), myvars, with= FALSE])
         # have to convert character vars to factors before imputing
-        for (varname in varnamesFromModel()) {
-            if (is.character(dset.orig()[[varname]])) {
-                # todo: make sure levels are transferring right
-                #if (!is.factor(dset.orig()[[varname]])) {
-                    dset.orig()[, eval(varname) := factor(dset.orig()[[varname]])]
-                #}
+        for (varname in varnamesFromRHS()) {
+            if (is.character(dat[[varname]])) {
+                dat[, eval(varname) := factor(dat[[varname]])]
             }
         }
         
-        myvars <- c(varnamesFromModel(), groupvarname())
-        dat <- copy(dset.orig()[PSIDs(), myvars, with= FALSE])
         dat[, (myvars) := lapply(.SD, function(x) impute(x, fun= mean)),
             .SDcols = myvars]
         dat
     })
     
     lrmfit <- reactive({
-        if (is.null(psForm()) | is.null(varnamesFromModel())) return(NULL)
+        if (is.null(psForm()) | 
+            is.null(varnamesFromRHS())) return(NULL)
         
         if (input$completeCasesOnly == 1) {
             tryCatch({lrm(psForm(), 
-                data= dset.orig()[PSIDs()])},
-                error= function(e) {return(NULL)})
-        } else { # impute
-            
+                data  = dset.orig()[PSIDs()])},
+                error = function(e) return(NULL))
+        } else { # use imputed data
             tryCatch({lrm(psForm(), 
-                data= dset.imputed())},
-                error= function(e) {return(NULL)})
+                data  = dset.imputed())},
+                error = function(e) return(NULL))
         }    
     })
 
@@ -554,9 +544,9 @@ shinyServer(function(input, output, session) {
         # dependencies
         input$completeCasesOnly
         
-        if (psNotChecked() | is.null(varnamesFromModelOK())) {
+        if (psNotChecked() | is.null(varnamesFromRHSOK())) {
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
-        } else if (!varnamesFromModelOK()) { # couldn't combine this with above
+        } else if (!varnamesFromRHSOK()) { # couldn't combine this with above
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
         } else if (is.null(isolate(lrmfit()))) {
             HTML(paste0(tags$span(style="color:red", "The propensity score formula can't be fit using the current dataset. Please modify the model and/or the variables selected for viewing.")))
@@ -598,7 +588,6 @@ shinyServer(function(input, output, session) {
         
         lrmfit()$linear.predictors
     })
-
     PS <- reactive({
         if (is.null(logitPS())) return(NULL)
         
@@ -606,20 +595,26 @@ shinyServer(function(input, output, session) {
     })
     
     output$dataNonmissingDimText1  <- renderUI({
-        if (is.null(nonMissingIDs()) | input$completeCasesOnly == 0) return(NULL)
-        if (psNotChecked() | is.null(varnamesFromModelOK())) return(NULL)
+        if (is.null(nonMissingIDs()) | 
+            input$completeCasesOnly == 0) return(NULL)
+        if (psNotChecked() | 
+            is.null(varnamesFromRHSOK())) return(NULL)
 
         HTML(paste0(tags$hr()))
     })
     output$dataNonmissingDimText2  <- renderUI({
-        if (is.null(nonMissingIDs()) | input$completeCasesOnly == 0) return(NULL)
-        if (psNotChecked() | is.null(varnamesFromModelOK())) return(NULL)
+        if (is.null(nonMissingIDs()) | 
+            input$completeCasesOnly == 0) return(NULL)
+        if (psNotChecked() | 
+            is.null(varnamesFromRHSOK())) return(NULL)
 
         HTML(paste0(tags$h4("N after excluding rows:")))
     })
     output$dataNonmissingDimText3 <- renderText({
-        if (is.null(nonMissingIDs()) | input$completeCasesOnly == 0) return(NULL)
-        if (psNotChecked() | is.null(varnamesFromModelOK())) return(NULL)
+        if (is.null(nonMissingIDs()) | 
+            input$completeCasesOnly == 0) return(NULL)
+        if (psNotChecked() | 
+            is.null(varnamesFromRHSOK())) return(NULL)
 
         paste0("After removal of rows with missing values for the variables selected for the PS model, ",
             "the dataset has ", length(nonMissingIDs()), " rows.")
@@ -681,6 +676,7 @@ shinyServer(function(input, output, session) {
         
     possVarsToRestrict <- reactive({
         if (is.null(groupvarname())) return(NULL)
+
         # We don't want to allow restriction of the treatment var 
         setdiff(varnames.orig(), 
             c(groupvarname(), groupvarFactorName(), idvarName()))  
@@ -689,9 +685,8 @@ shinyServer(function(input, output, session) {
         selectizeInput('varsToRestrict', 
             NULL, 
             choices= possVarsToRestrict(), 
-            selected= if (is.null(varnamesFromModel())) NULL else 
-                #setdiff(varnamesFromModel(), groupvarname()),
-                varnamesFromModel(),
+            selected= if (is.null(varnamesFromRHS())) NULL else 
+                varnamesFromRHS(),
             multiple= TRUE,
             width= '100%'
         )
@@ -708,9 +703,7 @@ shinyServer(function(input, output, session) {
     output$needPSText <- renderUI({
         if (is.null(dset.psgraphs()) & !psFitProblemPostPruning()) {
             HTML(paste0(
-                tags$span(style="color:red", "To see graphs,"),
-                    tags$span(style="color:red", "modify your last pruning decision and/or"),
-                tags$br(),
+                tags$span(style="color:red", "To see graphs, "),
                 tags$span(style="color:red", "specify a propensity score model"),
                 tags$br(),
                 tags$span(style="color:red", "on the 'Specify' tab page.") ))
@@ -795,12 +788,7 @@ shinyServer(function(input, output, session) {
         mylist <- vector("list", numvarsToView())
 
         for (i in 1:numvarsToView()) {
-            if (input$completeCasesOnly == 1 & 
-                varsToView()[i] %in% varnamesFromModel()) {
-                mylist[[i]]  <- FALSE
-            } else {
-                mylist[[i]]  <- input[[paste0("keepNAInput", i)]] == "1"
-            }
+            mylist[[i]]  <- input[[paste0("keepNAInput", i)]] == "1"
         }
         mylist
     })
@@ -808,11 +796,8 @@ shinyServer(function(input, output, session) {
         # dependencies
         if (is.null(varsToView())) return(NULL)
 
-        if ((input$xgraphsUpdateButton == 0 & 
-                input$PSCalcUpdateButton == 0) | 
-            # TODO: Am I sure I want to wipe out the pruning if
-            #   PS model is re-specified?
-            identical(buttonvalues$lastActionX, 'specify'))  {
+        if (input$xgraphsUpdateButton == 0 & 
+            input$PSCalcUpdateButton == 0) {
             return(NULL)
         }
         
@@ -871,23 +856,18 @@ shinyServer(function(input, output, session) {
     })    
 
     idsToKeepAfterPruning <- reactive({
-        if (is.null(nonMissingIDs())) return(NULL)
-
-        if (is.null(exprToKeepAfterPruning())) return(nonMissingIDs())
+        if (is.null(exprToKeepAfterPruning())) return(dset.orig()[[idvarName()]])
         
-        # TODO: I don't remember why I have this error handling here.
-        #    Doesn't seem like the best idea.
-        tryCatch(dset.orig()[nonMissingIDs()][eval(parse(text= 
-            exprToKeepAfterPruning()))][[idvarName()]],
-            error= function(e) nonMissingIDs())
+        dset.orig()[eval(parse(text= 
+            exprToKeepAfterPruning()))][[idvarName()]]
     })    
     
     output$pruneTable <- renderTable({
         if (is.null(nonMissingIDs())) return(NULL)
     
-        dat <- dset.orig()[xgraphs.ids(), .N, by= eval(groupvarFactorName())]
+        dat <- dset.orig()[idsToKeepAfterPruning(), .N, by= eval(groupvarFactorName())]
         setnames(dat, old = groupvarFactorName(), new = groupvarname())
-        rbind(dat, list("Total", dset.orig()[xgraphs.ids(), .N]))
+        rbind(dat, list("Total", dset.orig()[idsToKeepAfterPruning(), .N]))
     }, include.rownames = FALSE)
 
     ############################################################
@@ -977,15 +957,16 @@ shinyServer(function(input, output, session) {
     # from http://stackoverflow.com/questions/12539348/ggplot-separate-legend-and-plot    
     output$legendPlot <- renderPlot({
         if (is.null(dset.orig())) return(NULL)
-        if (is.null(xgraphs.ids())) return(NULL)
+        if (is.null(idsToKeepAfterPruning())) return(NULL)
         if (is.null(groupvarFactorName())) return(NULL)
         #if (!(groupvarFactorName() %in% names(dset.orig()))) return(NULL)
 
-        p <- ggplot(data= dset.orig()[xgraphs.ids()],
+        p <- ggplot(data= dset.orig()[idsToKeepAfterPruning()],
             mapping= aes_string(
                 x      = idvarName(),
                 fill   = groupvarFactorName()
-            )) +
+            ), 
+            alpha= alpha1) +
             # not a real plot
             geom_histogram(bins= 30) +
             scale_fill_manual(groupvarname(), 
@@ -1032,7 +1013,7 @@ shinyServer(function(input, output, session) {
                 # Call renderPlot for each selected variable. 
                 output[[plotname]] <- renderPlot({
                     p <- ggplot(
-                        data= dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ],
+                        data= dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ],
                         mapping= aes_string(
                             x      = varname,
                             fill   = groupvarFactorName(),
@@ -1088,10 +1069,24 @@ shinyServer(function(input, output, session) {
                 output[[plot2name]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
-                    dat <- na.omit(dset.orig()[xgraphs.ids()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE][dset.psgraphs.plus()])
+                    # use dat1 for plot 2
+                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
+                    my.xlim <- if(varIsContinuous()[varname]) {
+                        range(dat1[[varname]])
+                    } else NA
+
+                    # use dat2 for plot 1...
+                    dat2 <- na.omit(dat1[dset.psgraphs.plus()])
+                    # preserve any levels that might have been lost
+                    if(is.factor(dat1[[varname]])) {
+                        my.levels <- levels(dat1[[varname]])
+                        print(my.levels)
+                        dat2[, eval(varname) := factor(get(varname),
+                            levels= my.levels)]
+                    }
 
                     p <- ggplot(
-                        data= dat,
+                        data= dat2,
                         mapping= aes_string(
                             x = varname,
                             y = logitpsvarName(),
@@ -1110,7 +1105,7 @@ shinyServer(function(input, output, session) {
                         ylab("Logit PS") 
                     
                         p2 <- ggplot(
-                            data= dat,
+                            data= dat1,
                             mapping= aes_string(
                                 x = varname,
                                 fill = groupvarFactorName()
@@ -1126,7 +1121,8 @@ shinyServer(function(input, output, session) {
                     if (varIsContinuous()[varname]) {    
                         # from http://stackoverflow.com/questions/17370460/scatterplot-with-alpha-transparent-histograms-in-r?lq=1
                         p <- p + 
-                            geom_point(alpha= alpha1) 
+                            geom_point(alpha= alpha1)  +
+                            xlim(my.xlim)
 
                         p2 <- p2 + 
                             #geom_density(alpha= 0.5)  
@@ -1134,7 +1130,8 @@ shinyServer(function(input, output, session) {
                                 alpha    = alpha1, 
                                 position = 'identity',
                                 bins     = 30
-                            ) 
+                            ) +
+                            xlim(my.xlim)
                     } else {
                         p <- p + 
                             geom_jitter(
@@ -1212,22 +1209,17 @@ shinyServer(function(input, output, session) {
                 
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
-                    if (input$completeCasesOnly == 1 & 
-                        varname %in% varnamesFromModel()) {
-                        return (NULL)
-                    } else {
-                        radioButtons(keepNAInputName, NULL,
-                            c("Keep units with missing values for this variable" = 1,
-                            "Exclude units with missing values for this variable" = 0),
-                            selected = 1,
-                            width = '100%'
-                        )
-                    } 
+                    radioButtons(keepNAInputName, NULL,
+                        c("Keep units with missing values for this variable" = 1,
+                        "Exclude units with missing values for this variable" = 0),
+                        selected = 1,
+                        width = '100%'
+                    )
                 }) # end renderUI
 
                 # Create a missing-by-group table each variable
                 output[[naTableName]] <- renderTable({
-                    dat <- dset.orig()[xgraphs.ids(), .(prop.missing = mean(is.na(get(varname)))), by= eval(groupvarFactorName())]
+                    dat <- dset.orig()[idsToKeepAfterPruning(), .(prop.missing = mean(is.na(get(varname)))), by= eval(groupvarFactorName())]
                     setnames(dat, old = groupvarFactorName(), new = groupvarname())
                     dat
                 }, include.rownames= FALSE) # end renderTable
