@@ -108,8 +108,24 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 #numericInput('xDigits', 
                 #    NULL,
                 #    value= 2, min= 1, max= 10)
-                actionButton('varsToViewUpdateButton', 
-                    HTML("Make graphs"))
+                h5("Point/bar opacity ('alpha')"),
+                sliderInput('alphaSlider', NULL, 
+                    min = 0.01, 
+                    max = 1, 
+                    value = 0.7, 
+                    ticks= FALSE,
+                    width= '33%'
+                    ),
+                h5("Point size for scatterplots"),
+                sliderInput('pointsizeSlider', NULL, 
+                    min = 0.01, 
+                    max = 3, 
+                    value = 0.7, 
+                    ticks= FALSE,
+                    width= '33%'
+                    ),
+                actionButton('generalGraphUpdateButton', 
+                    HTML("(re-)Make graphs"))
             ), # end column
             column(width= 6,
                 actionButton('xgraphsUpdateButton', 
@@ -123,16 +139,10 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" )),
                 tags$br(),
                 h4("Current sample size"),
-                tableOutput("pruneTable")
-            ) # end column
-        ), # end fluidRow 
-        fluidRow(
-            tags$hr(),
-            h4('Legend for all plots:'),
-            column(width= 4, #offset= 1,
-                plotOutput("legendPlot", height= 100, width= '100%')
-            ), # end column
-            column(width= 7, offset= 1,
+                tableOutput("pruneTable"),
+                tags$br(),
+                h4('Legend for all plots:'),
+                plotOutput("legendPlot", height= 100, width= '100%'),
                 uiOutput('needPSText')
             ) # end column
         ), # end fluidRow 

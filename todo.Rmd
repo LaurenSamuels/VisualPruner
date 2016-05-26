@@ -5,8 +5,6 @@ date: ""
 output: html_document
 ---
 
-* The version that's currently on the server is updating covariate graphs immediately, w/o button click. Is this what we want? I didn't think that's what was supposed to be happening...
-
 * from RG, 13 Jan 2016: on the R tab, include a short paragraph on running it locally (update: this is now on the wiki)
 
 * Make it a package
@@ -14,9 +12,7 @@ output: html_document
 * Handle missing data: From RG, 16 Feb 2016 email:
 If checking allow missing, it does mean imputation for any missing values (effectively nullifying them from the PS model) and automatically creates indicators for all the variables with missingness (as recommended by D'Agostino and Rubin and as better explained by Sarah and Jeffrey). 
 Then VP would show the indicator variables as covariates. 
-ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys & dias. bp)
-
-* On Specify tab, make the appearance of the plot-related text and checkbox conditional (i.e. they should appear only after scores have been estimated). Same for the plots?
+ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys & dias. bp). Why doesn't it work if I use is.imputed() in model? Would that work w/ the other non-lrm function?
 
 * Have some sort of smart model adjustment, where if we're down to one value of a variable, that variable is dropped from model? This seems like a good idea, but I think it might have implications I haven't thought through.
 
@@ -26,26 +22,18 @@ ALSO: before PS calc, need processing to get rid of redundant (collinear) missin
 
 * **Upload new version to server. Remember to change version # and Cairo. Might need to ask Dale to update packages on server. Check the readme and description files too.**
 
-* Consider mirror histograms
+* Come up w/ a plot alternative for v large datasets (too many points).
 
-* Consider plots of x vs PS as an alternative to histograms. The points could be colored (or use alpha) by in or outside of brush. This wouldn't nec. work for v large datasets (too many points)
+* Consider switching to base graphics to speed things up
 
 * For barplots, put the labels at an angle, or maybe even switch to horizontal/dotplots? I have now angled the labels; need to check w/ dataset w/ long level names
 
-* Add estimated densities to histograms? 
-
-* Consider doing something like the histograms on p. 230 of Li and Greene (matching wts)--- leaving the orig. histogram there as a shell (would mean specifying the breaks in advance) and/or doing the mirroring thing
-
-* Add a tab for scatterplots?
+* For the histograms & bar charts, consider leaving the orig. histogram there as a shell (would mean specifying the breaks in advance) 
 
 * Think about the example dset included w/ pkg.  
 Should it be the same as the one in the documentation? 
 That one is slow.
 If I'm going to use it, how reference from w/in app?
-
-* Try always making the smaller group the second group, and using a lighter color.  
-Then maybe can use higher alpha.  
-This is all to avoid the outlining problem.
 
 * Add note "This may take a minute for large dsets"
 
@@ -56,23 +44,18 @@ This is all to avoid the outlining problem.
 * Add option to save a file of all the steps (written every time PS is recalculated).  
 This might help with the "rollback" too.
 
+* I'm not sure that the plots will work right when the datasets for PS calc and for plotting are very different (that is, when just rows w/ nonmissing values are used for PS calc). Especially w/ the barcharts. Figure out how to test this. Related: why am I getting "Warning: Removed 2 rows containing missing values (geom_bar)."?
+
+* remove the code for the old plots and brushing
+
 * Add Robert's 'default pruning' idea?
 
 * Later: allow > 2 tx groups
 
-* Maybe show a list of variables for making PS model?
-
-* Move the PS formula example to farther down
-
-* Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
-
-* Find a way to jitter the rug plots for cat. vars, or else do them some other way. 
+* Move the PS formula example to farther down, or to its own tab?
+Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
 
 * Add option to use prognostic score instead?
-
-* Maybe try marking high-leverage points in PS fitting
-
-* Maybe: zoom into histograms/ cut vertical scale off
 
 * Maybe: change # bins (put in binwidth controls)
 

@@ -35,9 +35,6 @@ myColorScale <- c(
 # number of decimal places to use w/ propensity scores
 psdig <- 2
 
-# alpha for graphs
-alpha1 <- 0.7
-
 
 # Allow upload of bigger files
 # from http://stackoverflow.com/questions/18037737/how-to-change-maximum-upload-size-exceeded-restriction-in-shiny-and-save-user
@@ -52,25 +49,17 @@ theme0 <- function(...) {
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         panel.margin = unit(0,"null"),
-        axis.ticks = element_blank(),
-        axis.text.x = element_blank(),
-        axis.text.y = element_blank(),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank(),
+        axis.ticks        = element_blank(),
+        axis.text.x       = element_blank(),
+        axis.text.y       = element_blank(),
+        axis.title.x      = element_blank(),
+        axis.title.y      = element_blank(),
         axis.ticks.length = unit(0,"null"),
         #axis.ticks.margin = unit(0,"null"),
         axis.text.x = element_text(margin=margin(0,0,0,0,"null")),
         axis.text.y = element_text(margin=margin(0,0,0,0,"null")),
         panel.border=element_rect(color=NA),
     ...)
-}
-
-# from http://stackoverflow.com/questions/12539348/ggplot-separate-legend-and-plot    
-g_legend <- function(a.gplot) {
-    tmp <- ggplot_gtable(ggplot_build(a.gplot))
-    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-    legend <- tmp$grobs[[leg]]
-    legend
 }
 
 
@@ -691,9 +680,10 @@ shinyServer(function(input, output, session) {
             width= '100%'
         )
     })
+
     varsToView <- reactive({
         #dependency
-        input$varsToViewUpdateButton
+        input$generalGraphUpdateButton
 
         isolate(input$varsToRestrict)
     })
@@ -727,6 +717,18 @@ shinyServer(function(input, output, session) {
         myvec
     })    
 
+    alphaval <- reactive({
+        #dependency
+        input$generalGraphUpdateButton
+
+        isolate(input$alphaSlider)
+    })
+    pointsizeval <- reactive({
+        #dependency
+        input$generalGraphUpdateButton
+
+        isolate(input$pointsizeSlider)
+    })
     # number of decimal places to use w/ covariate graphs
     # TODO: get rid of this if not using brushing on PS
     xdig <- reactive({
@@ -886,7 +888,7 @@ shinyServer(function(input, output, session) {
         p <- ggplot(data= dset.psgraphs(),
             aes_string(x= psvarName())) +
             geom_histogram(
-                alpha    = alpha1, 
+                alpha    = alphaval(), 
                 position = 'identity', 
                 bins     = 30,
                 aes_string(fill= groupvarFactorName())) +
@@ -922,7 +924,7 @@ shinyServer(function(input, output, session) {
         p <- ggplot(data= dset.psgraphs(),
             aes_string(x= logitpsvarName())) +
             geom_histogram(
-                alpha    = alpha1, 
+                alpha    = alphaval(), 
                 position = 'identity', 
                 bins     = 30,
                 aes_string(fill= groupvarFactorName())) +
@@ -966,7 +968,7 @@ shinyServer(function(input, output, session) {
                 x      = idvarName(),
                 fill   = groupvarFactorName()
             ), 
-            alpha= alpha1) +
+            alpha= alphaval()) +
             # not a real plot
             geom_histogram(bins= 30) +
             scale_fill_manual(groupvarname(), 
@@ -1011,59 +1013,59 @@ shinyServer(function(input, output, session) {
                 naTableName     <- paste0("naTable", my_i)
      
                 # Call renderPlot for each selected variable. 
-                output[[plotname]] <- renderPlot({
-                    p <- ggplot(
-                        data= dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ],
-                        mapping= aes_string(
-                            x      = varname,
-                            fill   = groupvarFactorName(),
-                            colour = groupvarFactorName()
-                        )) +
-                        theme_bw() +
-                        scale_fill_manual(groupvarname(), 
-                            values= colorScale.mod(),
-                            guide= FALSE) +
-                        scale_colour_manual(groupvarname(), 
-                            values= colorScale.mod(), 
-                            guide= FALSE)
-                    
-                    # Histogram or bar chart
-                    if (varIsContinuous()[varname]) {    
-                        p <- p + geom_histogram(
-                            alpha    = alpha1, 
-                            position = 'identity',
-                            bins     = 30) 
-                    } else {
-                        p <- p + geom_bar(
-                            alpha    = alpha1, 
-                            position = position_dodge()) +
-                            theme(axis.text.x = element_text(angle = 45,
-                                hjust = 0.5, vjust = 0.5))
-                    }    
-                    
-                    # legend
-                    #if (my_i == 1) {
-                    #    p <- p + theme(legend.position= "top")
-                    #} else {
-                    #    p <- p + theme(legend.position= "none")
-                    #}  
-                    
-                    # add the rug plots
-                    if (!is.null(idsForRug())) { 
-                        if (varIsContinuous()[varname]) {    
-                            p <- p + geom_rug(
-                                data= dset.orig()[idsForRug()][!is.na(eval(varname)), ],  
-                                # keep aes() from above
-                                position = 'identity',
-                                sides= "b") 
-                        } else {
-                            # todo: keep working on this.
-                            # see http://stackoverflow.com/questions/30287334/how-to-add-marginal-rugs-above-bars-of-a-bar-chart-with-ggplot2
-                        }
-                    }    
-                    # just p here!  not print(p)!
-                    p
-                }) # end renderPlot
+                #output[[plotname]] <- renderPlot({
+                #    p <- ggplot(
+                #        data= dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ],
+                #        mapping= aes_string(
+                #            x      = varname,
+                #            fill   = groupvarFactorName(),
+                #            colour = groupvarFactorName()
+                #        )) +
+                #        theme_bw() +
+                #        scale_fill_manual(groupvarname(), 
+                #            values= colorScale.mod(),
+                #            guide= FALSE) +
+                #        scale_colour_manual(groupvarname(), 
+                #            values= colorScale.mod(), 
+                #            guide= FALSE)
+                #    
+                #    # Histogram or bar chart
+                #    if (varIsContinuous()[varname]) {    
+                #        p <- p + geom_histogram(
+                #            alpha    = alphaval(), 
+                #            position = 'identity',
+                #            bins     = 30) 
+                #    } else {
+                #        p <- p + geom_bar(
+                #            alpha    = alphaval(), 
+                #            position = position_dodge()) +
+                #            theme(axis.text.x = element_text(angle = 45,
+                #                hjust = 0.5, vjust = 0.5))
+                #    }    
+                #    
+                #    # legend
+                #    #if (my_i == 1) {
+                #    #    p <- p + theme(legend.position= "top")
+                #    #} else {
+                #    #    p <- p + theme(legend.position= "none")
+                #    #}  
+                #    
+                #    # add the rug plots
+                #    if (!is.null(idsForRug())) { 
+                #        if (varIsContinuous()[varname]) {    
+                #            p <- p + geom_rug(
+                #                data= dset.orig()[idsForRug()][!is.na(eval(varname)), ],  
+                #                # keep aes() from above
+                #                position = 'identity',
+                #                sides= "b") 
+                #        } else {
+                #            # todo: keep working on this.
+                #            # see http://stackoverflow.com/questions/30287334/how-to-add-marginal-rugs-above-bars-of-a-bar-chart-with-ggplot2
+                #        }
+                #    }    
+                #    # just p here!  not print(p)!
+                #    p
+                #}) # end renderPlot
 
                 # Call renderPlot again for each selected variable. 
                 output[[plot2name]] <- renderPlot({
@@ -1105,30 +1107,33 @@ shinyServer(function(input, output, session) {
                         xlab(varname) +
                         ylab("Logit PS") 
                     
-                        p2 <- ggplot(
-                            data= dat1,
-                            mapping= aes_string(
-                                x = varname,
-                                fill = groupvarFactorName()
-                            )) +
-                            scale_fill_manual(groupvarname(), 
-                                values= colorScale.mod(), guide= FALSE) +
-                            theme_bw() +
-                            # t,r,b,l
-                            theme0(plot.margin = unit(c(1,0,0,2.2), "lines")) 
+                    p2 <- ggplot(
+                        data= dat1,
+                        mapping= aes_string(
+                            x = varname,
+                            fill = groupvarFactorName()
+                        )) +
+                        scale_fill_manual(groupvarname(), 
+                            values= colorScale.mod(), guide= FALSE) +
+                        theme_bw() +
+                        # t,r,b,l
+                        theme0(plot.margin = unit(c(1,0,0,2.2), "lines")) 
 
 
                     # Scatterplot
                     if (varIsContinuous()[varname]) {    
                         # from http://stackoverflow.com/questions/17370460/scatterplot-with-alpha-transparent-histograms-in-r?lq=1
                         p <- p + 
-                            geom_point(alpha= alpha1)  +
+                            geom_point(
+                                alpha= alphaval(), 
+                                size = pointsizeval()
+                            )  +
                             xlim(my.xlim)
 
                         p2 <- p2 + 
                             #geom_density(alpha= 0.5)  
                             geom_histogram(
-                                alpha    = alpha1, 
+                                alpha    = alphaval(), 
                                 position = 'identity',
                                 bins     = 30
                             ) +
@@ -1138,14 +1143,15 @@ shinyServer(function(input, output, session) {
                             geom_jitter(
                                 width= 0.3,
                                 height= 0,
-                                alpha= alpha1 
+                                alpha= alphaval(), 
+                                size = pointsizeval()
                             ) +
                             theme(axis.text.x = element_text(angle = 45,
                                 hjust = 1, vjust = 1))
 
                         p2 <- p2 +
                             geom_bar(
-                            alpha    = alpha1, 
+                            alpha    = alphaval(), 
                             position = position_dodge())
                     }    
                     
@@ -1156,19 +1162,11 @@ shinyServer(function(input, output, session) {
                     #    p <- p + theme(legend.position= "none")
                     #}  
                     
-                    if (varIsContinuous()[varname]) {    
-                        # just p here!  not print(p)!
-                        #p
-                        grid.arrange(arrangeGrob(p2,ncol=1),
-                                     arrangeGrob(p,ncol=1),
-                                     heights=c(1,3))
-                    } else {
-                        # just p here!  not print(p)!
-                        #p
-                        grid.arrange(arrangeGrob(p2,ncol=1),
-                                     arrangeGrob(p,ncol=1),
-                                     heights=c(1,3))
-                    }
+                    grid.arrange(
+                        arrangeGrob(p2, ncol= 1),
+                        arrangeGrob(p,  ncol= 1),
+                        heights=c(1,3)
+                    )
                 }) # end renderPlot for second plot
 
                 # Create input function for each variable
