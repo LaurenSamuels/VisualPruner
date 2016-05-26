@@ -1,0 +1,10 @@
+d1 <- read.csv('~/Documents/VisualPruner/data/rhcMOD.csv')
+names(d1)
+d2 <- d1[!(d1$meanbp1>175 & d1$swang1=='RHC'),]
+dim(d1)
+dim(d2)
+d2 <- d1[!(d1$meanbp1>160 & d1$swang1=='RHC'),]
+dim(d2)
+d2 <- d1[!(d1$meanbp1>160 & d1$swang1=='No RHC'),]
+dim(d2)
+write.csv(d2,'temp.csv',row.names=F)
