@@ -269,6 +269,7 @@ shinyServer(function(input, output, session) {
         }    
     })    
     
+    # TODO: can I get rid of this and just use idsToKeepAfterPruning()?
     xgraphs.ids <- reactive({
         # IDs for making the covariate plots.
         #if (is.null(nonMissingIDs())) return(NULL)
@@ -649,6 +650,7 @@ shinyServer(function(input, output, session) {
     })  
 
     # todo: is there a way to do this w/o making a third dataset?
+    # TODO: might not need this anyway
     dset.psgraphs.plus <- reactive({
         if (is.null(hasScoreOutside())) return(NULL)
 
@@ -878,7 +880,10 @@ shinyServer(function(input, output, session) {
     
     colorScale.mod <- reactive({
         if (is.null(nonMissingIDs())) return(NULL)
-        myColorScale[1:length(unique(dset.orig()[[groupvarFactorName()]]))]
+
+        sc <- myColorScale[1:length(unique(dset.orig()[[groupvarFactorName()]]))]
+        names(sc) <- levels(dset.orig()[[groupvarFactorName()]])
+        sc
     })
     
     #############################################################
@@ -1005,6 +1010,7 @@ shinyServer(function(input, output, session) {
                 varname         <- varsToView()[my_i]
                 plotname        <- paste0("plot", my_i)
                 plot2name       <- paste0("plot2", my_i)
+                plot2nameOLD    <- paste0("plot2OLD", my_i)
                 prunername      <- paste0("pruner", my_i)
                 inputname       <- paste0("pruningChoices_", my_i)
                 textCheckName   <- paste0("textcheck", my_i)
@@ -1067,8 +1073,116 @@ shinyServer(function(input, output, session) {
                 #    p
                 #}) # end renderPlot
 
-                # Call renderPlot again for each selected variable. 
+                # trying to redo this in base graphics
                 output[[plot2name]] <- renderPlot({
+                    if (is.null(dset.psgraphs())) return(NULL)
+
+                    # use dat1 for plot 2
+                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
+                    my.xlim <- if(varIsContinuous()[varname]) {
+                        range(dat1[[varname]])
+                    } else NA
+
+                    # use dat2 for plot 1...
+                    # For dat2 we need a PS, which might not have
+                    #   been calculated for everyone
+                    dat2 <- na.omit(dat1[dset.psgraphs.plus()])
+                    # preserve any levels that might have been lost
+                    if(is.factor(dat1[[varname]])) {
+                        my.levels <- levels(dat1[[varname]])
+                        dat2[, eval(varname) := factor(get(varname),
+                            levels= my.levels)]
+                    }
+                    my.ylim <- range(dat2[[logitpsvarName()]])
+
+                    # from http://www.r-bloggers.com/example-10-3-enhanced-scatterplot-with-marginal-histograms/
+                    # save the old graphics settings-- they may be needed
+                    def.par <- par(no.readonly = TRUE)
+
+                    zones <- matrix(c(#1,1,1, 
+                        #0,5,0, 2,6,4, 0,3,0), ncol = 3, byrow = TRUE)
+                        0,4,0, 1,5,3, 0,2,0), ncol = 3, byrow = TRUE)
+                    layout(zones, widths=c(0.3,4,1), heights = c(#1,
+                        3,10,.75))
+
+                    if (varIsContinuous()[varname]) {    
+                        # tuning to plot histograms nicely
+                        #xhist <- hist(dat1[[varname]], plot = FALSE)
+                        #yhist <- hist(y, plot = FALSE)
+                        #top <- max(c(xhist$counts, yhist$counts))
+
+                        # for all three titles: 
+                        #   drop the axis titles and omit boxes, set up margins
+                        par(xaxt="n", yaxt="n", bty="n", mar = c(.3,2,.3,0) +.05)
+
+                        # fig 1 from the layout
+                        #plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
+                        #text(0,0,paste(""), cex=2)
+
+                        # fig 2 = Y axis label. Now 1
+                        plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
+                        text(0, 0, paste("Logit PS"), cex=1.5, srt=90)
+
+                        # fig 3 = X axis label. Now 2
+                        plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
+                        text(0, 0, paste(varname), cex=1.5)
+
+                        # fig 4, right-side plot, needs different margins. Now 3
+                        # no margin on the left
+                        # TODO: plot missings here
+                        par(mar = c(2,0,1,1))
+                        # TODO: this isn't picking up the ids w/ missing values.
+                        #   look into this & it also means the code above might 
+                        #   not be right either (the !is.na)
+                        xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(eval(varname)), get(idvarName())]
+                        print(length(xna.ids))
+
+                        xna.logitps <- na.omit(dset.psgraphs.plus()[xna.ids][, c(idvarName(), groupvarFactorName(), logitpsvarName()), with= FALSE])
+                        print(nrow(xna.logitps))
+                        xna.logitps[, randx := runif(xna.logitps[, .N])]
+
+                        plot(xna.logitps[, randx], xna.logitps[[logitpsvarName()]], xlim= 0:1, ylim= my.ylim, type= "n")
+                        for (lev in levels(xna.logitps[[groupvarFactorName()]])) {
+                            x <- xna.logitps[get(groupvarFactorName()) == lev, randx]
+                            y <- xna.logitps[get(groupvarFactorName()) == lev, get(logitpsvarName())]
+                            points(x, y, pch= 15,
+                                col= colorScale.mod()[lev])
+                        }
+                        
+
+                        # fig 5, top plot needs no margin on the bottom. Now 4
+                        par(mar = c(0,2,1,1))
+                        #barplot(xhist$counts, axes = FALSE, ylim = c(0, top), space = 0)
+                        plot(rnorm(1000), col= "red")
+
+                        # fig 6, finally, the scatterplot-- needs regular axes,. Now 5 
+                        #  different margins
+                        par(mar = c(2,2,.5,.5), xaxt="s", yaxt="s", bty="n")
+                        # this color allows traparency & overplotting-- useful if a lot of points
+                        #plot(x, y , pch=19, col="#00000022", cex= pointsizeval())
+
+                        plot(dat2[[varname]], dat2[[logitpsvarName()]] , xlim= my.xlim, type= "n")
+                        for (lev in levels(dat2[[groupvarFactorName()]])) {
+                            x <- dat2[get(groupvarFactorName()) == lev, get(varname)]
+                            y <- dat2[get(groupvarFactorName()) == lev, get(logitpsvarName())]
+                            points(x, y,
+                                col= colorScale.mod()[lev])
+                        }
+
+
+                    } else {
+                            # do nothing yet
+                    }
+
+
+                    # reset the graphics, if desired 
+                    par(def.par)
+                })
+
+                ##############################################
+                # Old (current) ggplot plots
+                # Call renderPlot again for each selected variable. 
+                output[[plot2nameOLD]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
                     # use dat1 for plot 2
