@@ -1021,7 +1021,7 @@ shinyServer(function(input, output, session) {
                 # Call renderPlot for each selected variable. 
                 #output[[plotname]] <- renderPlot({
                 #    p <- ggplot(
-                #        data= dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ],
+                #        data= dset.orig()[idsToKeepAfterPruning()][!is.na(get(varname)), ],
                 #        mapping= aes_string(
                 #            x      = varname,
                 #            fill   = groupvarFactorName(),
@@ -1060,7 +1060,7 @@ shinyServer(function(input, output, session) {
                 #    if (!is.null(idsForRug())) { 
                 #        if (varIsContinuous()[varname]) {    
                 #            p <- p + geom_rug(
-                #                data= dset.orig()[idsForRug()][!is.na(eval(varname)), ],  
+                #                data= dset.orig()[idsForRug()][!is.na(get(varname)), ],  
                 #                # keep aes() from above
                 #                position = 'identity',
                 #                sides= "b") 
@@ -1077,8 +1077,8 @@ shinyServer(function(input, output, session) {
                 output[[plot2name]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
-                    # use dat1 for plot 2
-                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
+                    # use dat1 for marginal histogram/barchart
+                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(get(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
                     my.xlim <- if(varIsContinuous()[varname]) {
                         range(dat1[[varname]])
                     } else NA
@@ -1095,50 +1095,37 @@ shinyServer(function(input, output, session) {
                     }
                     my.ylim <- range(dat2[[logitpsvarName()]])
 
-                    # from http://www.r-bloggers.com/example-10-3-enhanced-scatterplot-with-marginal-histograms/
+                    # adapted from http://www.r-bloggers.com/example-10-3-enhanced-scatterplot-with-marginal-histograms/
+
                     # save the old graphics settings-- they may be needed
                     def.par <- par(no.readonly = TRUE)
 
-                    zones <- matrix(c(#1,1,1, 
-                        #0,5,0, 2,6,4, 0,3,0), ncol = 3, byrow = TRUE)
+                    zones <- matrix(c(
                         0,4,0, 1,5,3, 0,2,0), ncol = 3, byrow = TRUE)
-                    layout(zones, widths=c(0.3,4,1), heights = c(#1,
+                    layout(zones, widths=c(0.4, 4, 0.75), heights = c(#1,
                         3,10,.75))
 
                     if (varIsContinuous()[varname]) {    
-                        # tuning to plot histograms nicely
-                        #xhist <- hist(dat1[[varname]], plot = FALSE)
-                        #yhist <- hist(y, plot = FALSE)
-                        #top <- max(c(xhist$counts, yhist$counts))
-
-                        # for all three titles: 
+                        # for all plots: 
                         #   drop the axis titles and omit boxes, set up margins
-                        par(xaxt="n", yaxt="n", bty="n", mar = c(.3,2,.3,0) +.05)
+                        par(xaxt="n", yaxt="n", bty="n", 
+                            mar = c(.3, 2, .3, 0) +.05)
 
-                        # fig 1 from the layout
-                        #plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
-                        #text(0,0,paste(""), cex=2)
-
-                        # fig 2 = Y axis label. Now 1
+                        # fig 1 = Y axis label. 
                         plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
                         text(0, 0, paste("Logit PS"), cex=1.5, srt=90)
 
-                        # fig 3 = X axis label. Now 2
+                        # fig 2 = X axis label. 
                         plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
                         text(0, 0, paste(varname), cex=1.5)
 
-                        # fig 4, right-side plot, needs different margins. Now 3
+                        # fig 3, right-side plot, needs different margins. 
                         # no margin on the left
-                        # TODO: plot missings here
-                        par(mar = c(2,0,1,1))
-                        # TODO: this isn't picking up the ids w/ missing values.
-                        #   look into this & it also means the code above might 
-                        #   not be right either (the !is.na)
-                        xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(eval(varname)), get(idvarName())]
-                        print(length(xna.ids))
+                        par(mar = c(2, 0, 1, 1))
+                        xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(get(varname)), get(idvarName())]
 
+                        # TODO: clean this up
                         xna.logitps <- na.omit(dset.psgraphs.plus()[xna.ids][, c(idvarName(), groupvarFactorName(), logitpsvarName()), with= FALSE])
-                        print(nrow(xna.logitps))
                         xna.logitps[, randx := runif(xna.logitps[, .N])]
 
                         plot(xna.logitps[, randx], xna.logitps[[logitpsvarName()]], xlim= 0:1, ylim= my.ylim, type= "n")
@@ -1148,16 +1135,24 @@ shinyServer(function(input, output, session) {
                             points(x, y, pch= 15,
                                 col= colorScale.mod()[lev])
                         }
-                        
 
-                        # fig 5, top plot needs no margin on the bottom. Now 4
-                        par(mar = c(0,2,1,1))
+                        # fig 4, top plot. needs no margin on the bottom. 
+                        par(mar = c(0, 2, 1, 1))
                         #barplot(xhist$counts, axes = FALSE, ylim = c(0, top), space = 0)
-                        plot(rnorm(1000), col= "red")
+                        xhist <- hist(dat1[[varname]], plot = FALSE)
+                        plot(dat1[[varname]], runif(dat1[, .N]), 
+                            ylim= c(0, max(xhist$counts)), 
+                            type= "n")
+                        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+                        for (lev in levels(dat2[[groupvarFactorName()]])) {
+                            x <- dat1[get(groupvarFactorName()) == lev, get(varname)]
+                            hist(x, col= colorScale.mod()[lev], freq= TRUE, add= TRUE)
+                        }
 
-                        # fig 6, finally, the scatterplot-- needs regular axes,. Now 5 
+                        # fig 5, finally, the scatterplot-- needs regular axes,
                         #  different margins
                         par(mar = c(2,2,.5,.5), xaxt="s", yaxt="s", bty="n")
+                        #par(mar = c(2,2,.5,.5), xaxt="s", yaxt="s", bty="l")
                         # this color allows traparency & overplotting-- useful if a lot of points
                         #plot(x, y , pch=19, col="#00000022", cex= pointsizeval())
 
@@ -1186,7 +1181,7 @@ shinyServer(function(input, output, session) {
                     if (is.null(dset.psgraphs())) return(NULL)
 
                     # use dat1 for plot 2
-                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(eval(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
+                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(get(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
                     my.xlim <- if(varIsContinuous()[varname]) {
                         range(dat1[[varname]])
                     } else NA
