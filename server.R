@@ -215,6 +215,12 @@ shinyServer(function(input, output, session) {
             }
         }
     })
+    groupvarFactorLevelsSorted <- reactive({
+        # for use in graphs
+        if (is.null(groupvarFactorName())) return(NULL)
+        tmp <- table(dset.orig()[[groupvarFactorName()]])
+        names(tmp)[order(tmp, decreasing= TRUE)]
+    })
 
     observe({
         # Add an ID variable so we can match obsns w/ the PS dataset
@@ -1100,77 +1106,110 @@ shinyServer(function(input, output, session) {
                     # save the old graphics settings-- they may be needed
                     def.par <- par(no.readonly = TRUE)
 
+                    # the matrix shows the layout of the plots:
                     zones <- matrix(c(
-                        0,4,0, 1,5,3, 0,2,0), ncol = 3, byrow = TRUE)
-                    layout(zones, widths=c(0.4, 4, 0.75), heights = c(#1,
-                        3,10,.75))
+                        0, 4, 0, 
+                        1, 5, 3, 
+                        0, 2, 0), 
+                        ncol = 3, byrow = TRUE)
+                    layout(zones, 
+                        widths  = c(0.4, 4, 0.75),
+                        heights = c(3, 10, .75))
 
+                    # for all plots: 
+                    #   drop the axis titles and omit boxes, set up margins
+                    par(xaxt="n", yaxt="n", bty="n", 
+                        mar = c(.3, 2, .3, 0) +.05) # b, l, t, r
+
+                    # fig 1 = Y axis label. 
+                    plot(x= 1, y= 1, type= "n", ylim= c(-1, 1), xlim= c(-1, 1))
+                    text(0, 0, paste("Logit PS"), cex= 1.5, srt= 90)
+
+                    # fig 2 = X axis label for main plot. 
+                    plot(x= 1, y= 1, type="n", ylim= c(-1, 1), xlim= c(-1, 1))
+                    text(0, 0, paste(varname), cex=1.5)
+
+                    # fig 3, right-side plot, needs different margins. 
+                    # no margin on the left
+                    par(mar = c(2, 0, 1, 1))
+                    par(xaxt="s")
+                    xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(get(varname)), 
+                        get(idvarName())]
+
+                    # TODO: clean this up
+                    xna.logitps <- na.omit(dset.psgraphs.plus()[xna.ids][, c(idvarName(), groupvarFactorName(), logitpsvarName()), with= FALSE])
+                    xna.logitps[, randx := runif(xna.logitps[, .N])]
+
+                    plot(xna.logitps[, randx], xna.logitps[[logitpsvarName()]], 
+                        xlim= 0:1, 
+                        ylim= my.ylim, 
+                        type= "n", axes= FALSE)
+                    axis(1, at= 0.5, labels= "Missing")
+                    #for (lev in levels(xna.logitps[[groupvarFactorName()]])) {
+                    # TODO: keep the above line for ref. May need intersect()
+                    for (lev in groupvarFactorLevelsSorted()) {
+                        x <- xna.logitps[get(groupvarFactorName()) == lev, randx]
+                        y <- xna.logitps[get(groupvarFactorName()) == lev, get(logitpsvarName())]
+                        points(x, y, 
+                            pch= 15,
+                            cex= pointsizeval(),
+                            col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()))
+                    }
+
+
+                    # fig 4, top plot. needs no margin on the bottom. 
+                    par(mar = c(0, 2, 1, 1))
+                    par(xaxt="n")
                     if (varIsContinuous()[varname]) {    
-                        # for all plots: 
-                        #   drop the axis titles and omit boxes, set up margins
-                        par(xaxt="n", yaxt="n", bty="n", 
-                            mar = c(.3, 2, .3, 0) +.05)
-
-                        # fig 1 = Y axis label. 
-                        plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
-                        text(0, 0, paste("Logit PS"), cex=1.5, srt=90)
-
-                        # fig 2 = X axis label. 
-                        plot(x=1, y=1, type="n", ylim=c(-1,1), xlim=c(-1,1))
-                        text(0, 0, paste(varname), cex=1.5)
-
-                        # fig 3, right-side plot, needs different margins. 
-                        # no margin on the left
-                        par(mar = c(2, 0, 1, 1))
-                        xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(get(varname)), get(idvarName())]
-
-                        # TODO: clean this up
-                        xna.logitps <- na.omit(dset.psgraphs.plus()[xna.ids][, c(idvarName(), groupvarFactorName(), logitpsvarName()), with= FALSE])
-                        xna.logitps[, randx := runif(xna.logitps[, .N])]
-
-                        plot(xna.logitps[, randx], xna.logitps[[logitpsvarName()]], xlim= 0:1, ylim= my.ylim, type= "n")
-                        for (lev in levels(xna.logitps[[groupvarFactorName()]])) {
-                            x <- xna.logitps[get(groupvarFactorName()) == lev, randx]
-                            y <- xna.logitps[get(groupvarFactorName()) == lev, get(logitpsvarName())]
-                            points(x, y, pch= 15,
-                                col= colorScale.mod()[lev])
-                        }
-
-                        # fig 4, top plot. needs no margin on the bottom. 
-                        par(mar = c(0, 2, 1, 1))
                         #barplot(xhist$counts, axes = FALSE, ylim = c(0, top), space = 0)
+                        # TODO: if it wouldn't take too long, I could figure out the top
+                        #    by getting the max over all levels. 
+                        # Then the histograms would take up more of the avail. space
+                        #   & I can just call plot on the histogram objects
                         xhist <- hist(dat1[[varname]], plot = FALSE)
                         plot(dat1[[varname]], runif(dat1[, .N]), 
                             ylim= c(0, max(xhist$counts)), 
                             type= "n")
                         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
-                        for (lev in levels(dat2[[groupvarFactorName()]])) {
+                        #for (lev in levels(dat2[[groupvarFactorName()]])) {
+                        for (lev in groupvarFactorLevelsSorted()) {
                             x <- dat1[get(groupvarFactorName()) == lev, get(varname)]
-                            hist(x, col= colorScale.mod()[lev], freq= TRUE, add= TRUE)
+                            hist(x, 
+                                col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
+                                freq   = TRUE, 
+                                border = NA,
+                                add    = TRUE
+                            )
                         }
-
-                        # fig 5, finally, the scatterplot-- needs regular axes,
-                        #  different margins
-                        par(mar = c(2,2,.5,.5), xaxt="s", yaxt="s", bty="n")
-                        #par(mar = c(2,2,.5,.5), xaxt="s", yaxt="s", bty="l")
-                        # this color allows traparency & overplotting-- useful if a lot of points
-                        #plot(x, y , pch=19, col="#00000022", cex= pointsizeval())
-
-                        plot(dat2[[varname]], dat2[[logitpsvarName()]] , xlim= my.xlim, type= "n")
-                        for (lev in levels(dat2[[groupvarFactorName()]])) {
-                            x <- dat2[get(groupvarFactorName()) == lev, get(varname)]
-                            y <- dat2[get(groupvarFactorName()) == lev, get(logitpsvarName())]
-                            points(x, y,
-                                col= colorScale.mod()[lev])
-                        }
-
-
                     } else {
-                            # do nothing yet
+                        plot(rnorm(100))
                     }
 
 
-                    # reset the graphics, if desired 
+                    # fig 5, finally, the main plot-- needs regular axes,
+                    #  different margins
+                    par(mar = c(2, 2, .5, .5), xaxt="s", yaxt="s", bty="n")
+
+                    if (varIsContinuous()[varname]) {    
+                        plot(dat2[[varname]], dat2[[logitpsvarName()]], 
+                            xlim= my.xlim, 
+                            type= "n"
+                        )
+                        #for (lev in levels(dat2[[groupvarFactorName()]])) {
+                        for (lev in groupvarFactorLevelsSorted()) {
+                            x <- dat2[get(groupvarFactorName()) == lev, get(varname)]
+                            y <- dat2[get(groupvarFactorName()) == lev, 
+                                get(logitpsvarName())]
+                            points(x, y,
+                                cex= pointsizeval(),
+                                col= adjustcolor(colorScale.mod()[lev], 
+                                    alpha.f= alphaval()))
+                        }
+                    } else {
+                        plot(rnorm(100))
+                    }
+
+                    # reset the graphics
                     par(def.par)
                 })
 
