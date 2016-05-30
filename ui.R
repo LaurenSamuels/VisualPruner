@@ -78,17 +78,16 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         fluidRow(
             h2("Estimated propensity score distributions"),
             uiOutput('psGraphsNotReady'),
-            column(12, 
-                h4("After brushing, points OUTSIDE the brushed area will be shown in rug plots on next tab.")
+            column(6,
+                plotOutput("psPlot",
+                    height= 300,
+                    width= '100%')
             ), # end column
             column(6,
-                uiOutput("psPlotui")
-            ), # end column
-            column(6,
-                uiOutput("logitpsPlotui")
-            ), # end column
-            checkboxInput('useProbScale', 
-                'Use probability-scale plot for brushing', FALSE)
+                plotOutput("logitpsPlot",
+                    height= 300,
+                    width= '100%')
+            ) # end column
         ) # end fluidRow 
     ), # end Specify panel
     tabPanel("Prune",
@@ -97,17 +96,12 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Variables to view and restrict:'),
                 uiOutput("chooseVarsToRestrict"),
                 tags$br(),
-                tags$br(),
                 h4('Preferences for graphs:'),
-                h5('Treat numeric variables as continuous if they have at least __ distinct values:'),
+                h5('View numeric variables as continuous if they have at least __ distinct values:'),
                 numericInput('numCont', 
                     NULL,
                     value= 10, min= 1,
                     width= '33%'),
-                #h5('Number of decimal places to show for covariates:'),
-                #numericInput('xDigits', 
-                #    NULL,
-                #    value= 2, min= 1, max= 10)
                 h5("Point/bar opacity ('alpha')"),
                 sliderInput('alphaSlider', NULL, 
                     min = 0.01, 
@@ -125,24 +119,29 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     width= '33%'
                     ),
                 actionButton('generalGraphUpdateButton', 
-                    HTML("(re-)Make graphs"))
-            ), # end column
-            column(width= 6,
+                    HTML("Update variable list and/or graph preferences")),
+                tags$br(),
+                tags$br(),
+                h4('After pruning:'),
                 actionButton('xgraphsUpdateButton', 
-                    HTML("Update covariate graphs")),
+                    HTML("Update covariate graphs to reflect pruning choices")),
                 tags$br(),
                 tags$br(),
                 actionButton('PSCalcUpdateButton', 
-                    HTML("Recalculate PS for pruned sample<br/>(will update all graphs)")),
+                    HTML("Recalculate PS for pruned sample<br/>(will also update all graphs)")),
                 textOutput('psFitProblemTextPostPruning'),
                 tags$head(tags$style(
-                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" )),
-                tags$br(),
+                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" ))
+            ), # end column
+            column(width= 6,
                 h4("Current sample size"),
                 tableOutput("pruneTable"),
                 tags$br(),
-                h4('Legend for all plots:'),
-                plotOutput("legendPlot", height= 100, width= '100%'),
+                h4('Propensity score distribution (repeated from last tab)'),
+                h5('Legend for this plot applies to all plots on page.'),
+                plotOutput("logitpsPlot2",
+                    height= 300,
+                    width= '100%'),
                 uiOutput('needPSText')
             ) # end column
         ), # end fluidRow 

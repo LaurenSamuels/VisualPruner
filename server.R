@@ -82,18 +82,16 @@ shinyServer(function(input, output, session) {
         if (input$useExampleData == 1 | is.null(datInfo$inFileInfo)) return(NULL)
         actionButton("changeUpFile", "Upload different file")
     })
-    
     observeEvent(input$changeUpFile, {
         datInfo$inFileInfo <- NULL
     })    
     
     
     output$chooseDatafile <- renderUI({
-        #if (input$useExampleData == 1) return(NULL)
         if (input$useExampleData == 1 |
                 (input$useExampleData == 0 & !is.null(datInfo$inFileInfo))) return(NULL)
         
-        # File input from example on shiny website
+        # File input from example on shiny website.
         # input$dataInfo will be NULL initially. 
         # After the user selects
         # and uploads a file, it will be a data frame with 'name',
@@ -145,7 +143,6 @@ shinyServer(function(input, output, session) {
                 )
             } else if (grepl("\\.rds\\>", datInfo$inFileInfo$name)){
                 # todo: add error handling. 
-                # Also: can it handle data.tables?
                 mydat <- as.data.table(readRDS(datInfo$inFileInfo$datapath))
             }    
         }
@@ -167,6 +164,7 @@ shinyServer(function(input, output, session) {
     psvarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the ps var in dset.psgraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
         if(is.null(dset.orig())) return (NULL)
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
@@ -179,6 +177,7 @@ shinyServer(function(input, output, session) {
     logitpsvarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the logit ps var in dset.psgraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
         if(is.null(dset.orig())) return (NULL)
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
@@ -192,11 +191,11 @@ shinyServer(function(input, output, session) {
     nonMissingIDs <- reactive({
         # These are the IDs of people who can be used for PS calculation
 
-        # TODO: this line used to return NULL. trying this way instead.
         if (is.null(varnamesFromRHS())) return(dset.orig()[[idvarName()]])
         
         if (input$completeCasesOnly == 1) {
-            na.omit(dset.orig()[, c(varnamesFromRHS(), idvarName()), with= FALSE])[[idvarName()]]
+            na.omit(dset.orig()[, c(varnamesFromRHS(), idvarName()), 
+                with= FALSE])[[idvarName()]]
         } else {
             dset.orig()[[idvarName()]]
         }
@@ -258,21 +257,6 @@ shinyServer(function(input, output, session) {
         dat <- as.data.table(dat)  
         setkeyv(dat, idvarName())
         dat
-    })    
-
-    observe({
-        # for bar plots, need to turn discrete numeric vars 
-        #   and character vars into factors. 
-        if (!is.null(varsToView())) {
-            for (varname in varsToView()) {
-                if (is.character(dset.orig()[[varname]]) | 
-                        (is.numeric(dset.orig()[[varname]]) & 
-                        !(varIsContinuous()[varname]))) {
-                    dset.orig()[, eval(varname) := 
-                        factor(dset.orig()[[varname]])]
-                }
-            }
-        }    
     })    
     
     # TODO: can I get rid of this and just use idsToKeepAfterPruning()?
@@ -620,32 +604,24 @@ shinyServer(function(input, output, session) {
     ############################################################
     ## Reactive text, etc. for PS graphs
     
-    useLogit <- reactive({
-        !(input$useProbScale)
-    })
-    
+    # TODO: not currently using these
     psbrushmin <- reactive({
-        if (is.null(dset.psgraphs()) |
-            identical(buttonvalues$lastActionRug, 'choosePlot')) return(NULL)
-        if (useLogit()) input$logitpsPlot_brush$xmin else input$psPlot_brush$xmin
+        if (is.null(dset.psgraphs()) ) return(NULL)
+        #if (useLogit()) input$logitpsPlot_brush$xmin else input$psPlot_brush$xmin
+        NULL
     })
     psbrushmax <- reactive({
-        if (is.null(dset.psgraphs()) |
-            identical(buttonvalues$lastActionRug, 'choosePlot')) return(NULL)
-        if (useLogit()) input$logitpsPlot_brush$xmax else input$psPlot_brush$xmax
-    })
-    scorename <- reactive({
-        #if (is.null(psvarName()) | is.null(logitpsvarName())) return(NULL)
-
-        ifelse(useLogit(), logitpsvarName(), psvarName())
+        if (is.null(dset.psgraphs()) ) return(NULL)
+        #if (useLogit()) input$logitpsPlot_brush$xmax else input$psPlot_brush$xmax
+        NULL
     })
     hasScoreOutside <- reactive({
         if (is.null(dset.psgraphs())) return(NULL)
 
         if (is.null(psbrushmin())) return(rep(FALSE, dset.psgraphs()[, .N]))
 
-        round(dset.psgraphs()[[scorename()]], psdig) < psbrushmin() |
-            round(dset.psgraphs()[[scorename()]], psdig) > psbrushmax()
+        round(dset.psgraphs()[[logitpsvarName()]], psdig) < psbrushmin() |
+            round(dset.psgraphs()[[logitpsvarName()]], psdig) > psbrushmax()
     })
     idsForRug <- reactive({
         if (is.null(hasScoreOutside())) return(NULL)
@@ -679,7 +655,7 @@ shinyServer(function(input, output, session) {
             c(groupvarname(), groupvarFactorName(), idvarName()))  
     })    
     output$chooseVarsToRestrict <- renderUI({
-        if (is.null(possVarsToRestrict())) return (NULL)
+        if (is.null(possVarsToRestrict())) return(NULL)
 
         selectizeInput('varsToRestrict', 
             NULL, 
@@ -694,11 +670,11 @@ shinyServer(function(input, output, session) {
     varsToView <- reactive({
         #dependency
         input$generalGraphUpdateButton
-        
-        # trying other dependencies, not working yet. 
-        varnamesFromRHS()
 
-        isolate(input$varsToRestrict)
+        #isolate(input$varsToRestrict)
+        # to cover switching between datasets
+        print(intersect(isolate(input$varsToRestrict), names(dset.orig())))
+        intersect(isolate(input$varsToRestrict), names(dset.orig()))
     })
     numvarsToView <- reactive({
         length(varsToView())    
@@ -714,6 +690,8 @@ shinyServer(function(input, output, session) {
     })
 
     varIsContinuous <- reactive({
+        #dependencies
+        input$generalGraphUpdateButton
         if (is.null(varsToView())) return(NULL)
         
         vnames <- varsToView()
@@ -724,7 +702,7 @@ shinyServer(function(input, output, session) {
             
             if (is.numeric(dset.orig()[[varname]]) & 
                 length(unique(dset.orig()[[varname]])) >= 
-                input$numCont) myvec[i] <- TRUE
+                isolate(input$numCont)) myvec[i] <- TRUE
         }
         names(myvec) <- vnames
         myvec
@@ -766,22 +744,6 @@ shinyServer(function(input, output, session) {
     observe({
         if (input$psTypedButton != 0 | input$completeCasesOnly %in% c(0,1)) {
             buttonvalues$lastActionX <- 'specify'
-        }
-    })
-
-    # and now one for the rug plots
-    buttonvalues$lastActionRug <- NULL
-    observe({
-        if (useLogit() | !useLogit()) {
-            buttonvalues$lastActionRug <- 'choosePlot'
-        }
-    })
-    observe({
-        if (!is.null(input$logitpsPlot_brush$xmin) | 
-            !is.null(input$psPlot_brush$xmin) | 
-            !is.null(input$logitpsPlot_brush$xmax) | 
-            !is.null(input$psPlot_brush$xmax)) { 
-            buttonvalues$lastActionRug <- 'brush'
         }
     })
 
@@ -901,109 +863,131 @@ shinyServer(function(input, output, session) {
     output$psPlot <- renderPlot({
         if (is.null(dset.psgraphs())) return(NULL)
         
-        p <- ggplot(data= dset.psgraphs(),
-            aes_string(x= psvarName())) +
-            geom_histogram(
-                alpha    = alphaval(), 
-                position = 'identity', 
-                bins     = 30,
-                aes_string(fill= groupvarFactorName())) +
-            theme_bw() +
-            scale_fill_manual(groupvarname(), values= colorScale.mod()) +
-            xlab(paste0("PS (n= ", nrow(dset.psgraphs()), ")")) +
-            theme(legend.position= "right")
-
-        # it is very important to have just p here, not print(p)!
-        p 
+        histlist <- vector("list", length(groupvarFactorLevelsSorted()))
+        names(histlist) <- groupvarFactorLevelsSorted() 
+        for (lev in groupvarFactorLevelsSorted()) {
+            x <- dset.psgraphs()[get(groupvarFactorName()) == lev, get(psvarName())]
+            if (length(x) > 0) {
+                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
+            } else {
+                histlist[[lev]] <- NULL
+            }
+        }
+        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
+        plot(dset.psgraphs()[[psvarName()]], runif(dset.psgraphs()[, .N]), 
+            ylim= c(0, max(histcounts)), 
+            xlab= "PS",
+            ylab= "Count",
+            bty= "n",
+            type= "n"
+        )
+        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+        for (lev in groupvarFactorLevelsSorted()) {
+            if (!is.null(histlist[[lev]])) {
+                plot(histlist[[lev]], 
+                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
+                    freq   = TRUE, 
+                    border = NA,
+                    add    = TRUE
+                )
+            }
+        }
     })    
     
-    output$psPlotui <- renderUI({
-        if (is.null(dset.psgraphs())) return(NULL)
-
-        plotOutput("psPlot", 
-            height = 300,
-            brush  = if (useLogit() == FALSE) {
-                brushOpts(
-                    id = "psPlot_brush",
-                    delay = 300,
-                    delayType = "debounce",
-                    direction = "x",
-                    resetOnNew = TRUE
-                )
-            } else NULL
-        )
-    })
     
     output$logitpsPlot <- renderPlot({
         if (is.null(dset.psgraphs())) return(NULL)
 
-        p <- ggplot(data= dset.psgraphs(),
-            aes_string(x= logitpsvarName())) +
-            geom_histogram(
-                alpha    = alphaval(), 
-                position = 'identity', 
-                bins     = 30,
-                aes_string(fill= groupvarFactorName())) +
-            theme_bw() +
-            scale_fill_manual(groupvarname(), values= colorScale.mod()) +
-            xlab(paste0("Logit PS (n= ", nrow(dset.psgraphs()), ")")) +
-            theme(legend.position= "none")
-            
-        # it is very important to have just p here, not print(p)!
-        p 
+        histlist <- vector("list", length(groupvarFactorLevelsSorted()))
+        names(histlist) <- groupvarFactorLevelsSorted() 
+        for (lev in groupvarFactorLevelsSorted()) {
+            x <- dset.psgraphs()[get(groupvarFactorName()) == lev, get(logitpsvarName())]
+            if (length(x) > 0) {
+                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
+            } else {
+                histlist[[lev]] <- NULL
+            }
+        }
+        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
+        plot(dset.psgraphs()[[logitpsvarName()]], runif(dset.psgraphs()[, .N]), 
+            ylim= c(0, max(histcounts)), 
+            xlab= "Logit PS",
+            ylab= "Count",
+            bty= "n",
+            type= "n"
+        )
+        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+        for (lev in groupvarFactorLevelsSorted()) {
+            if (!is.null(histlist[[lev]])) {
+                plot(histlist[[lev]], 
+                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
+                    freq   = TRUE, 
+                    border = NA,
+                    add    = TRUE
+                )
+            }
+        }
+        legend(
+            "topleft",
+            inset= .05,
+            cex = 1,
+            title= NULL,
+            groupvarFactorLevelsSorted(),
+            horiz = FALSE,
+            bty= "n",
+            border= NA,
+            fill = do.call(c, lapply(groupvarFactorLevelsSorted(), function(x)
+                adjustcolor(colorScale.mod()[x], alpha.f= alphaval())))
+        )
     })    
-    
-    output$logitpsPlotui <- renderUI({
+    output$logitpsPlot2 <- renderPlot({
+        # exact duplicate of the other one; can't call the same plot twice in the UI 
         if (is.null(dset.psgraphs())) return(NULL)
 
-        plotOutput("logitpsPlot", 
-            height = 300,
-            brush  = if (useLogit() == TRUE) {
-                brushOpts(
-                    id = "logitpsPlot_brush",
-                    delay = 300,
-                    delayType = "debounce",
-                    direction = "x",
-                    resetOnNew = TRUE
-                )
-            } else NULL
+        histlist <- vector("list", length(groupvarFactorLevelsSorted()))
+        names(histlist) <- groupvarFactorLevelsSorted() 
+        for (lev in groupvarFactorLevelsSorted()) {
+            x <- dset.psgraphs()[get(groupvarFactorName()) == lev, get(logitpsvarName())]
+            if (length(x) > 0) {
+                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
+            } else {
+                histlist[[lev]] <- NULL
+            }
+        }
+        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
+        plot(dset.psgraphs()[[logitpsvarName()]], runif(dset.psgraphs()[, .N]), 
+            ylim= c(0, max(histcounts)), 
+            xlab= "Logit PS",
+            ylab= "Count",
+            bty= "n",
+            type= "n"
         )
-    })
-    #############################################################
-
-    # plot just the legend, 
-    # from http://stackoverflow.com/questions/12539348/ggplot-separate-legend-and-plot    
-    output$legendPlot <- renderPlot({
-        if (is.null(dset.orig())) return(NULL)
-        if (is.null(idsToKeepAfterPruning())) return(NULL)
-        if (is.null(groupvarFactorName())) return(NULL)
-        #if (!(groupvarFactorName() %in% names(dset.orig()))) return(NULL)
-
-        p <- ggplot(data= dset.orig()[idsToKeepAfterPruning()],
-            mapping= aes_string(
-                x      = idvarName(),
-                fill   = groupvarFactorName()
-            ), 
-            alpha= alphaval()) +
-            # not a real plot
-            geom_histogram(bins= 30) +
-            scale_fill_manual(groupvarname(), 
-                values= colorScale.mod()) +
-                theme(
-                    legend.title = element_text(size = 16),
-                    legend.text  = element_text(size = 12),
-                    legend.key.width  = unit(1, "cm"),
-                    legend.key.height = unit(1, "cm")
+        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+        for (lev in groupvarFactorLevelsSorted()) {
+            if (!is.null(histlist[[lev]])) {
+                plot(histlist[[lev]], 
+                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
+                    freq   = TRUE, 
+                    border = NA,
+                    add    = TRUE
                 )
-        
-        tmp <- ggplot_gtable(ggplot_build(p))
-        leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
-        my.legend <- tmp$grobs[[leg]]
-
-        grid.arrange(my.legend, padding= 0)
-        #my.legend
-    })
-
+            }
+        }
+        legend(
+            "topleft",
+            inset= .05,
+            cex = 1,
+            title= NULL,
+            groupvarFactorLevelsSorted(),
+            horiz = FALSE,
+            bty= "n",
+            border= NA,
+            fill = do.call(c, lapply(groupvarFactorLevelsSorted(), function(x)
+                adjustcolor(colorScale.mod()[x], alpha.f= alphaval())))
+        )
+    })    
+    
+    #############################################################
 
     # modified from https://gist.github.com/wch/5436415/, with
     # help from a SO post I forgot to get the URL for
@@ -1029,62 +1013,6 @@ shinyServer(function(input, output, session) {
                 keepNAInputName <- paste0("keepNAInput", my_i)
                 naTableName     <- paste0("naTable", my_i)
      
-                # Call renderPlot for each selected variable. 
-                #output[[plotname]] <- renderPlot({
-                #    p <- ggplot(
-                #        data= dset.orig()[idsToKeepAfterPruning()][!is.na(get(varname)), ],
-                #        mapping= aes_string(
-                #            x      = varname,
-                #            fill   = groupvarFactorName(),
-                #            colour = groupvarFactorName()
-                #        )) +
-                #        theme_bw() +
-                #        scale_fill_manual(groupvarname(), 
-                #            values= colorScale.mod(),
-                #            guide= FALSE) +
-                #        scale_colour_manual(groupvarname(), 
-                #            values= colorScale.mod(), 
-                #            guide= FALSE)
-                #    
-                #    # Histogram or bar chart
-                #    if (varIsContinuous()[varname]) {    
-                #        p <- p + geom_histogram(
-                #            alpha    = alphaval(), 
-                #            position = 'identity',
-                #            bins     = 30) 
-                #    } else {
-                #        p <- p + geom_bar(
-                #            alpha    = alphaval(), 
-                #            position = position_dodge()) +
-                #            theme(axis.text.x = element_text(angle = 45,
-                #                hjust = 0.5, vjust = 0.5))
-                #    }    
-                #    
-                #    # legend
-                #    #if (my_i == 1) {
-                #    #    p <- p + theme(legend.position= "top")
-                #    #} else {
-                #    #    p <- p + theme(legend.position= "none")
-                #    #}  
-                #    
-                #    # add the rug plots
-                #    if (!is.null(idsForRug())) { 
-                #        if (varIsContinuous()[varname]) {    
-                #            p <- p + geom_rug(
-                #                data= dset.orig()[idsForRug()][!is.na(get(varname)), ],  
-                #                # keep aes() from above
-                #                position = 'identity',
-                #                sides= "b") 
-                #        } else {
-                #            # todo: keep working on this.
-                #            # see http://stackoverflow.com/questions/30287334/how-to-add-marginal-rugs-above-bars-of-a-bar-chart-with-ggplot2
-                #        }
-                #    }    
-                #    # just p here!  not print(p)!
-                #    p
-                #}) # end renderPlot
-
-                # trying to redo this in base graphics
                 output[[plot2name]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
@@ -1092,6 +1020,14 @@ shinyServer(function(input, output, session) {
                     datx <- dset.orig()[idsToKeepAfterPruning()][, 
                         c(idvarName(), groupvarFactorName(), varname), 
                         with= FALSE]
+
+                    # convert character & discrete numeric to factor
+                    if (is.character(datx[[varname]]) | 
+                            (is.numeric(datx[[varname]]) & 
+                            !(varIsContinuous()[varname]))) {
+                        datx[, eval(varname) := 
+                            factor(datx[[varname]])]
+                    }
 
                     # use datx.nona for marginal histogram/barchart
                     datx.nona <- na.omit(datx)
@@ -1126,7 +1062,9 @@ shinyServer(function(input, output, session) {
                         widths  = c(0.45, 4, 0.75),
                         heights = c(3, 10, 1)
                     )
-                    bottomMargin <- if (varIsContinuous()[varname]) 2 else 8
+                    bottomMargin <- if (varIsContinuous()[varname]) 2 else {
+                        max(min(max(nchar(levels(datx[[varname]])))[1] / 2, 8), 2)
+                    }
 
                     # for all plots: 
                     #   drop the axis titles and omit boxes, set up margins
@@ -1162,7 +1100,7 @@ shinyServer(function(input, output, session) {
                         type= "n", axes= FALSE)
                     axis(1, at= 0.5, labels= "Missing")
 
-                    #for (lev in levels(xna.logitps[[groupvarFactorName()]])) {
+                    #for (lev in levels(xna.logitps[[groupvarFactorName()]])) {}
                     # TODO: keep the above line for ref. May need intersect()
                     for (lev in groupvarFactorLevelsSorted()) {
                         x <- datxps.xna[get(groupvarFactorName()) == lev, randx]
@@ -1244,13 +1182,6 @@ shinyServer(function(input, output, session) {
                                 )
                             }
                         }
-                        
-                        
-                        #biggestcell <- max(xtbl)[1]
-                        #bar.colors <- do.call(c, lapply(rownames(xtbl),
-                        #    function(lev) adjustcolor(colorScale.mod()[lev], alpha.f= alphaval())))
-                        #barplot(as.matrix(xtbl), beside= TRUE, col= bar.colors,
-                        #    border= NA)
                     }
                     ###############################################################
 
@@ -1305,111 +1236,8 @@ shinyServer(function(input, output, session) {
 
                     # reset the graphics
                     par(def.par)
-                })
+                }) # end renderPlot
 
-                ##############################################
-                # Old (current) ggplot plots
-                # Call renderPlot again for each selected variable. 
-                output[[plot2nameOLD]] <- renderPlot({
-                    if (is.null(dset.psgraphs())) return(NULL)
-
-                    # use dat1 for plot 2
-                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(get(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
-                    my.xlim <- if(varIsContinuous()[varname]) {
-                        range(dat1[[varname]])
-                    } else NA
-
-                    # use dat2 for plot 1...
-                    # For dat2 we need a PS, which might not have
-                    #   been calculated for everyone
-                    dat2 <- na.omit(dat1[dset.psgraphs.plus()])
-                    # preserve any levels that might have been lost
-                    if(is.factor(dat1[[varname]])) {
-                        my.levels <- levels(dat1[[varname]])
-                        dat2[, eval(varname) := factor(get(varname),
-                            levels= my.levels)]
-                    }
-
-                    p <- ggplot(
-                        data= dat2,
-                        mapping= aes_string(
-                            x = varname,
-                            y = logitpsvarName(),
-                            colour = groupvarFactorName()#,
-                            #alpha  = 
-                        )) +
-                        theme_bw() +
-                        scale_colour_manual(groupvarname(), 
-                            values= colorScale.mod(), guide= FALSE) +
-                        scale_fill_manual(groupvarname(), 
-                            values= colorScale.mod(), guide= FALSE) +
-                        theme(
-                            plot.margin=unit(c(0,0,0,0),"points")
-                        ) +
-                        xlab(varname) +
-                        ylab("Logit PS") 
-                    
-                    p2 <- ggplot(
-                        data= dat1,
-                        mapping= aes_string(
-                            x = varname,
-                            fill = groupvarFactorName()
-                        )) +
-                        scale_fill_manual(groupvarname(), 
-                            values= colorScale.mod(), guide= FALSE) +
-                        theme_bw() +
-                        # t,r,b,l
-                        theme0(plot.margin = unit(c(1,0,0,2.2), "lines")) 
-
-
-                    # Scatterplot
-                    if (varIsContinuous()[varname]) {    
-                        # from http://stackoverflow.com/questions/17370460/scatterplot-with-alpha-transparent-histograms-in-r?lq=1
-                        p <- p + 
-                            geom_point(
-                                alpha= alphaval(), 
-                                size = pointsizeval()
-                            )  +
-                            xlim(my.xlim)
-
-                        p2 <- p2 + 
-                            #geom_density(alpha= 0.5)  
-                            geom_histogram(
-                                alpha    = alphaval(), 
-                                position = 'identity',
-                                bins     = 30
-                            ) +
-                            xlim(my.xlim)
-                    } else {
-                        p <- p + 
-                            geom_jitter(
-                                width= 0.3,
-                                height= 0,
-                                alpha= alphaval(), 
-                                size = pointsizeval()
-                            ) +
-                            theme(axis.text.x = element_text(angle = 45,
-                                hjust = 1, vjust = 1))
-
-                        p2 <- p2 +
-                            geom_bar(
-                            alpha    = alphaval(), 
-                            position = position_dodge())
-                    }    
-                    
-                    # legend
-                    #if (my_i == 1) {
-                    #    p <- p + theme(legend.position= "bottom")
-                    #} else {
-                    #    p <- p + theme(legend.position= "none")
-                    #}  
-                    
-                    grid.arrange(
-                        arrangeGrob(p2, ncol= 1),
-                        arrangeGrob(p,  ncol= 1),
-                        heights=c(1,3)
-                    )
-                }) # end renderPlot for second plot
 
                 # Create input function for each variable
                 output[[prunername]] <- renderUI({
@@ -1472,6 +1300,7 @@ shinyServer(function(input, output, session) {
     
     # Now put them all together
     output$univariatePlotsAndInputs <- renderUI({
+        if (input$generalGraphUpdateButton == 0) return(NULL)
         if (is.null(varsToView())) return(NULL)
         
         plot_and_input_list <- vector("list", numvarsToView())
@@ -1488,17 +1317,8 @@ shinyServer(function(input, output, session) {
                 fluidRow(
                     tags$hr(),
                     h4(paste0("Variable: ", varname)),
-                    #column(4, 
-                    #    plotOutput(plotname, 
-                    #        # first plot taller to accomodate legend
-                    #        height = ifelse(i == 1, 320, 280), 
-                    #        width  = 400#,
-                    #    ) # end plotOutput   
-                    #), # end column
                     column(width= 5, offset= 1, 
                         plotOutput(plot2name, 
-                            # first plot taller to accomodate legend
-                            #height = ifelse(i == 1, 320, 280), 
                             height= 300,
                             width  = "100%"#,
                         ) # end plotOutput   

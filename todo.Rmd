@@ -24,9 +24,13 @@ ALSO: before PS calc, need processing to get rid of redundant (collinear) missin
 
 * Come up w/ a plot alternative for v large datasets (too many points).
 
-* Consider switching to base graphics to speed things up
+* For discrete vars, try angling axis labels
 
-* For barplots, put the labels at an angle, or maybe even switch to horizontal/dotplots? I have now angled the labels; need to check w/ dataset w/ long level names
+* Try bigger font size on x-axis
+
+* Can we get higher res on the graphs, esp. the text?
+
+* Look into the warnings: graphical parameter "type" is obsolete
 
 * For the histograms & bar charts, consider leaving the orig. histogram there as a shell (would mean specifying the breaks in advance) 
 
