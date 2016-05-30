@@ -1118,32 +1118,35 @@ shinyServer(function(input, output, session) {
                         0, 2, 0), 
                         ncol = 3, byrow = TRUE)
                     layout(zones, 
-                        widths  = c(0.4, 4, 0.75),
-                        heights = c(3, 10, .75))
+                        widths  = c(0.45, 4, 0.75),
+                        heights = c(3, 10, 1)
+                    )
+                    bottomMargin <- if (varIsContinuous()[varname]) 2 else 8
 
                     # for all plots: 
                     #   drop the axis titles and omit boxes, set up margins
-                    par(xaxt="n", yaxt="n", bty="n", 
-                        mar = c(.3, 2, .3, 0) +.05) # b, l, t, r
+                    par(xaxt="n", 
+                        yaxt="n", 
+                        ann= FALSE,
+                        bty="n"
+                        ) 
 
                     # fig 1 = Y axis label. 
+                    par(mar = c(bottomMargin - 1.7, 2, .3, 0) +.05) # b, l, t, r
                     plot(x= 1, y= 1, type= "n", ylim= c(-1, 1), xlim= c(-1, 1))
                     text(0, 0, paste("Logit PS"), cex= 1.5, srt= 90)
 
                     # fig 2 = X axis label for main plot. 
+                    par(mar = c(.3, 2, .3, 0) +.05) # b, l, t, r
                     plot(x= 1, y= 1, type="n", ylim= c(-1, 1), xlim= c(-1, 1))
                     text(0, 0, paste(varname), cex=1.5)
 
                     ###############################################################
                     # fig 3, right-side plot, needs different margins. 
                     # no margin on the left
-                    par(mar = c(2, 0, 1, 1))
+                    par(mar = c(bottomMargin, 0, 0.65, 1))
                     par(xaxt="s")
-                    #xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(get(varname)), 
-                    #    get(idvarName())]
 
-                    # TODO: clean this up
-                    #xna.logitps <- na.omit(dset.psgraphs.plus()[xna.ids][, c(idvarName(), groupvarFactorName(), logitpsvarName()), with= FALSE])
                     datxps.xna <- datxps[is.na(get(varname)), ]
                     datxps.xna[, randx := runif(datxps.xna[, .N])]
 
@@ -1153,11 +1156,10 @@ shinyServer(function(input, output, session) {
                         ylim= my.ylim, 
                         type= "n", axes= FALSE)
                     axis(1, at= 0.5, labels= "Missing")
+
                     #for (lev in levels(xna.logitps[[groupvarFactorName()]])) {
                     # TODO: keep the above line for ref. May need intersect()
                     for (lev in groupvarFactorLevelsSorted()) {
-                        #x <- xna.logitps[get(groupvarFactorName()) == lev, randx]
-                        #y <- xna.logitps[get(groupvarFactorName()) == lev, get(logitpsvarName())]
                         x <- datxps.xna[get(groupvarFactorName()) == lev, randx]
                         y <- datxps.xna[get(groupvarFactorName()) == lev, get(logitpsvarName())]
                         points(x, y, 
@@ -1170,7 +1172,7 @@ shinyServer(function(input, output, session) {
 
                     ###############################################################
                     # fig 4, top plot. needs no margin on the bottom. 
-                    par(mar = c(0, 2, 1, 1))
+                    par(mar = c(0, 2, 1, .65))
                     par(xaxt="n")
                     if (varIsContinuous()[varname]) {    
                         # first make all histograms but do not plot,
@@ -1185,7 +1187,7 @@ shinyServer(function(input, output, session) {
                                 histlist[[lev]] <- NULL
                             }
                         }
-                        histcounts <- do.call(c, sapply(histlist, function(hl) hl$counts))
+                        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
                         plot(datx.nona[[varname]], runif(datx.nona[, .N]), 
                             ylim= c(0, max(histcounts)), 
                             type= "n"
@@ -1219,8 +1221,9 @@ shinyServer(function(input, output, session) {
                     ###############################################################
                     # fig 5, finally, the main plot-- needs regular axes,
                     #  different margins
-                    par(mar = c(2, 2, .5, .5), xaxt="s", yaxt="s", bty="n")
 
+                    par(mar = c(bottomMargin, 2, .5, .5), 
+                        xaxt="s", yaxt="s", bty="n")
                     if (varIsContinuous()[varname]) {    
                         plot(datxps.nona[[varname]], datxps.nona[[logitpsvarName()]], 
                             xlim= my.xlim, 
@@ -1236,9 +1239,24 @@ shinyServer(function(input, output, session) {
                                     alpha.f= alphaval()))
                         }
                     } else {
+                        par(las= 2) #TODO: try to angle instead
+
                         # first: set the x-axis to match the plot above
-                        stripchart(runif(datx.nona[, .N]) ~ datx.nona[[varname]], 
-                            ylim= my.ylim, type= "n", vertical= TRUE)
+                        my.at.orig <- seq_along(levels(datx.nona[[varname]]))
+                        num.levs <- length(groupvarFactorLevelsSorted())
+                        my.jitter <- min(0.1, 1 / length(my.at.orig))
+                        my.at.adds <- 2 * my.jitter * (1:num.levs)
+                        #shift so centered at 0
+                        my.at.adds <- my.at.adds - mean(my.at.adds)
+                        names(my.at.adds) <- groupvarFactorLevelsSorted()
+                        stripchart(
+                            as.formula(paste0(idvarName(),  "~", varname)),
+                            data= datx.nona,
+                            xlim= c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
+                            ylim= my.ylim, 
+                            at = my.at.orig,
+                            type= "n", vertical= TRUE)
+
                         for (lev in groupvarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
                             y <- datxps.nona[get(groupvarFactorName()) == lev, 
@@ -1247,6 +1265,8 @@ shinyServer(function(input, output, session) {
                                 vertical= TRUE,
                                 add= TRUE,
                                 method= "jitter",
+                                jitter= my.jitter,
+                                at = my.at.orig + my.at.adds[lev],
                                 cex= pointsizeval(),
                                 col= adjustcolor(colorScale.mod()[lev], 
                                     alpha.f= alphaval()))
