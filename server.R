@@ -1083,23 +1083,28 @@ shinyServer(function(input, output, session) {
                 output[[plot2name]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
-                    # use dat1 for marginal histogram/barchart
-                    dat1 <- na.omit(dset.orig()[idsToKeepAfterPruning()][!is.na(get(varname)), ][, c(idvarName(), groupvarFactorName(), varname), with= FALSE])
+                    # core dataset
+                    datx <- dset.orig()[idsToKeepAfterPruning()][, 
+                        c(idvarName(), groupvarFactorName(), varname), 
+                        with= FALSE]
+
+                    # use datx.nona for marginal histogram/barchart
+                    datx.nona <- na.omit(datx)
                     my.xlim <- if(varIsContinuous()[varname]) {
-                        range(dat1[[varname]])
+                        range(datx.nona[[varname]])
                     } else NA
 
-                    # use dat2 for plot 1...
-                    # For dat2 we need a PS, which might not have
-                    #   been calculated for everyone
-                    dat2 <- na.omit(dat1[dset.psgraphs.plus()])
+                    datxps <- datx[dset.psgraphs.plus()]
+                    my.ylim <- range(datxps[[logitpsvarName()]])
+
+                    # use datxps.nona for central scatterplot/stripchart
+                    datxps.nona <- na.omit(datxps)
                     # preserve any levels that might have been lost
-                    if(is.factor(dat1[[varname]])) {
-                        my.levels <- levels(dat1[[varname]])
-                        dat2[, eval(varname) := factor(get(varname),
+                    if(is.factor(datx[[varname]])) {
+                        my.levels <- levels(datx[[varname]])
+                        datxps.nona[, eval(varname) := factor(get(varname),
                             levels= my.levels)]
                     }
-                    my.ylim <- range(dat2[[logitpsvarName()]])
 
                     # adapted from http://www.r-bloggers.com/example-10-3-enhanced-scatterplot-with-marginal-histograms/
 
@@ -1129,18 +1134,21 @@ shinyServer(function(input, output, session) {
                     plot(x= 1, y= 1, type="n", ylim= c(-1, 1), xlim= c(-1, 1))
                     text(0, 0, paste(varname), cex=1.5)
 
+                    ###############################################################
                     # fig 3, right-side plot, needs different margins. 
                     # no margin on the left
                     par(mar = c(2, 0, 1, 1))
                     par(xaxt="s")
-                    xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(get(varname)), 
-                        get(idvarName())]
+                    #xna.ids <- dset.orig()[idsToKeepAfterPruning()][is.na(get(varname)), 
+                    #    get(idvarName())]
 
                     # TODO: clean this up
-                    xna.logitps <- na.omit(dset.psgraphs.plus()[xna.ids][, c(idvarName(), groupvarFactorName(), logitpsvarName()), with= FALSE])
-                    xna.logitps[, randx := runif(xna.logitps[, .N])]
+                    #xna.logitps <- na.omit(dset.psgraphs.plus()[xna.ids][, c(idvarName(), groupvarFactorName(), logitpsvarName()), with= FALSE])
+                    datxps.xna <- datxps[is.na(get(varname)), ]
+                    datxps.xna[, randx := runif(datxps.xna[, .N])]
 
-                    plot(xna.logitps[, randx], xna.logitps[[logitpsvarName()]], 
+                    #plot(xna.logitps[, randx], xna.logitps[[logitpsvarName()]], 
+                    plot(datxps.xna[, randx], datxps.xna[[logitpsvarName()]], 
                         xlim= 0:1, 
                         ylim= my.ylim, 
                         type= "n", axes= FALSE)
@@ -1148,57 +1156,79 @@ shinyServer(function(input, output, session) {
                     #for (lev in levels(xna.logitps[[groupvarFactorName()]])) {
                     # TODO: keep the above line for ref. May need intersect()
                     for (lev in groupvarFactorLevelsSorted()) {
-                        x <- xna.logitps[get(groupvarFactorName()) == lev, randx]
-                        y <- xna.logitps[get(groupvarFactorName()) == lev, get(logitpsvarName())]
+                        #x <- xna.logitps[get(groupvarFactorName()) == lev, randx]
+                        #y <- xna.logitps[get(groupvarFactorName()) == lev, get(logitpsvarName())]
+                        x <- datxps.xna[get(groupvarFactorName()) == lev, randx]
+                        y <- datxps.xna[get(groupvarFactorName()) == lev, get(logitpsvarName())]
                         points(x, y, 
                             pch= 15,
                             cex= pointsizeval(),
                             col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()))
                     }
+                    ###############################################################
 
 
+                    ###############################################################
                     # fig 4, top plot. needs no margin on the bottom. 
                     par(mar = c(0, 2, 1, 1))
                     par(xaxt="n")
                     if (varIsContinuous()[varname]) {    
-                        #barplot(xhist$counts, axes = FALSE, ylim = c(0, top), space = 0)
-                        # TODO: if it wouldn't take too long, I could figure out the top
-                        #    by getting the max over all levels. 
-                        # Then the histograms would take up more of the avail. space
-                        #   & I can just call plot on the histogram objects
-                        xhist <- hist(dat1[[varname]], plot = FALSE)
-                        plot(dat1[[varname]], runif(dat1[, .N]), 
-                            ylim= c(0, max(xhist$counts)), 
-                            type= "n")
-                        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
-                        #for (lev in levels(dat2[[groupvarFactorName()]])) {
+                        # first make all histograms but do not plot,
+                        #    in order to get ylim
+                        histlist <- vector("list", length(groupvarFactorLevelsSorted()))
+                        names(histlist) <- groupvarFactorLevelsSorted() 
                         for (lev in groupvarFactorLevelsSorted()) {
-                            x <- dat1[get(groupvarFactorName()) == lev, get(varname)]
-                            hist(x, 
-                                col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
-                                freq   = TRUE, 
-                                border = NA,
-                                add    = TRUE
-                            )
+                            x <- datx.nona[get(groupvarFactorName()) == lev, get(varname)]
+                            if (length(x) > 0) {
+                                histlist[[lev]] <- hist(x, plot= FALSE)
+                            } else {
+                                histlist[[lev]] <- NULL
+                            }
+                        }
+                        histcounts <- do.call(c, sapply(histlist, function(hl) hl$counts))
+                        plot(datx.nona[[varname]], runif(datx.nona[, .N]), 
+                            ylim= c(0, max(histcounts)), 
+                            type= "n"
+                        )
+                        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+                        for (lev in groupvarFactorLevelsSorted()) {
+                            if (!is.null(histlist[[lev]])) {
+                                plot(histlist[[lev]], 
+                                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
+                                    freq   = TRUE, 
+                                    border = NA,
+                                    add    = TRUE
+                                )
+                            }
                         }
                     } else {
-                        plot(rnorm(100))
+                        # https://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/
+                        xtbl <- table(
+                            datx.nona[[groupvarFactorName()]],
+                            datx.nona[[varname]] 
+                        )
+                        biggestcell <- max(xtbl)[1]
+                        bar.colors <- do.call(c, lapply(rownames(xtbl),
+                            function(lev) adjustcolor(colorScale.mod()[lev], alpha.f= alphaval())))
+                        barplot(as.matrix(xtbl), beside= TRUE, col= bar.colors,
+                            border= NA)
                     }
+                    ###############################################################
 
 
+                    ###############################################################
                     # fig 5, finally, the main plot-- needs regular axes,
                     #  different margins
                     par(mar = c(2, 2, .5, .5), xaxt="s", yaxt="s", bty="n")
 
                     if (varIsContinuous()[varname]) {    
-                        plot(dat2[[varname]], dat2[[logitpsvarName()]], 
+                        plot(datxps.nona[[varname]], datxps.nona[[logitpsvarName()]], 
                             xlim= my.xlim, 
                             type= "n"
                         )
-                        #for (lev in levels(dat2[[groupvarFactorName()]])) {
                         for (lev in groupvarFactorLevelsSorted()) {
-                            x <- dat2[get(groupvarFactorName()) == lev, get(varname)]
-                            y <- dat2[get(groupvarFactorName()) == lev, 
+                            x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
+                            y <- datxps.nona[get(groupvarFactorName()) == lev, 
                                 get(logitpsvarName())]
                             points(x, y,
                                 cex= pointsizeval(),
@@ -1206,8 +1236,23 @@ shinyServer(function(input, output, session) {
                                     alpha.f= alphaval()))
                         }
                     } else {
-                        plot(rnorm(100))
+                        # first: set the x-axis to match the plot above
+                        stripchart(runif(datx.nona[, .N]) ~ datx.nona[[varname]], 
+                            ylim= my.ylim, type= "n", vertical= TRUE)
+                        for (lev in groupvarFactorLevelsSorted()) {
+                            x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
+                            y <- datxps.nona[get(groupvarFactorName()) == lev, 
+                                get(logitpsvarName())]
+                            stripchart(y ~ x,
+                                vertical= TRUE,
+                                add= TRUE,
+                                method= "jitter",
+                                cex= pointsizeval(),
+                                col= adjustcolor(colorScale.mod()[lev], 
+                                    alpha.f= alphaval()))
+                        }
                     }
+                    ###############################################################
 
                     # reset the graphics
                     par(def.par)
