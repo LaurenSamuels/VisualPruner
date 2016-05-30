@@ -1204,16 +1204,48 @@ shinyServer(function(input, output, session) {
                             }
                         }
                     } else {
+                        # first: we will use this x-axis below also
+                        my.at.orig <- seq_along(levels(datx.nona[[varname]]))
+                        names(my.at.orig) <- levels(datx.nona[[varname]])
+                        num.levs <- length(groupvarFactorLevelsSorted())
+                        my.jitter <- min(0.1, 1 / length(my.at.orig))
+                        my.at.adds <- 2 * my.jitter * (1:num.levs)
+                        #shift so centered at 0
+                        my.at.adds <- my.at.adds - mean(my.at.adds)
+                        names(my.at.adds) <- groupvarFactorLevelsSorted()
+                        
                         # https://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/
                         xtbl <- table(
                             datx.nona[[groupvarFactorName()]],
                             datx.nona[[varname]] 
                         )
-                        biggestcell <- max(xtbl)[1]
-                        bar.colors <- do.call(c, lapply(rownames(xtbl),
-                            function(lev) adjustcolor(colorScale.mod()[lev], alpha.f= alphaval())))
-                        barplot(as.matrix(xtbl), beside= TRUE, col= bar.colors,
-                            border= NA)
+                        
+                        plot(1, 0,
+                            xlim= c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
+                            ylim= c(0, max(xtbl)), 
+                            type= "n")
+
+                        for (grouplev in groupvarFactorLevelsSorted()) {
+                            for (varlev in levels(datx.nona[[varname]])) {
+                                rect(
+                                    xleft= my.at.orig[varlev] + my.at.adds[grouplev] - my.jitter,
+                                    ybottom= 0,
+                                    xright= my.at.orig[varlev] + my.at.adds[grouplev] + my.jitter,
+                                    ytop= xtbl[grouplev, varlev],
+                                    density= NA,
+                                    border= NA,
+                                    col= adjustcolor(colorScale.mod()[grouplev], 
+                                        alpha.f= alphaval())
+                                )
+                            }
+                        }
+                        
+                        
+                        #biggestcell <- max(xtbl)[1]
+                        #bar.colors <- do.call(c, lapply(rownames(xtbl),
+                        #    function(lev) adjustcolor(colorScale.mod()[lev], alpha.f= alphaval())))
+                        #barplot(as.matrix(xtbl), beside= TRUE, col= bar.colors,
+                        #    border= NA)
                     }
                     ###############################################################
 
@@ -1241,14 +1273,6 @@ shinyServer(function(input, output, session) {
                     } else {
                         par(las= 2) #TODO: try to angle instead
 
-                        # first: set the x-axis to match the plot above
-                        my.at.orig <- seq_along(levels(datx.nona[[varname]]))
-                        num.levs <- length(groupvarFactorLevelsSorted())
-                        my.jitter <- min(0.1, 1 / length(my.at.orig))
-                        my.at.adds <- 2 * my.jitter * (1:num.levs)
-                        #shift so centered at 0
-                        my.at.adds <- my.at.adds - mean(my.at.adds)
-                        names(my.at.adds) <- groupvarFactorLevelsSorted()
                         stripchart(
                             as.formula(paste0(idvarName(),  "~", varname)),
                             data= datx.nona,
