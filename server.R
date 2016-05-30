@@ -679,6 +679,8 @@ shinyServer(function(input, output, session) {
             c(groupvarname(), groupvarFactorName(), idvarName()))  
     })    
     output$chooseVarsToRestrict <- renderUI({
+        if (is.null(possVarsToRestrict())) return (NULL)
+
         selectizeInput('varsToRestrict', 
             NULL, 
             choices= possVarsToRestrict(), 
@@ -692,6 +694,9 @@ shinyServer(function(input, output, session) {
     varsToView <- reactive({
         #dependency
         input$generalGraphUpdateButton
+        
+        # trying other dependencies, not working yet. 
+        varnamesFromRHS()
 
         isolate(input$varsToRestrict)
     })
