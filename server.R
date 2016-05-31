@@ -733,7 +733,15 @@ shinyServer(function(input, output, session) {
         mylist <- vector("list", numvarsToView())
 
         for (i in 1:numvarsToView()) {
-            mylist[[i]]  <- input[[paste0("pruningChoices_", i)]]
+            # doing it this way to fit w/ old code---
+            #   could redo later
+            mylist[[i]]  <- 
+                input[[paste0("pruningChoices1_", i)]]
+            if (varIsContinuous()[varsToView()[i]]) {
+                mylist[[i]]  <- paste(mylist[[i]],
+                    input[[paste0("pruningChoices2_", i)]],
+                    collapse= " ")
+            } 
         }
         mylist
     })
@@ -1008,17 +1016,18 @@ shinyServer(function(input, output, session) {
 
                 varname         <- varsToView()[my_i]
                 plotname        <- paste0("plot", my_i)
-                plot2name       <- paste0("plot2", my_i)
-                plot2nameOLD    <- paste0("plot2OLD", my_i)
-                prunername      <- paste0("pruner", my_i)
-                inputname       <- paste0("pruningChoices_", my_i)
-                textCheckName   <- paste0("textcheck", my_i)
+                pruner1name      <- paste0("pruner1_", my_i)
+                pruner2name      <- paste0("pruner2_", my_i)
+                input1name       <- paste0("pruningChoices1_", my_i)
+                input2name       <- paste0("pruningChoices2_", my_i)
+                textCheck1Name   <- paste0("textcheck1_", my_i)
+                textCheck2Name   <- paste0("textcheck2_", my_i)
                 keepNAName      <- paste0("keepNA", my_i)
                 keepNAInputName <- paste0("keepNAInput", my_i)
                 naTableName     <- paste0("naTable", my_i)
      
                 testing <- FALSE
-                output[[plot2name]] <- renderPlot({
+                output[[plotname]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
                     # core dataset
@@ -1249,6 +1258,7 @@ shinyServer(function(input, output, session) {
                             )
                         }
                         axis(1, at= my.at.orig, labels= names(my.at.orig))
+                        axis(2)
                     }
                     if (testing) box("figure", col= "green")
                     ###############################################################
@@ -1259,21 +1269,22 @@ shinyServer(function(input, output, session) {
                 ) # end renderPlot
 
 
-                # Create input function for each variable
-                output[[prunername]] <- renderUI({
+                # Create input functions for each variable
+                output[[pruner1name]] <- renderUI({
                     if (varIsContinuous()[varname]) {
                         textInput(
-                            inputname, 
-                            NULL,
+                            input1name, 
+                            #NULL,
+                            "Min:",
                             # make min & max slightly more extreme than rounded min and max in data, so that we don't get accidental pruning using the default values
-                            value= paste(
-                                floor(10^xdig() *   min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
-                                ceiling(10^xdig() * max(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
-                                collapse= ", ")
+                            value= 
+                                floor(10^xdig() *   
+                                    min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
+                            width= '20%'
                         )
                     } else { # we have categorical var, either factor or char
                         checkboxGroupInput(
-                            inputname, 
+                            input1name, 
                             NULL,
                             # as.character corrects the printing of factor levels
                             choices=  as.character(sort(unique(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE])))),
@@ -1282,12 +1293,31 @@ shinyServer(function(input, output, session) {
                     }
                 }) # end renderUI
 
-                # Check the textInput for each variable
-                output[[textCheckName]] <- renderText({
-                    if (is.null(pruneValTextList())) return(NULL)
+                output[[pruner2name]] <- renderUI({
                     if (varIsContinuous()[varname]) {
-                        if (pruneValTextList()[[my_i]] == TRUE) {
-                            "Please type min and max, separated by one space."
+                        textInput(
+                            input2name, 
+                            #NULL,
+                            "Max:",
+                            # make min & max slightly more extreme than rounded min and max in data, so that we don't get accidental pruning using the default values
+                            value= 
+                                ceiling(10^xdig() * 
+                                    max(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
+                            width= '20%'
+                        )
+                    } else { # we have categorical var, either factor or char
+                        NULL
+                    }
+                }) # end renderUI
+
+                # Check the textInput for each variable
+                # TODO: can break this up for the two input boxes
+                output[[textCheck1Name]] <- renderText({
+                    if (is.null(pruneValTextList())) return(NULL)
+                    
+                    if (varIsContinuous()[varname]) {
+                        if (grepl("TRUE", pruneValTextList()[[my_i]], fixed= TRUE)) {
+                            "Please make sure both boxes contain numbers."
                         } else { # no problem
                             return(NULL)
                         }
@@ -1328,9 +1358,9 @@ shinyServer(function(input, output, session) {
         for(i in 1:numvarsToView()) {
             varname       <- varsToView()[i]
             plotname      <- paste0("plot", i)
-            plot2name     <- paste0("plot2", i)
-            prunername    <- paste0("pruner", i)
-            textcheckname <- paste0("textcheck", i)
+            pruner1name    <- paste0("pruner1_", i)
+            pruner2name    <- paste0("pruner2_", i)
+            textcheck1name <- paste0("textcheck1_", i)
             keepNAName    <- paste0("keepNA", i)
             naTableName   <- paste0("naTable", i)
             
@@ -1339,7 +1369,7 @@ shinyServer(function(input, output, session) {
                     tags$hr(),
                     h4(paste0("Variable: ", varname)),
                     column(width= 5, offset= 1, 
-                        plotOutput(plot2name, 
+                        plotOutput(plotname, 
                             #inline= TRUE
                             height= 300,
                             width  = "auto"
@@ -1347,12 +1377,13 @@ shinyServer(function(input, output, session) {
                     ), # end column
                     column(6, 
                         if (varIsContinuous()[varname]) {
-                            h5("Keep only units in this range (inclusive). Separate min and max by a space:") 
+                            h5("Keep only units in this range (inclusive):") 
                         } else {
                             h5('Keep only units with the following value(s):')
                         },
-                        uiOutput(prunername),
-                        uiOutput(textcheckname),
+                        uiOutput(pruner1name),
+                        uiOutput(pruner2name),
+                        uiOutput(textcheck1name),
                         uiOutput(naTableName),
                         uiOutput(keepNAName)
                     ) # end column
