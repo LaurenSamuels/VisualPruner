@@ -119,7 +119,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     width= '33%'
                     ),
                 actionButton('generalGraphUpdateButton', 
-                    HTML("Update variable list and/or graph preferences")),
+                    HTML("(re-)Make graphs using updated variable list<br/>and/or graph preferences")),
                 tags$br(),
                 tags$br(),
                 h4('After pruning:'),

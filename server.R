@@ -650,6 +650,9 @@ shinyServer(function(input, output, session) {
     varsToView <- reactive({
         #dependency
         input$generalGraphUpdateButton
+        
+        # TODO: I wish this were a dependency, but it doesn't seem to have an effect
+        input$psTypedButton
 
         # to cover switching between datasets
         intersect(isolate(input$varsToRestrict), names(dset.orig()))
@@ -1005,6 +1008,7 @@ shinyServer(function(input, output, session) {
     # help from a SO post I forgot to get the URL for
     # also from http://stackoverflow.com/questions/19130455/create-dynamic-number-of-input-elements-with-r-shiny
     observe({
+        
         for (i in 1:numvarsToView()) {
             # My sources (above) say:
             # Need local so that each item gets its own number. 
