@@ -1268,20 +1268,19 @@ shinyServer(function(input, output, session) {
                 }, res= 100#, height= 300, width = 500 
                 ) # end renderPlot
 
-
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
                     if (varIsContinuous()[varname]) {
+                        #textInputRow(
                         textInput(
-                            input1name, 
-                            #NULL,
-                            "Min:",
-                            # make min & max slightly more extreme than rounded min and max in data, so that we don't get accidental pruning using the default values
-                            value= 
-                                floor(10^xdig() *   
-                                    min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
-                            width= '20%'
+                            inputId= input1name, 
+                            label="Min:", 
+                            width= '75%',
+                            value = floor(10^xdig() *   
+                                min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig()
+
                         )
+                        
                     } else { # we have categorical var, either factor or char
                         checkboxGroupInput(
                             input1name, 
@@ -1296,36 +1295,18 @@ shinyServer(function(input, output, session) {
                 output[[pruner2name]] <- renderUI({
                     if (varIsContinuous()[varname]) {
                         textInput(
-                            input2name, 
-                            #NULL,
-                            "Max:",
-                            # make min & max slightly more extreme than rounded min and max in data, so that we don't get accidental pruning using the default values
-                            value= 
-                                ceiling(10^xdig() * 
-                                    max(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig(),
-                            width= '20%'
+                            inputId= input2name, 
+                            label="Max:", 
+                            width= '75%',
+                            value = ceiling(10^xdig() * 
+                                max(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig()
+
                         )
                     } else { # we have categorical var, either factor or char
                         NULL
                     }
                 }) # end renderUI
 
-                # Check the textInput for each variable
-                # TODO: can break this up for the two input boxes
-                output[[textCheck1Name]] <- renderText({
-                    if (is.null(pruneValTextList())) return(NULL)
-                    
-                    if (varIsContinuous()[varname]) {
-                        if (grepl("TRUE", pruneValTextList()[[my_i]], fixed= TRUE)) {
-                            "Please make sure both boxes contain numbers."
-                        } else { # no problem
-                            return(NULL)
-                        }
-                    } else { # categorical var, nothing to check
-                        return(NULL)
-                    }
-                }) # end renderText
-                
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
                     radioButtons(keepNAInputName, NULL,
@@ -1348,6 +1329,38 @@ shinyServer(function(input, output, session) {
             }) # end local
         } # end for
     }) # end observe    
+    
+    # Keeping the observe for the textcheck separate
+    observe({
+        for (i in 1:numvarsToView()) {
+            local({
+                my_i <- i
+                varname         <- varsToView()[my_i]
+
+                textCheck1Name   <- paste0("textcheck1_", my_i)
+                #textCheck2Name   <- paste0("textcheck2_", my_i)
+                
+                # Check the textInput for each variable
+                # TODO: break this up for the two input boxes
+                output[[textCheck1Name]] <- renderUI({
+                    if (is.null(pruneValTextList())) return(NULL)
+                    
+                    if (varIsContinuous()[varname]) {
+                        #if (grepl("TRUE", pruneValTextList()[[my_i]], fixed= TRUE)) {
+                        if (is.na(as.numeric(input[[paste0("pruningChoices1_", my_i)]])) | 
+                            is.na(as.numeric(input[[paste0("pruningChoices2_", my_i)]]))) {    
+                            HTML(paste0(tags$span(style="color:red", "Please make sure both boxes contain numbers.")))
+                        } else { # no problem
+                            return(NULL)
+                        }
+                    } else { # categorical var, nothing to check
+                        return(NULL)
+                    }
+                }) # end renderUI
+            }) # end local
+        } # end for
+    }) # end observe    
+    
     
     # Now put them all together
     output$univariatePlotsAndInputs <- renderUI({
@@ -1381,9 +1394,16 @@ shinyServer(function(input, output, session) {
                         } else {
                             h5('Keep only units with the following value(s):')
                         },
-                        uiOutput(pruner1name),
-                        uiOutput(pruner2name),
                         uiOutput(textcheck1name),
+                        fluidRow(
+                            column(3, 
+                                uiOutput(pruner1name)
+                            ),
+                            column(3, 
+                                uiOutput(pruner2name)
+                            )
+                        ),
+                        tags$hr(),
                         uiOutput(naTableName),
                         uiOutput(keepNAName)
                     ) # end column
