@@ -1145,7 +1145,7 @@ shinyServer(function(input, output, session) {
                                 )
                             }
                         }
-                    } else {
+                    } else { # discrete
                         # first: we will use this x-axis below also
                         my.at.orig <- seq_along(levels(datx.nona[[varname]]))
                         names(my.at.orig) <- levels(datx.nona[[varname]])
@@ -1227,7 +1227,8 @@ shinyServer(function(input, output, session) {
                                 at = my.at.orig + my.at.adds[lev],
                                 cex= pointsizeval(),
                                 col= adjustcolor(colorScale.mod()[lev], 
-                                    alpha.f= alphaval()))
+                                    alpha.f= alphaval())
+                            )
                         }
                         axis(1, at= my.at.orig, labels= names(my.at.orig))
                     }
@@ -1287,11 +1288,12 @@ shinyServer(function(input, output, session) {
 
                 # Create a missing-by-group table each variable
                 output[[naTableName]] <- renderTable({
-                    dat <- dset.orig()[idsToKeepAfterPruning(), .(prop.missing = mean(is.na(get(varname)))), by= eval(groupvarFactorName())]
+                    dat <- dset.orig()[idsToKeepAfterPruning(), 
+                        .(pct.missing = 100 * mean(is.na(get(varname)))), 
+                        by= eval(groupvarFactorName())]
                     setnames(dat, old = groupvarFactorName(), new = groupvarname())
                     dat
-                }, include.rownames= FALSE) # end renderTable
-                
+                }, digits= 1, include.rownames= FALSE) # end renderTable
                 
             }) # end local
         } # end for
