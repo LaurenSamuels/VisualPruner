@@ -81,12 +81,12 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6,
                 plotOutput("psPlot",
                     height= 300,
-                    width= '100%')
+                    width= 'auto')
             ), # end column
             column(6,
                 plotOutput("logitpsPlot",
                     height= 300,
-                    width= '100%')
+                    width= 'auto')
             ) # end column
         ) # end fluidRow 
     ), # end Specify panel
@@ -141,7 +141,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h5('Legend for this plot applies to all plots on page.'),
                 plotOutput("logitpsPlot2",
                     height= 300,
-                    width= '100%'),
+                    width= 'auto'),
                 uiOutput('needPSText')
             ) # end column
         ), # end fluidRow 

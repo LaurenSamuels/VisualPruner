@@ -877,7 +877,9 @@ shinyServer(function(input, output, session) {
             xlab= "PS",
             ylab= "Count",
             bty= "n",
-            type= "n"
+            type= "n",
+            cex.lab= 1,
+            cex.axis= 0.8
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
@@ -890,7 +892,7 @@ shinyServer(function(input, output, session) {
                 )
             }
         }
-    })    
+    }, res= 100)    
     
     
     output$logitpsPlot <- renderPlot({
@@ -912,7 +914,9 @@ shinyServer(function(input, output, session) {
             xlab= "Logit PS",
             ylab= "Count",
             bty= "n",
-            type= "n"
+            type= "n",
+            cex.lab= 1,
+            cex.axis= 0.8
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
@@ -928,7 +932,7 @@ shinyServer(function(input, output, session) {
         legend(
             "topleft",
             inset= .05,
-            cex = 1,
+            cex = .8,
             title= NULL,
             groupvarFactorLevelsSorted(),
             horiz = FALSE,
@@ -937,7 +941,7 @@ shinyServer(function(input, output, session) {
             fill = do.call(c, lapply(groupvarFactorLevelsSorted(), function(x)
                 adjustcolor(colorScale.mod()[x], alpha.f= alphaval())))
         )
-    })    
+    }, res= 100)    
     output$logitpsPlot2 <- renderPlot({
         # exact duplicate of the other one; can't call the same plot twice in the UI 
         if (is.null(dset.psgraphs())) return(NULL)
@@ -958,7 +962,9 @@ shinyServer(function(input, output, session) {
             xlab= "Logit PS",
             ylab= "Count",
             bty= "n",
-            type= "n"
+            type= "n",
+            cex.lab= 1,
+            cex.axis= 0.8
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
@@ -974,7 +980,7 @@ shinyServer(function(input, output, session) {
         legend(
             "topleft",
             inset= .05,
-            cex = 1,
+            cex = .8,
             title= NULL,
             groupvarFactorLevelsSorted(),
             horiz = FALSE,
@@ -983,7 +989,7 @@ shinyServer(function(input, output, session) {
             fill = do.call(c, lapply(groupvarFactorLevelsSorted(), function(x)
                 adjustcolor(colorScale.mod()[x], alpha.f= alphaval())))
         )
-    })    
+    }, res= 100)    
     
     #############################################################
 
@@ -1011,6 +1017,7 @@ shinyServer(function(input, output, session) {
                 keepNAInputName <- paste0("keepNAInput", my_i)
                 naTableName     <- paste0("naTable", my_i)
      
+                testing <- FALSE
                 output[[plot2name]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
@@ -1057,8 +1064,11 @@ shinyServer(function(input, output, session) {
                         0, 2, 0), 
                         ncol = 3, byrow = TRUE)
                     layout(zones, 
-                        widths  = c(0.45, 4, 0.6),
-                        heights = c(3, 10, 1)
+                        respect= TRUE,
+                        #widths  = c(0.45, 4, 0.6),
+                        #heights = c(3, 10, 1)
+                        widths  = c(0.4, 4, 0.6),
+                        heights = c(3/5, 10.5/5, 1.5/5)
                     )
                     bottomMargin <- if (varIsContinuous()[varname]) 2 else {
                         max(min(max(nchar(levels(datx[[varname]])))[1] / 2, 8), 2)
@@ -1069,24 +1079,30 @@ shinyServer(function(input, output, session) {
                     par(xaxt="n", 
                         yaxt="n", 
                         ann= FALSE,
-                        bty="n",
-                        cex.axis= 1.3
+                        bty= if (testing) "o" else "n",
+                        oma= c(0,0,0,0),
+                        cex.axis= 1.1
                         ) 
 
                     # fig 1 = Y axis label. 
-                    par(mar = c(bottomMargin - 1.7, 2, .3, 0) +.05) # b, l, t, r
+                    #par(mar = c(bottomMargin - 1.7, 2, .3, 0) +.05) # b, l, t, r
+                    par(mar = c(bottomMargin - 1.7, 0.7, .3, 0) +.05) # b, l, t, r
                     plot(x= 1, y= 1, type= "n", ylim= c(-1, 1), xlim= c(-1, 1))
-                    text(0, 0, paste("Logit PS"), cex= 1.5, srt= 90)
-
+                    text(0, 0, paste("Logit PS"), cex= 1.4, srt= 90)
+                    if (testing) box("outer", col= "blue")
+                    if (testing) box("figure", col= "green")
+                    
                     # fig 2 = X axis label for main plot. 
-                    par(mar = c(.3, 2, .3, 0) +.05) # b, l, t, r
+                    #par(mar = c(.3, 2, .3, 0) +.05) # b, l, t, r
+                    par(mar = c(0, 2, .3, 0) +.05) # b, l, t, r
                     plot(x= 1, y= 1, type="n", ylim= c(-1, 1), xlim= c(-1, 1))
-                    text(0, 0, paste(varname), cex=1.5)
+                    text(0, 0, paste(varname), cex=1.4)
+                    if (testing) box("figure", col= "green")
 
                     ###############################################################
                     # fig 3, right-side plot, needs different margins. 
                     # no margin on the left
-                    par(mar = c(bottomMargin, 0, 0.65, 1))
+                    par(mar = c(bottomMargin, 0.3, 0.65, 0.7))
                     par(xaxt="s")
 
                     datxps.xna <- datxps[is.na(get(varname)), ]
@@ -1109,6 +1125,7 @@ shinyServer(function(input, output, session) {
                             col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()))
                     }
                     axis(1, at= 0.5, labels= "Missing")
+                    if (testing) box("figure", col= "green")
                     ###############################################################
 
 
@@ -1182,6 +1199,7 @@ shinyServer(function(input, output, session) {
                             }
                         }
                     }
+                    if (testing) box("figure", col= "green")
                     ###############################################################
 
 
@@ -1232,11 +1250,13 @@ shinyServer(function(input, output, session) {
                         }
                         axis(1, at= my.at.orig, labels= names(my.at.orig))
                     }
+                    if (testing) box("figure", col= "green")
                     ###############################################################
 
                     # reset the graphics
                     par(def.par)
-                }) # end renderPlot
+                }, res= 100#, height= 300, width = 500 
+                ) # end renderPlot
 
 
                 # Create input function for each variable
@@ -1320,8 +1340,9 @@ shinyServer(function(input, output, session) {
                     h4(paste0("Variable: ", varname)),
                     column(width= 5, offset= 1, 
                         plotOutput(plot2name, 
+                            #inline= TRUE
                             height= 300,
-                            width  = "100%"#,
+                            width  = "auto"
                         ) # end plotOutput   
                     ), # end column
                     column(6, 
