@@ -11,29 +11,8 @@ library(data.table)
 #library(Cairo) # for better graphics on Linux servers
 #options(shiny.usecairo= TRUE)
 
-#  colors, from http://www.sron.nl/~pault/
-# these are slightly less cb-friendly, but optimized for screen
-s.red    <- "#EE3333"
-s.orange <- "#EE7722"
-s.yellow <- "#FFEE33"
-s.green  <- "#66AA55"
-s.teal   <- "#11AA99"
-s.dkblue <- "#3366AA"
-s.magenta<- "#992288"
-s.mustard<- "#CCCC55"
-myColorScale <- c(
-    s.orange,
-    s.dkblue,
-    s.magenta,
-    s.teal  ,
-    s.red    ,
-    s.yellow,
-    s.green ,
-    s.mustard
-)    
 
 # number of decimal places to use w/ propensity scores
-psdig <- 2
 
 
 # Allow upload of bigger files
@@ -42,25 +21,25 @@ psdig <- 2
 options(shiny.maxRequestSize=30*1024^2)
 
 # from http://stackoverflow.com/questions/17370460/scatterplot-with-alpha-transparent-histograms-in-r?lq=1
-theme0 <- function(...) {
-    theme( 
-        legend.position = "none",
-        panel.background = element_blank(),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.margin = unit(0,"null"),
-        axis.ticks        = element_blank(),
-        axis.text.x       = element_blank(),
-        axis.text.y       = element_blank(),
-        axis.title.x      = element_blank(),
-        axis.title.y      = element_blank(),
-        axis.ticks.length = unit(0,"null"),
-        #axis.ticks.margin = unit(0,"null"),
-        axis.text.x = element_text(margin=margin(0,0,0,0,"null")),
-        axis.text.y = element_text(margin=margin(0,0,0,0,"null")),
-        panel.border=element_rect(color=NA),
-    ...)
-}
+#theme0 <- function(...) {
+#    theme( 
+#        legend.position = "none",
+#        panel.background = element_blank(),
+#        panel.grid.major = element_blank(),
+#        panel.grid.minor = element_blank(),
+#        panel.margin = unit(0,"null"),
+#        axis.ticks        = element_blank(),
+#        axis.text.x       = element_blank(),
+#        axis.text.y       = element_blank(),
+#        axis.title.x      = element_blank(),
+#        axis.title.y      = element_blank(),
+#        axis.ticks.length = unit(0,"null"),
+#        #axis.ticks.margin = unit(0,"null"),
+#        axis.text.x = element_text(margin=margin(0,0,0,0,"null")),
+#        axis.text.y = element_text(margin=margin(0,0,0,0,"null")),
+#        panel.border=element_rect(color=NA),
+#    ...)
+#}
 
 
 shinyServer(function(input, output, session) {
@@ -620,6 +599,7 @@ shinyServer(function(input, output, session) {
 
         if (is.null(psbrushmin())) return(rep(FALSE, dset.psgraphs()[, .N]))
 
+        psdig <- 2
         round(dset.psgraphs()[[logitpsvarName()]], psdig) < psbrushmin() |
             round(dset.psgraphs()[[logitpsvarName()]], psdig) > psbrushmax()
     })
@@ -671,9 +651,7 @@ shinyServer(function(input, output, session) {
         #dependency
         input$generalGraphUpdateButton
 
-        #isolate(input$varsToRestrict)
         # to cover switching between datasets
-        print(intersect(isolate(input$varsToRestrict), names(dset.orig())))
         intersect(isolate(input$varsToRestrict), names(dset.orig()))
     })
     numvarsToView <- reactive({
@@ -854,6 +832,26 @@ shinyServer(function(input, output, session) {
     colorScale.mod <- reactive({
         if (is.null(nonMissingIDs())) return(NULL)
 
+        #  colors, from http://www.sron.nl/~pault/
+        # these are slightly less cb-friendly, but optimized for screen
+        s.red    <- "#EE3333"
+        s.orange <- "#EE7722"
+        s.yellow <- "#FFEE33"
+        s.green  <- "#66AA55"
+        s.teal   <- "#11AA99"
+        s.dkblue <- "#3366AA"
+        s.magenta<- "#992288"
+        s.mustard<- "#CCCC55"
+        myColorScale <- c(
+            s.orange,
+            s.dkblue,
+            s.magenta,
+            s.teal  ,
+            s.red    ,
+            s.yellow,
+            s.green ,
+            s.mustard
+        )    
         sc <- myColorScale[1:length(unique(dset.orig()[[groupvarFactorName()]]))]
         names(sc) <- levels(dset.orig()[[groupvarFactorName()]])
         sc
@@ -1059,7 +1057,7 @@ shinyServer(function(input, output, session) {
                         0, 2, 0), 
                         ncol = 3, byrow = TRUE)
                     layout(zones, 
-                        widths  = c(0.45, 4, 0.75),
+                        widths  = c(0.45, 4, 0.6),
                         heights = c(3, 10, 1)
                     )
                     bottomMargin <- if (varIsContinuous()[varname]) 2 else {
@@ -1071,7 +1069,8 @@ shinyServer(function(input, output, session) {
                     par(xaxt="n", 
                         yaxt="n", 
                         ann= FALSE,
-                        bty="n"
+                        bty="n",
+                        cex.axis= 1.3
                         ) 
 
                     # fig 1 = Y axis label. 
@@ -1098,7 +1097,6 @@ shinyServer(function(input, output, session) {
                         xlim= 0:1, 
                         ylim= my.ylim, 
                         type= "n", axes= FALSE)
-                    axis(1, at= 0.5, labels= "Missing")
 
                     #for (lev in levels(xna.logitps[[groupvarFactorName()]])) {}
                     # TODO: keep the above line for ref. May need intersect()
@@ -1106,10 +1104,11 @@ shinyServer(function(input, output, session) {
                         x <- datxps.xna[get(groupvarFactorName()) == lev, randx]
                         y <- datxps.xna[get(groupvarFactorName()) == lev, get(logitpsvarName())]
                         points(x, y, 
-                            pch= 15,
+                            pch= 0,
                             cex= pointsizeval(),
                             col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()))
                     }
+                    axis(1, at= 0.5, labels= "Missing")
                     ###############################################################
 
 
@@ -1202,6 +1201,7 @@ shinyServer(function(input, output, session) {
                             y <- datxps.nona[get(groupvarFactorName()) == lev, 
                                 get(logitpsvarName())]
                             points(x, y,
+                                pch= 20,
                                 cex= pointsizeval(),
                                 col= adjustcolor(colorScale.mod()[lev], 
                                     alpha.f= alphaval()))
@@ -1209,14 +1209,11 @@ shinyServer(function(input, output, session) {
                     } else {
                         par(las= 2) #TODO: try to angle instead
 
-                        stripchart(
-                            as.formula(paste0(idvarName(),  "~", varname)),
-                            data= datx.nona,
+                        plot(1,0,
                             xlim= c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
                             ylim= my.ylim, 
-                            at = my.at.orig,
-                            type= "n", vertical= TRUE)
-
+                            axes= FALSE,
+                            type= "n")
                         for (lev in groupvarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
                             y <- datxps.nona[get(groupvarFactorName()) == lev, 
@@ -1226,11 +1223,13 @@ shinyServer(function(input, output, session) {
                                 add= TRUE,
                                 method= "jitter",
                                 jitter= my.jitter,
+                                pch= 20,
                                 at = my.at.orig + my.at.adds[lev],
                                 cex= pointsizeval(),
                                 col= adjustcolor(colorScale.mod()[lev], 
                                     alpha.f= alphaval()))
                         }
+                        axis(1, at= my.at.orig, labels= names(my.at.orig))
                     }
                     ###############################################################
 
