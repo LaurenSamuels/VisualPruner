@@ -1106,7 +1106,9 @@ shinyServer(function(input, output, session) {
                 keepNAInputName <- paste0("keepNAInput", my_i)
                 naTableName     <- paste0("naTable", my_i)
      
-                testing <- TRUE
+                # For plot alignment
+                testing <- FALSE
+                
                 output[[plotname]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
@@ -1129,7 +1131,22 @@ shinyServer(function(input, output, session) {
                     # for the right-hand top plot
                     datx.xna <- datx[is.na(get(varname)), ]
                     
-                    # x-axis limits, etc. for central and top plots
+                    # subset of datx that has a PS
+                    datxps <- datx[dset.psgraphs.plus()]
+                    
+                    # use datxps.nona for central scatterplot/stripchart
+                    datxps.nona <- na.omit(datxps)
+                    # preserve any levels that might have been lost
+                    if(is.factor(datx[[varname]])) {
+                        my.levels <- levels(datx[[varname]])
+                        datxps.nona[, eval(varname) := factor(get(varname),
+                            levels= my.levels)]
+                    }
+                    
+                    # for the right-hand central (row2) plot
+                    datxps.xna <- datxps[is.na(get(varname)), ]
+                    
+                    # x-axis limits, etc. for col2 plots
                     if(varIsContinuous()[varname]) {
                         my.xlim <- range(datx.nona[[varname]])
                         #my.jitter <- 0.1
@@ -1140,29 +1157,18 @@ shinyServer(function(input, output, session) {
                     }
                     # for RH plots for continuous, and all plots for cat.
                     num.levs <- length(groupvarFactorLevelsSorted())
+                    # jitter: we want the points to take up half
+                    #    the available space, regardless of # groups
                     my.jitter <- (1 / num.levs) / 4
+                    # alignment for each group
                     my.at.adds <- 2 * my.jitter * (1:num.levs)
                     #shift so centered at 0
                     my.at.adds <- my.at.adds - mean(my.at.adds)
                     names(my.at.adds) <- groupvarFactorLevelsSorted()
                     
-                    # subset of datx that has a PS
-                    datxps <- datx[dset.psgraphs.plus()]
-                    
                     # all vars: ylim for row2 plots
                     my.ylim.ps <- range(datxps[[logitpsvarName()]])
 
-                    # use datxps.nona for central scatterplot/stripchart
-                    datxps.nona <- na.omit(datxps)
-                    # preserve any levels that might have been lost
-                    if(is.factor(datx[[varname]])) {
-                        my.levels <- levels(datx[[varname]])
-                        datxps.nona[, eval(varname) := factor(get(varname),
-                            levels= my.levels)]
-                    }
-                    # for the right-hand central plot
-                    datxps.xna <- datxps[is.na(get(varname)), ]
-                    
                     # ylim for top plots: 
                     datx.xna.counts <- table(datx.xna[[groupvarFactorName()]])
                     if(varIsContinuous()[varname]) {
@@ -1188,8 +1194,6 @@ shinyServer(function(input, output, session) {
                         my.ylim.counts <- max(c(xtbl, datx.xna.counts))
                     }
                     
-                    
-                    
                     # multi-panel plot adapted from 
                     #   http://www.r-bloggers.com/example-10-3-enhanced-scatterplot-with-marginal-histograms/
                     # save the old graphics settings-- they may be needed
@@ -1202,22 +1206,23 @@ shinyServer(function(input, output, session) {
                         0, 2, 0), 
                         ncol = 3, byrow = TRUE)
                     layout(zones, 
-                        respect= TRUE,
-                        #widths  = c(0.45, 4, 0.6),
-                        #heights = c(3, 10, 1)
+                        respect = TRUE,
                         widths  = c(0.4, 4, 0.6),
                         heights = c(3/5, 10.5/5, 1.5/5)
                     )
                     # certain plots need to have the same margins
                     topPlots.mar.b <- 0
                     topPlots.mar.t <- 0.35
+                    
                     # "row2Plots" appear as the bottom (nothing but labels in row 3)
                     row2Plots.mar.b <- if (varIsContinuous()[varname]) 2 else {
                         max(min(max(nchar(levels(datx[[varname]])))[1] / 2, 8), 2)
                     }
                     row2Plots.mar.t <- 0.65 
+                    
                     col2Plots.mar.l <- 2
-                    col2Plots.mar.r <- 0.65
+                    col2Plots.mar.r <- 0.35
+                    
                     col3Plots.mar.l <- 0.35
                     col3Plots.mar.r <- 0.65
 
@@ -1229,7 +1234,7 @@ shinyServer(function(input, output, session) {
                         bty      = if (testing) "o" else "n",
                         oma      = c(0,0,0,0),
                         cex.axis = 1.1
-                        ) 
+                    ) 
 
                     # fig 1: Y axis label for central plot. 
                     par(mar = c(row2Plots.mar.b - 1.7, 0.7, .3, 0) +.05) # b, l, t, r
@@ -1246,54 +1251,56 @@ shinyServer(function(input, output, session) {
 
                     ###############################################################
                     # fig 3, right-side central (row2) plot
-                    par(mar = c(row2Plots.mar.b, col3Plots.mar.l, 
-                        row2Plots.mar.t, col3Plots.mar.r)) # bltr
-                    par(xaxt="s")
+                    par(mar  = c(row2Plots.mar.b, col3Plots.mar.l, 
+                            row2Plots.mar.t, col3Plots.mar.r), # bltr
+                        xaxt ="s"
+                    )
                     
                     plot(1, 0,
-                        xlim= c(0, 2), 
-                        ylim= my.ylim.ps, 
-                        axes= FALSE,
-                        type= "n"
+                        xlim = c(0, 2), 
+                        ylim = my.ylim.ps, 
+                        axes = FALSE,
+                        type = "n"
                     )
                     for (lev in groupvarFactorLevelsSorted()) {
                         y <- datxps.xna[get(groupvarFactorName()) == lev, 
                             get(logitpsvarName())]
                         stripchart(y,
-                            vertical= TRUE,
-                            add= TRUE,
-                            method= "jitter",
-                            jitter= my.jitter,
-                            pch= 20,
-                            at = 1 + my.at.adds[lev],
-                            cex= pointsizeval(),
-                            col= adjustcolor(colorScale.mod()[lev], 
-                                alpha.f= alphaval())
+                            vertical = TRUE,
+                            add      = TRUE,
+                            method   = "jitter",
+                            jitter   = my.jitter,
+                            pch      = 20,
+                            at       = 1 + my.at.adds[lev],
+                            cex      = pointsizeval(),
+                            col      = adjustcolor(colorScale.mod()[lev], 
+                                        alpha.f= alphaval())
                         )
                     }
-                    axis(1, at= 1, labels= "Missing")
+                    axis(1, at = 1, labels= "Missing")
                     if (testing) box("figure", col= "green")
                     if (testing) box("plot", col= "black")
                     ###############################################################
 
 
                     ###############################################################
-                    # fig 4, top central plot. needs no margin on the bottom. 
-                    #par(mar = c(0, 2, 1, .65)) #bltr
-                    par(mar = c(topPlots.mar.b, col2Plots.mar.l, 
-                        topPlots.mar.t, col2Plots.mar.r)) #bltr
-                    par(xaxt="n")
+                    # fig 4, top central plot. 
+                    par(mar  = c(topPlots.mar.b, col2Plots.mar.l, 
+                                topPlots.mar.t, col2Plots.mar.r), #bltr
+                        xaxt ="n"
+                    )
                     if (varIsContinuous()[varname]) {    
                         plot(datx.nona[[varname]], runif(datx.nona[, .N]), 
-                            ylim= c(0, my.ylim.counts), 
-                            bty= if (testing) "o" else "n",
-                            type= "n"
+                            ylim = c(0, my.ylim.counts), 
+                            bty  = if (testing) "o" else "n",
+                            type = "n"
                         )
                         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
                         for (lev in groupvarFactorLevelsSorted()) {
                             if (!is.null(histlist[[lev]])) {
                                 plot(histlist[[lev]], 
-                                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
+                                    col    = adjustcolor(colorScale.mod()[lev], 
+                                                alpha.f= alphaval()), 
                                     freq   = TRUE, 
                                     border = NA,
                                     add    = TRUE
@@ -1303,22 +1310,21 @@ shinyServer(function(input, output, session) {
                     } else { # discrete
                         # https://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/
                         plot(1, 0,
-                            xlim= c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
-                            ylim= c(0, my.ylim.counts), 
-                            bty= if (testing) "o" else "n",
-                            type= "n")
+                            xlim = c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
+                            ylim = c(0, my.ylim.counts), 
+                            bty  = if (testing) "o" else "n",
+                            type = "n")
 
                         for (grouplev in groupvarFactorLevelsSorted()) {
                             for (varlev in levels(datx.nona[[varname]])) {
                                 rect(
-                                    xleft= my.at.orig[varlev] + my.at.adds[grouplev] - my.jitter,
-                                    ybottom= 0,
-                                    xright= my.at.orig[varlev] + my.at.adds[grouplev] + my.jitter,
-                                    ytop= xtbl[grouplev, varlev],
-                                    density= NA,
-                                    border= NA,
-                                    col= adjustcolor(colorScale.mod()[grouplev], 
-                                        alpha.f= alphaval())
+                                    xleft   = my.at.orig[varlev] + my.at.adds[grouplev] - my.jitter,
+                                    ybottom = 0,
+                                    xright  = my.at.orig[varlev] + my.at.adds[grouplev] + my.jitter,
+                                    ytop    = xtbl[grouplev, varlev],
+                                    density = NA,
+                                    border  = NA,
+                                    col     = colorScale.mod()[grouplev] 
                                 )
                             }
                         }
@@ -1328,53 +1334,55 @@ shinyServer(function(input, output, session) {
 
 
                     ###############################################################
-                    # fig 5, the main plot-- needs regular axes,
-                    #  different margins
+                    # fig 5, the main plot
                     par(
-                        mar = c(row2Plots.mar.b, col2Plots.mar.l, 
+                        mar  = c(row2Plots.mar.b, col2Plots.mar.l, 
                             row2Plots.mar.t, col2Plots.mar.r), #bltr
-                        xaxt="s", yaxt="s", bty= if (testing) "o" else "n")
+                        xaxt = "s", 
+                        yaxt = "s", 
+                        bty= if (testing) "o" else "n"
+                    )
                     if (varIsContinuous()[varname]) {    
                         plot(datxps.nona[[varname]], datxps.nona[[logitpsvarName()]], 
-                            xlim= my.xlim, 
-                            bty= if (testing) "o" else "n",
-                            type= "n"
+                            xlim = my.xlim, 
+                            bty  = if (testing) "o" else "n",
+                            type = "n"
                         )
                         for (lev in groupvarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
                             y <- datxps.nona[get(groupvarFactorName()) == lev, 
                                 get(logitpsvarName())]
                             points(x, y,
-                                pch= 20,
-                                cex= pointsizeval(),
-                                col= adjustcolor(colorScale.mod()[lev], 
+                                pch = 20,
+                                cex = pointsizeval(),
+                                col = adjustcolor(colorScale.mod()[lev], 
                                     alpha.f= alphaval()))
                         }
                     } else {
                         par(las= 2) #TODO: try to angle instead
 
-                        plot(1,0,
-                            xlim= c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
-                            ylim= my.ylim.ps, 
-                            axes= FALSE,
-                            type= "n")
+                        plot(1, 0,
+                            xlim = c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
+                            ylim = my.ylim.ps, 
+                            axes = FALSE,
+                            type = "n")
                         for (lev in groupvarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
                             y <- datxps.nona[get(groupvarFactorName()) == lev, 
                                 get(logitpsvarName())]
                             stripchart(y ~ x,
-                                vertical= TRUE,
-                                add= TRUE,
-                                method= "jitter",
-                                jitter= my.jitter,
-                                pch= 20,
-                                at = my.at.orig + my.at.adds[lev],
-                                cex= pointsizeval(),
-                                col= adjustcolor(colorScale.mod()[lev], 
-                                    alpha.f= alphaval())
+                                vertical = TRUE,
+                                add      = TRUE,
+                                method   = "jitter",
+                                jitter   = my.jitter,
+                                pch      = 20,
+                                at       = my.at.orig + my.at.adds[lev],
+                                cex      = pointsizeval(),
+                                col      = adjustcolor(colorScale.mod()[lev], 
+                                            alpha.f= alphaval())
                             )
                         }
-                        axis(1, at= my.at.orig, labels= names(my.at.orig))
+                        axis(1, at = my.at.orig, labels = names(my.at.orig))
                         axis(2)
                     }
                     if (testing) box("figure", col= "green")
@@ -1382,21 +1390,36 @@ shinyServer(function(input, output, session) {
                     ###############################################################
 
                     ###############################################################
-                    # fig 6, top right plot. needs no margin on the bottom. 
-                    # v small margin on the left
+                    # fig 6, top right plot. 
                     par(
-                        mar = c(topPlots.mar.b, col3Plots.mar.l, topPlots.mar.t, col3Plots.mar.r), #bltr
-                        xaxt= "n", 
-                        yaxt= "n"
+                        mar  = c(topPlots.mar.b, col3Plots.mar.l, 
+                                topPlots.mar.t, col3Plots.mar.r), #bltr
+                        xaxt = "n", 
+                        yaxt = "n"
                     )
-                    plot(rnorm(100) )
-                    
+                    plot(1, 0,
+                        xlim = c(0, 2), 
+                        ylim = c(0, my.ylim.counts), 
+                        bty  = if (testing) "o" else "n",
+                        type = "n")
+
+                    for (grouplev in groupvarFactorLevelsSorted()) {
+                        rect(
+                            xleft   = 1 + my.at.adds[grouplev] - my.jitter,
+                            ybottom = 0,
+                            xright  = 1 + my.at.adds[grouplev] + my.jitter,
+                            ytop    = datx.xna.counts[grouplev],
+                            density = NA,
+                            border  = NA,
+                            col     = colorScale.mod()[grouplev] 
+                        )
+                    }
                     if (testing) box("figure", col= "green")
                     ###############################################################
 
                     # reset the graphics
                     par(def.par)
-                }, res= 100#, height= 300, width = 500 
+                }, res= 100
                 ) # end renderPlot
 
                 # Create input functions for each variable
