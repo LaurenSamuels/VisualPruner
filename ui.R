@@ -47,18 +47,15 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 ),
                 tags$br(),
                 h4('Propensity score model:'),
-                helpText('Type RHS of R formula* for lrm(), e.g.'),
-                verbatimTextOutput("psHelpText"),
+                #helpText('Type RHS of R formula* for lrm(), e.g.'),
+                uiOutput('psHelpGen1'),
+                uiOutput('psHelpNA1'),
+                tags$br(),
                 uiOutput('getFormula'),
                 actionButton('psTypedButton', "I have finished typing"),
                 textOutput('psNeedsCheckingText'),
                 tags$head(tags$style(
-                    "#psNeedsCheckingText{color: magenta; font-size: 10px; }" )),
-                tags$br(),
-                tags$br(),
-                helpText(a("*R formula help online", 
-                    href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html", 
-                    target="_blank"))
+                    "#psNeedsCheckingText{color: magenta; font-size: 10px; }" ))
             ), # end column
             column(6,
                 h4("Preliminary syntax check:"),

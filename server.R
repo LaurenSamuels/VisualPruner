@@ -166,13 +166,28 @@ shinyServer(function(input, output, session) {
         }    
         proposedName
     })    
+    naPrefix <- reactive({
+        # The phrase produced by this function will be used as
+        #   the prefix for the na.indicator vars
+        if(is.null(dset.orig())) return (NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+        
+        proposedPrefix <- "is.na_"
+        while(any(grepl(paste0("^", proposedPrefix), names(dset.orig())))) {
+            proposedPrefix <- paste0(proposedPrefix, "_")    
+        }    
+        proposedPrefix
+    })    
 
+    useCompleteCasesOnly <- reactive({
+        input$completeCasesOnly == 1
+    })
     nonMissingIDs <- reactive({
         # These are the IDs of people who can be used for PS calculation
 
         if (is.null(varnamesFromRHS())) return(dset.orig()[[idvarName()]])
         
-        if (input$completeCasesOnly == 1) {
+        if (useCompleteCasesOnly()) {
             na.omit(dset.orig()[, c(varnamesFromRHS(), idvarName()), 
                 with= FALSE])[[idvarName()]]
         } else {
@@ -405,6 +420,34 @@ shinyServer(function(input, output, session) {
         "    age + gender"
     })
     
+    output$psHelpGen1 <- renderUI({
+        HTML(paste0(
+            "Type RHS of ", 
+            tags$a("R formula", 
+                    href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html", 
+                    target="_blank"),
+            " for ", 
+            tags$span(style="font-family:courier", "lrm()"), 
+            ", e.g. ",
+            tags$b(style="font-family:courier", "age + gender"), 
+            "."
+        ))
+    })
+    output$psHelpNA1 <- renderUI({
+        if (useCompleteCasesOnly()) {
+            return(NULL)
+        } else {
+            HTML(paste0(
+                "To include missingness indicators, ", 
+                "prefix the variable name with ",
+                tags$b(style="font-family:courier", naPrefix()),
+                ", e.g. ", 
+                tags$b(style="font-family:courier", paste0(naPrefix(), "myvar")), 
+                "."
+            ))
+        }
+    })
+
     output$psFormulaProblemText <- renderUI({
         if (psNotChecked()) {
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
@@ -420,8 +463,8 @@ shinyServer(function(input, output, session) {
         if (input$PSCalcUpdateButton == 0) return(nonMissingIDs()) 
         # this next one should be covered by nonMissingIDs,
         #    but just in case:
-        input$completeCasesOnly 
-            
+        useCompleteCasesOnly()   
+        
         intersect(nonMissingIDs(), isolate(idsToKeepAfterPruning()))
     })
 
@@ -461,7 +504,7 @@ shinyServer(function(input, output, session) {
 
     dset.imputed <- reactive({
         if (is.null(varnamesFromRHS())) return(NULL)
-        if (input$completeCasesOnly == 1) return(NULL)
+        if (useCompleteCasesOnly()) return(NULL)
         
         myvars <- c(varnamesFromRHS(), groupvarname())
         dat <- copy(dset.orig()[PSIDs(), myvars, with= FALSE])
@@ -481,7 +524,7 @@ shinyServer(function(input, output, session) {
         if (is.null(psForm()) | 
             is.null(varnamesFromRHS())) return(NULL)
         
-        if (input$completeCasesOnly == 1) {
+        if (useCompleteCasesOnly()) {
             tryCatch({lrm(psForm(), 
                 data  = dset.orig()[PSIDs()])},
                 error = function(e) return(NULL))
@@ -501,7 +544,7 @@ shinyServer(function(input, output, session) {
 
     output$psFitProblemTextPrePruning <- renderUI({
         # dependencies
-        input$completeCasesOnly
+        useCompleteCasesOnly()
         
         if (psNotChecked() | is.null(varnamesFromRHSOK())) {
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
@@ -515,7 +558,7 @@ shinyServer(function(input, output, session) {
     })
     output$psGraphsNotReady <- renderUI({
         # dependencies
-        input$completeCasesOnly
+        useCompleteCasesOnly()
         
         if (is.null(dset.psgraphs())) {
             HTML(paste0(tags$span(style="color:orange", "Scores not yet estimated.")))
@@ -555,7 +598,7 @@ shinyServer(function(input, output, session) {
     
     output$dataNonmissingDimText1  <- renderUI({
         if (is.null(nonMissingIDs()) | 
-            input$completeCasesOnly == 0) return(NULL)
+            !useCompleteCasesOnly()) return(NULL)
         if (psNotChecked() | 
             is.null(varnamesFromRHSOK())) return(NULL)
 
@@ -563,7 +606,7 @@ shinyServer(function(input, output, session) {
     })
     output$dataNonmissingDimText2  <- renderUI({
         if (is.null(nonMissingIDs()) | 
-            input$completeCasesOnly == 0) return(NULL)
+            !useCompleteCasesOnly()) return(NULL)
         if (psNotChecked() | 
             is.null(varnamesFromRHSOK())) return(NULL)
 
@@ -571,7 +614,7 @@ shinyServer(function(input, output, session) {
     })
     output$dataNonmissingDimText3 <- renderText({
         if (is.null(nonMissingIDs()) | 
-            input$completeCasesOnly == 0) return(NULL)
+            !useCompleteCasesOnly()) return(NULL)
         if (psNotChecked() | 
             is.null(varnamesFromRHSOK())) return(NULL)
 
@@ -722,6 +765,7 @@ shinyServer(function(input, output, session) {
             buttonvalues$lastActionX <- 'pruneOrPlot'
         }
     })
+    # TODO: am I still using this?
     observe({
         if (input$psTypedButton != 0 | input$completeCasesOnly %in% c(0,1)) {
             buttonvalues$lastActionX <- 'specify'
