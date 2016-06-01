@@ -2,6 +2,7 @@ library(shiny)
 #library(shinythemes)
 
 shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
+    theme= "sandstone.css",
     tabPanel("Upload",
         fluidRow(
             column(6,
@@ -116,19 +117,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     width= '33%'
                     ),
                 actionButton('generalGraphUpdateButton', 
-                    HTML("(re-)Make graphs using updated variable list<br/>and/or graph preferences")),
-                tags$br(),
-                tags$br(),
-                h4('After pruning:'),
-                actionButton('xgraphsUpdateButton', 
-                    HTML("Update covariate graphs to reflect pruning choices")),
-                tags$br(),
-                tags$br(),
-                actionButton('PSCalcUpdateButton', 
-                    HTML("Recalculate PS for pruned sample<br/>(will also update all graphs)")),
-                textOutput('psFitProblemTextPostPruning'),
-                tags$head(tags$style(
-                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" ))
+                    HTML("(re-)Make graphs using updated variable list<br/>and/or graph preferences"))
             ), # end column
             column(width= 6,
                 h4("Current sample size"),
@@ -140,6 +129,25 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     height= 300,
                     width= 'auto'),
                 uiOutput('needPSText')
+            ) # end column
+        ), # end fluidRow 
+        tags$hr(),
+        fluidRow(
+            #h4('After pruning:'),
+            column(width= 4, offset= 2,
+                actionButton('xgraphsUpdateButton', 
+                    HTML("Update covariate graphs<br/>to reflect pruning choices"),
+                    style="color: #fff; background-color: #337ab7; border-color: #2e6da4"
+                )
+            ), # end column
+            column(width= 4, offset= 2,
+                actionButton('PSCalcUpdateButton', 
+                    HTML("Recalculate PS for pruned sample<br/>(will also update all graphs)"),
+                    style="color: #fff; background-color: #337ab7; border-color: #2e6da4"
+                ),
+                textOutput('psFitProblemTextPostPruning'),
+                tags$head(tags$style(
+                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" ))
             ) # end column
         ), # end fluidRow 
         uiOutput("univariatePlotsAndInputs")

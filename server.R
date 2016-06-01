@@ -20,28 +20,6 @@ library(data.table)
 # The first number is the number of MB
 options(shiny.maxRequestSize=30*1024^2)
 
-# from http://stackoverflow.com/questions/17370460/scatterplot-with-alpha-transparent-histograms-in-r?lq=1
-#theme0 <- function(...) {
-#    theme( 
-#        legend.position = "none",
-#        panel.background = element_blank(),
-#        panel.grid.major = element_blank(),
-#        panel.grid.minor = element_blank(),
-#        panel.margin = unit(0,"null"),
-#        axis.ticks        = element_blank(),
-#        axis.text.x       = element_blank(),
-#        axis.text.y       = element_blank(),
-#        axis.title.x      = element_blank(),
-#        axis.title.y      = element_blank(),
-#        axis.ticks.length = unit(0,"null"),
-#        #axis.ticks.margin = unit(0,"null"),
-#        axis.text.x = element_text(margin=margin(0,0,0,0,"null")),
-#        axis.text.y = element_text(margin=margin(0,0,0,0,"null")),
-#        panel.border=element_rect(color=NA),
-#    ...)
-#}
-
-
 shinyServer(function(input, output, session) {
     ############################################################
     ############################################################
@@ -930,10 +908,10 @@ shinyServer(function(input, output, session) {
         s.magenta<- "#992288"
         s.mustard<- "#CCCC55"
         myColorScale <- c(
-            s.orange,
-            s.dkblue,
             s.magenta,
+            s.orange,
             s.teal  ,
+            s.dkblue,
             s.red    ,
             s.yellow,
             s.green ,
@@ -1557,7 +1535,7 @@ shinyServer(function(input, output, session) {
                                 uiOutput(pruner2name)
                             )
                         ),
-                        tags$hr(),
+                        tags$br(),
                         uiOutput(naTableName),
                         uiOutput(keepNAName)
                     ) # end column
