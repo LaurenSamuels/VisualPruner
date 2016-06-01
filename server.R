@@ -1164,6 +1164,7 @@ shinyServer(function(input, output, session) {
                     datxps.xna <- datxps[is.na(get(varname)), ]
                     
                     # ylim for top plots: 
+                    datx.xna.counts <- table(datx.xna[[groupvarFactorName()]])
                     if(varIsContinuous()[varname]) {
                         # first make all histograms but do not plot,
                         #    in order to get ylim
@@ -1178,10 +1179,13 @@ shinyServer(function(input, output, session) {
                             }
                         }
                         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-                        datx.xna.counts <- table(datx.xna[[groupvarFactorName()]])
                         my.ylim.counts <- max(c(histcounts, datx.xna.counts)) 
                     } else {
-                        
+                        xtbl <- table(
+                            datx.nona[[groupvarFactorName()]],
+                            datx.nona[[varname]] 
+                        )
+                        my.ylim.counts <- max(c(xtbl, datx.xna.counts))
                     }
                     
                     
@@ -1270,7 +1274,6 @@ shinyServer(function(input, output, session) {
                     axis(1, at= 1, labels= "Missing")
                     if (testing) box("figure", col= "green")
                     if (testing) box("plot", col= "black")
-                    if (testing) box("inner", col= "red")
                     ###############################################################
 
 
@@ -1299,14 +1302,9 @@ shinyServer(function(input, output, session) {
                         }
                     } else { # discrete
                         # https://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/
-                        xtbl <- table(
-                            datx.nona[[groupvarFactorName()]],
-                            datx.nona[[varname]] 
-                        )
-                        
                         plot(1, 0,
                             xlim= c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
-                            ylim= c(0, max(xtbl)), 
+                            ylim= c(0, my.ylim.counts), 
                             bty= if (testing) "o" else "n",
                             type= "n")
 
@@ -1359,7 +1357,6 @@ shinyServer(function(input, output, session) {
                             xlim= c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
                             ylim= my.ylim.ps, 
                             axes= FALSE,
-                            bty= if (testing) "o" else "n",
                             type= "n")
                         for (lev in groupvarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
@@ -1381,6 +1378,7 @@ shinyServer(function(input, output, session) {
                         axis(2)
                     }
                     if (testing) box("figure", col= "green")
+                    if (testing) box("plot", col= "black")
                     ###############################################################
 
                     ###############################################################
