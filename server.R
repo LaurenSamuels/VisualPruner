@@ -392,6 +392,7 @@ shinyServer(function(input, output, session) {
         # Dependencies
         if (input$psTypedButton == 0 | 
             is.null(dset.orig())) return(NULL) 
+        useCompleteCasesOnly()
         
         isolate(input$formulaRHS)
     })
@@ -403,8 +404,9 @@ shinyServer(function(input, output, session) {
             error= function(e) {return(NULL)})
     })    
     psNotChecked <- reactive({
-        if (input$psTypedButton == 0 | paste0(groupvarname(), ' ~ ', 
-            input$formulaRHS) != stringFormula()) TRUE else FALSE
+        if (input$psTypedButton == 0 | 
+            paste0(groupvarname(), ' ~ ', input$formulaRHS) != 
+                stringFormula()) TRUE else FALSE
     })
     psFormSyntaxOK <- reactive({
         if (psNotChecked()) return(NULL)
@@ -442,7 +444,7 @@ shinyServer(function(input, output, session) {
                 "prefix the variable name with ",
                 tags$b(style="font-family:courier", naPrefix()),
                 ", e.g. ", 
-                tags$b(style="font-family:courier", paste0(naPrefix(), "myvar")), 
+                tags$b(style="font-family:courier", paste0(naPrefix(), "age")), 
                 "."
             ))
         }
@@ -472,8 +474,20 @@ shinyServer(function(input, output, session) {
         if (is.null(psForm())) return(NULL)
         
         allvars <- setdiff(all.vars(psForm()), groupvarname())
-        if (all(allvars %in% names(dset.orig()))) allvars else NULL
+        
+        if (useCompleteCasesOnly()) {
+            if (all(allvars %in% names(dset.orig()))) allvars else NULL
+        } else {
+            allvars.noprefix <- 
+                unique(gsub(paste0("^", naPrefix()), "", allvars))
+            if (all(allvars.noprefix %in% names(dset.orig()))) allvars else NULL
+        }
     })    
+    varnamesForIndicators <- reactive({
+        if (is.null(varnamesFromRHS())) return(NULL)
+        
+        setdiff(varnamesFromRHS(), names(dset.orig()))
+    })
     varnamesFromRHSOK <- reactive({
         if (psNotChecked()) return(NULL)
         if (is.null(psFormSyntaxOK())) return(NULL)
@@ -490,7 +504,14 @@ shinyServer(function(input, output, session) {
         } else if (!psFormSyntaxOK()) {
             HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
         } else if (!varnamesFromRHSOK()) {
-            HTML(paste0(tags$span(style="color:red", "The formula uses variables that are not in the dataset. Please try again.")))
+            if (any(grepl(paste0("^", naPrefix()), all.vars(psForm())))) {
+                HTML(paste0(tags$span(style="color:red", paste0(
+                    "The formula uses missingness indicators, but you have ",
+                    "chosen to use complete cases only. ",
+                    "Please change your selection or remove the indicators."))))
+            } else {
+                HTML(paste0(tags$span(style="color:red", "The formula uses variables that are not in the dataset. Please try again.")))
+            }
         } else {
             HTML(paste0(tags$span(style="color:green", "All variable names are OK.")))
         }
@@ -506,7 +527,8 @@ shinyServer(function(input, output, session) {
         if (is.null(varnamesFromRHS())) return(NULL)
         if (useCompleteCasesOnly()) return(NULL)
         
-        myvars <- c(varnamesFromRHS(), groupvarname())
+        origvars <- unique(gsub(paste0("^", naPrefix()), "", varnamesFromRHS()))
+        myvars <- c(origvars, groupvarname())
         dat <- copy(dset.orig()[PSIDs(), myvars, with= FALSE])
         # have to convert character vars to factors before imputing
         for (varname in varnamesFromRHS()) {
@@ -515,8 +537,18 @@ shinyServer(function(input, output, session) {
             }
         }
         
+        # now do the imputation
         dat[, (myvars) := lapply(.SD, function(x) impute(x, fun= mean)),
             .SDcols = myvars]
+        
+        # now add the missingness indicators
+        if (length(varnamesForIndicators()) > 0) {
+            for (varname in varnamesForIndicators()) {
+                varname.orig <- gsub(paste0("^", naPrefix()), "", varname)
+                dat[, eval(varname) := is.imputed(dat[[varname.orig]])]
+            }
+        }
+        
         dat
     })
     
