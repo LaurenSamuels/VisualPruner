@@ -531,7 +531,7 @@ shinyServer(function(input, output, session) {
         myvars <- c(origvars, groupvarname())
         dat <- copy(dset.orig()[PSIDs(), myvars, with= FALSE])
         # have to convert character vars to factors before imputing
-        for (varname in varnamesFromRHS()) {
+        for (varname in origvars) {
             if (is.character(dat[[varname]])) {
                 dat[, eval(varname) := factor(dat[[varname]])]
             }
