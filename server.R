@@ -285,10 +285,16 @@ shinyServer(function(input, output, session) {
         }    
         proposedName
     })    
-    
+# info for css  
+#<p class="text-muted">Fusce dapibus, tellus ac cursus commodo, tortor mauris nibh.</p>
+#<p class="text-primary">Nullam id dolor id nibh ultricies vehicula ut id elit.</p>
+#<p class="text-warning">Etiam porta sem malesuada magna mollis euismod.</p>
+#<p class="text-danger">Donec ullamcorper nulla non metus auctor fringilla.</p>
+#<p class="text-success">Duis mollis, est non commodo luctus, nisi erat porttitor ligula.</p>
+#<p class="text-info">Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
     output$noDataChosenText <- renderUI({
         if (is.null(dset.orig())) {
-            HTML(paste0(tags$span(style="color:orange", "No dataset selected.")))
+            HTML(paste0(tags$span(class="text-warning", "No dataset selected.")))
         } else return(NULL)
     })
     output$dataFnameText1 <- renderUI({
@@ -430,11 +436,11 @@ shinyServer(function(input, output, session) {
 
     output$psFormulaProblemText <- renderUI({
         if (psNotChecked()) {
-            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+            HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!psFormSyntaxOK()) {
-            HTML(paste0(tags$span(style="color:red", "That is not a usable RHS. Please try again.")))
+            HTML(paste0(tags$span(class="text-danger", "That is not a usable RHS. Please try again.")))
         } else {
-            HTML(paste0(tags$span(style="color:green", "Formula syntax is OK.")))
+            HTML(paste0(tags$span(class="text-success", "Formula syntax is OK.")))
         }
     })
 
@@ -478,26 +484,26 @@ shinyServer(function(input, output, session) {
     })
     output$psVarsProblemText <- renderUI({
         if (psNotChecked() | is.null(psFormSyntaxOK())) {
-            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+            HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!psFormSyntaxOK()) {
-            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+            HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!varnamesFromRHSOK()) {
             if (any(grepl(paste0("^", naPrefix()), all.vars(psForm())))) {
-                HTML(paste0(tags$span(style="color:red", paste0(
+                HTML(paste0(tags$span(class="text-danger", paste0(
                     "The formula uses missingness indicators, but you have ",
                     "chosen to use complete cases only. ",
                     "Please change your selection or remove the indicators."))))
             } else {
-                HTML(paste0(tags$span(style="color:red", "The formula uses variables that are not in the dataset. Please try again.")))
+                HTML(paste0(tags$span(class="text-danger", "The formula uses variables that are not in the dataset. Please try again.")))
             }
         } else {
-            HTML(paste0(tags$span(style="color:green", "All variable names are OK.")))
+            HTML(paste0(tags$span(class="text-success", "All variable names are OK.")))
         }
     })    
 
-    output$psNeedsCheckingText <- renderText({
+    output$psNeedsCheckingText <- renderUI({
         if (psNotChecked()) {
-            "Remember to click the button when you're done!"
+            HTML(paste0(tags$span(class="text-info", "Remember to click the button when you're done!")))
         } else NULL   
     })
 
@@ -557,13 +563,13 @@ shinyServer(function(input, output, session) {
         useCompleteCasesOnly()
         
         if (psNotChecked() | is.null(varnamesFromRHSOK())) {
-            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+            HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!varnamesFromRHSOK()) { # couldn't combine this with above
-            HTML(paste0(tags$span(style="color:orange", "Not checked yet.")))
+            HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (is.null(isolate(lrmfit()))) {
-            HTML(paste0(tags$span(style="color:red", "The propensity score formula can't be fit using the current dataset. Please modify the model and/or the variables selected for viewing.")))
+            HTML(paste0(tags$span(class="text-danger", "The propensity score formula can't be fit using the current dataset. Please modify the model and/or the variables selected for viewing.")))
         } else {
-            HTML(paste0(tags$span(style="color:green", "PS model successfully fit.")))
+            HTML(paste0(tags$span(class="text-success", "PS model successfully fit.")))
         }
     })
     output$psGraphsNotReady <- renderUI({
@@ -571,7 +577,7 @@ shinyServer(function(input, output, session) {
         useCompleteCasesOnly()
         
         if (is.null(dset.psgraphs())) {
-            HTML(paste0(tags$span(style="color:orange", "Scores not yet estimated.")))
+            HTML(paste0(tags$span(class="text-warning", "Scores not yet estimated.")))
         } else {
             NULL
         }
@@ -587,9 +593,10 @@ shinyServer(function(input, output, session) {
             FALSE
         }    
     })
-    output$psFitProblemTextPostPruning <- renderText({
+    output$psFitProblemTextPostPruning <- renderUI({
         if (psFitProblemPostPruning()) {
-            "The propensity score formula can't be fit using the pruned dataset. Please modify the model and/or the pruning criteria."   
+            HTML(paste0(tags$span(class="text-danger", 
+                "The propensity score formula can't be fit using the pruned dataset. Please modify the model and/or the pruning criteria.")))
         } else {
             NULL
         }    
@@ -716,10 +723,10 @@ shinyServer(function(input, output, session) {
     output$needPSText <- renderUI({
         if (is.null(dset.psgraphs()) & !psFitProblemPostPruning()) {
             HTML(paste0(
-                tags$span(style="color:red", "To see graphs, "),
-                tags$span(style="color:red", "specify a propensity score model"),
+                tags$span(class="text-warning", "To see graphs, "),
+                tags$span(class="text-warning", "specify a propensity score model"),
                 tags$br(),
-                tags$span(style="color:red", "on the 'Specify' tab page.") ))
+                tags$span(class="text-warning", "on the 'Specify' tab page.") ))
         } else return(NULL)
     })
 
@@ -899,24 +906,38 @@ shinyServer(function(input, output, session) {
 
         #  colors, from http://www.sron.nl/~pault/
         # these are slightly less cb-friendly, but optimized for screen
-        s.red    <- "#EE3333"
-        s.orange <- "#EE7722"
-        s.yellow <- "#FFEE33"
-        s.green  <- "#66AA55"
-        s.teal   <- "#11AA99"
-        s.dkblue <- "#3366AA"
-        s.magenta<- "#992288"
-        s.mustard<- "#CCCC55"
+        #s.red    <- "#EE3333"
+        #s.orange <- "#EE7722"
+        #s.yellow <- "#FFEE33"
+        #s.green  <- "#66AA55"
+        #s.teal   <- "#11AA99"
+        #s.dkblue <- "#3366AA"
+        #s.magenta<- "#992288"
+        #s.mustard<- "#CCCC55"
+        #myColorScale <- c(
+        #    s.magenta,
+        #    s.orange,
+        #    s.teal  ,
+        #    s.dkblue,
+        #    s.red    ,
+        #    s.yellow,
+        #    s.green ,
+        #    s.mustard
+        #)    
+        #colors from  bootswatch sandstone
+        primary <-         "#325D88"
+        success <-         "#93C54B"
+        info <-            "#29ABE0"
+        warning <-         "#F47C3C"
+        danger <-          "#d9534f"
         myColorScale <- c(
-            s.magenta,
-            s.orange,
-            s.teal  ,
-            s.dkblue,
-            s.red    ,
-            s.yellow,
-            s.green ,
-            s.mustard
-        )    
+            primary,
+            warning,
+            success,
+            info,
+            danger
+        )
+        
         sc <- myColorScale[1:length(unique(dset.orig()[[groupvarFactorName()]]))]
         names(sc) <- levels(dset.orig()[[groupvarFactorName()]])
         sc
@@ -1481,7 +1502,7 @@ shinyServer(function(input, output, session) {
                         #if (grepl("TRUE", pruneValTextList()[[my_i]], fixed= TRUE)) {
                         if (is.na(as.numeric(input[[paste0("pruningChoices1_", my_i)]])) | 
                             is.na(as.numeric(input[[paste0("pruningChoices2_", my_i)]]))) {    
-                            HTML(paste0(tags$span(style="color:red", "Please make sure both boxes contain numbers.")))
+                            HTML(paste0(tags$span(class="text-danger", "Please make sure both boxes contain numbers.")))
                         } else { # no problem
                             return(NULL)
                         }
@@ -1520,7 +1541,7 @@ shinyServer(function(input, output, session) {
                             width  = "auto"
                         ) # end plotOutput   
                     ), # end column
-                    column(6, 
+                    column(6,
                         if (varIsContinuous()[varname]) {
                             h5("Keep only units in this range (inclusive):") 
                         } else {

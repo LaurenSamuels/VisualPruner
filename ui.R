@@ -37,7 +37,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     ), # end data-import panel
     tabPanel("Specify",
         fluidRow(
-            column(6,
+            column(5,
                 h4('Handling missing values in PS model:'),
                 radioButtons('completeCasesOnly', NULL,
                     c(
@@ -54,11 +54,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$br(),
                 uiOutput('getFormula'),
                 actionButton('psTypedButton', "I have finished typing"),
-                textOutput('psNeedsCheckingText'),
-                tags$head(tags$style(
-                    "#psNeedsCheckingText{color: magenta; font-size: 10px; }" ))
+                uiOutput('psNeedsCheckingText')
             ), # end column
-            column(6,
+            column(6, offset = 1,
                 h4("Preliminary syntax check:"),
                 uiOutput('psFormulaProblemText'),
                 h4("Variable-name check:"),
@@ -90,7 +88,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     ), # end Specify panel
     tabPanel("Prune",
         fluidRow(
-            column(6,
+            column(5,
                 h4('Variables to view and restrict:'),
                 uiOutput("chooseVarsToRestrict"),
                 tags$br(),
@@ -119,7 +117,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 actionButton('generalGraphUpdateButton', 
                     HTML("(re-)Make graphs using updated variable list<br/>and/or graph preferences"))
             ), # end column
-            column(width= 6,
+            column(width= 6, offset = 1,
                 h4("Current sample size"),
                 tableOutput("pruneTable"),
                 tags$br(),
@@ -137,17 +135,15 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(width= 4, offset= 2,
                 actionButton('xgraphsUpdateButton', 
                     HTML("Update covariate graphs<br/>to reflect pruning choices"),
-                    style="color: #fff; background-color: #337ab7; border-color: #2e6da4"
+                    class="btn btn-primary"
                 )
             ), # end column
             column(width= 4, offset= 2,
                 actionButton('PSCalcUpdateButton', 
                     HTML("Recalculate PS for pruned sample<br/>(will also update all graphs)"),
-                    style="color: #fff; background-color: #337ab7; border-color: #2e6da4"
+                    class="btn btn-primary"
                 ),
-                textOutput('psFitProblemTextPostPruning'),
-                tags$head(tags$style(
-                    "#psFitProblemTextPostPruning{color: red; font-size: 12px; }" ))
+                uiOutput('psFitProblemTextPostPruning')
             ) # end column
         ), # end fluidRow 
         uiOutput("univariatePlotsAndInputs")
@@ -166,10 +162,15 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
 
     tabPanel("About",
         h1("About Visual Pruner"),
-        'Visual Pruner is a study-design tool for use with observational studies. We hope to provide further documentation soon.',
+        'Visual Pruner is a study-design tool for use with observational studies.', 
+        'Some documentation can be found at ',
+        a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
+            href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
+            target="_blank"),
+        '. We hope to provide further documentation soon.',
         tags$hr(),
         h4('Version'),
-        '0.0.0.9005',
+        '0.0.0.9006',
         h4('License'),
         'GPL-3',
         h4('Authors'),
@@ -184,8 +185,12 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         h4('Acknowledgements'),
         'Many thanks to Qi Liu for helpful suggestions.',
         tags$br(),
-        'Visual Pruner is built using the', tags$code('R shiny'), 'framework.',
-        '(See the R tab for more information)'
+        'Visual Pruner is built using the', tags$code('R shiny'), 'framework',
+        ' (see the R tab for more information), with CSS from ',
+        a("http://bootswatch.com", 
+            href="http://bootswatch.com", 
+            target="_blank"),
+        '.'
     ), # end About panel
 
     tabPanel("R",
