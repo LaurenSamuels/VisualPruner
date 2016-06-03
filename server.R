@@ -504,7 +504,8 @@ shinyServer(function(input, output, session) {
         } else if (!psFormSyntaxOK()) {
             HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!varnamesFromRHSOK()) {
-            if (any(grepl(paste0("^", naPrefix()), all.vars(psForm())))) {
+            if (useCompleteCasesOnly() & 
+                any(grepl(paste0("^", naPrefix()), all.vars(psForm())))) {
                 HTML(paste0(tags$span(class="text-danger", paste0(
                     "The formula uses missingness indicators, but you have ",
                     "chosen to use complete cases only. ",
