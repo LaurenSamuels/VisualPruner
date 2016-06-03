@@ -171,23 +171,46 @@ shinyServer(function(input, output, session) {
         }
     })
     
-    observe({
-        # Add a factor version of the treatment indicator, 
-        #    for plotting
-        if (!is.null(groupvarFactorName())){
-            # I think this next line is necessary in case of dset switch. But it's possible it could be taken out.
-            if (groupvarname() %in% names(dset.orig())) {
-                if (!is.factor(dset.orig()[[groupvarname()]])) {
-                    dset.orig()[, groupvarFactorName() := 
-                        factor(dset.orig()[[groupvarname()]])]
-                }
+    #observe({
+    #    # Add a factor version of the treatment indicator, 
+    #    #    for plotting
+    #    if (!is.null(groupvarFactorName())){
+    #        # I think this next line is necessary in case of dset switch. But it's possible it could be taken out.
+    #        if (groupvarname() %in% names(dset.orig())) {
+    #            if (!is.factor(dset.orig()[[groupvarname()]])) {
+    #                dset.orig()[, groupvarFactorName() := 
+    #                    factor(dset.orig()[[groupvarname()]])]
+    #            }
+    #        }
+    #    }
+    #})
+    dset.groupvar <- reactive({
+        if (is.null(groupvarFactorName())) return(NULL)
+        if (is.null(idvarName())) return(NULL)
+        if (!(idvarName() %in% names(dset.orig()))) return(NULL)
+
+        dat <- data.table(dset.orig()[[idvarName()]])
+        setnames(dat, old = names(dat), new = idvarName())
+
+        # I think this next line is necessary in case of dset switch, but I'm not sure. 
+        if (groupvarname() %in% names(dset.orig())) {
+            if (!is.factor(dset.orig()[[groupvarname()]])) {
+                dat[, groupvarFactorName() := 
+                    factor(dset.orig()[[groupvarname()]])]
+            } else {
+                dat[, groupvarFactorName() := 
+                    dset.orig()[[groupvarname()]]]
             }
         }
+        setkeyv(dat, idvarName())
+        dat 
     })
+
     groupvarFactorLevelsSorted <- reactive({
         # for use in graphs
         if (is.null(groupvarFactorName())) return(NULL)
-        tmp <- table(dset.orig()[[groupvarFactorName()]])
+
+        tmp <- table(dset.groupvar()[[groupvarFactorName()]])
         names(tmp)[order(tmp, decreasing= TRUE)]
     })
 
@@ -204,12 +227,13 @@ shinyServer(function(input, output, session) {
     dset.psgraphs <- reactive({
         # This dataset is used for making the PS plots.
         if (is.null(logitPS())) return(NULL)
+        if (is.null(dset.groupvar())) return(NULL)
         
         # todo: do this all using data.table
         dat1 <- data.frame(
             id    = unlist(dset.orig()[nonMissingIDs(), 
                 idvarName(), with= FALSE]),
-            group = unlist(dset.orig()[nonMissingIDs(), 
+            group = unlist(dset.groupvar()[nonMissingIDs(), 
                 groupvarFactorName(), with= FALSE])
         )
         dat2 <- data.frame(
@@ -249,14 +273,8 @@ shinyServer(function(input, output, session) {
         names(dset.orig())  
     })
     possgroupnames.orig <- reactive({
-        # dependencies. Goal here: not have groupvarFactorName() show up in list
-        input$useExampleData
-        # TODO: this isn't 100% right. If they click this but then don't
-        #   actually change the data file, groupvarFactorName() will show up.
-        input$changeUpFile
-
-        isolate(varnames.orig()[sapply(dset.orig(), 
-            function(vec) length(unique(vec)) == 2)])
+        varnames.orig()[sapply(dset.orig(), 
+            function(vec) length(unique(vec)) == 2)]
     })
     output$chooseGroup <- renderUI({
         if (is.null(dset.orig())) return(NULL)
@@ -702,7 +720,8 @@ shinyServer(function(input, output, session) {
 
         # We don't want to allow restriction of the treatment var 
         setdiff(varnames.orig(), 
-            c(groupvarname(), groupvarFactorName(), idvarName()))  
+            #c(groupvarname(), groupvarFactorName(), idvarName()))  
+            c(groupvarname(), idvarName()))  
     })    
     output$chooseVarsToRestrict <- renderUI({
         if (is.null(possVarsToRestrict())) return(NULL)
@@ -898,7 +917,7 @@ shinyServer(function(input, output, session) {
     output$pruneTable <- renderTable({
         if (is.null(nonMissingIDs())) return(NULL)
     
-        dat <- dset.orig()[idsToKeepAfterPruning(), .N, by= eval(groupvarFactorName())]
+        dat <- dset.groupvar()[idsToKeepAfterPruning(), .N, by= eval(groupvarFactorName())]
         setnames(dat, old = groupvarFactorName(), new = groupvarname())
         rbind(dat, list("Total", dset.orig()[idsToKeepAfterPruning(), .N]))
     }, include.rownames = FALSE)
@@ -924,8 +943,8 @@ shinyServer(function(input, output, session) {
             danger
         )
         
-        sc <- myColorScale[1:length(unique(dset.orig()[[groupvarFactorName()]]))]
-        names(sc) <- levels(dset.orig()[[groupvarFactorName()]])
+        sc <- myColorScale[1:length(unique(dset.groupvar()[[groupvarFactorName()]]))]
+        names(sc) <- levels(dset.groupvar()[[groupvarFactorName()]])
         sc
     })
     
@@ -1081,17 +1100,18 @@ shinyServer(function(input, output, session) {
                 varname         <- varsToView()[my_i]
 
                 plotname        <- paste0("plot", my_i)
+                naTableName     <- paste0("naTable", my_i)
+
+                # core dataset for plots and naTable: ID, group, x
+                datx <- dset.orig()[idsToKeepAfterPruning()][, 
+                    c(idvarName(), varname), 
+                    with= FALSE][dset.groupvar()[idsToKeepAfterPruning()]]
      
-                # For plot alignment
-                testing <- FALSE
-                
                 output[[plotname]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
 
-                    # core dataset: ID, group, x
-                    datx <- dset.orig()[idsToKeepAfterPruning()][, 
-                        c(idvarName(), groupvarFactorName(), varname), 
-                        with= FALSE]
+                    # For plot alignment
+                    testing <- FALSE
 
                     # convert character & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
@@ -1397,6 +1417,17 @@ shinyServer(function(input, output, session) {
                     par(def.par)
                 }, res= 100
                 ) # end renderPlot
+
+
+                # Create a missing-by-group table for each variable
+                output[[naTableName]] <- renderTable({
+                    dat <- datx[, .(pct.missing = 100 * mean(is.na(get(varname)))), 
+                        by= eval(groupvarFactorName())]
+                    setnames(dat, old = groupvarFactorName(), new = groupvarname())
+                    dat
+                }, digits= 1, include.rownames= FALSE
+                ) # end renderTable
+
             }) # end local
         } # end for
     }) # end observe    
@@ -1476,26 +1507,6 @@ shinyServer(function(input, output, session) {
         } # end for
     }) # end observe    
 
-    observe({
-        for (i in seq_along(varsToView())) {
-            local({
-                my_i <- i
-                varname         <- varsToView()[my_i]
-
-                naTableName     <- paste0("naTable", my_i)
-     
-                # Create a missing-by-group table each variable
-                output[[naTableName]] <- renderTable({
-                    dat <- dset.orig()[idsToKeepAfterPruning(), 
-                        .(pct.missing = 100 * mean(is.na(get(varname)))), 
-                        by= eval(groupvarFactorName())]
-                    setnames(dat, old = groupvarFactorName(), new = groupvarname())
-                    dat
-                }, digits= 1, include.rownames= FALSE) # end renderTable
-                
-            }) # end local
-        } # end for
-    }) # end observe    
     
     # Keeping the observe for the textcheck separate
     observe({
@@ -1513,7 +1524,6 @@ shinyServer(function(input, output, session) {
                     if (is.null(pruneValTextList())) return(NULL)
                     
                     if (varIsContinuous()[varname]) {
-                        #if (grepl("TRUE", pruneValTextList()[[my_i]], fixed= TRUE)) {
                         if (is.na(as.numeric(input[[paste0("pruningChoices1_", my_i)]])) | 
                             is.na(as.numeric(input[[paste0("pruningChoices2_", my_i)]]))) {    
                             HTML(paste0(tags$span(class="text-danger", "Please make sure both boxes contain numbers.")))
