@@ -4,8 +4,6 @@
 #######################################################
 
 library(shiny)
-library(ggplot2)
-library(gridExtra)
 library(rms)
 library(data.table)
 #library(Cairo) # for better graphics on Linux servers
@@ -250,18 +248,24 @@ shinyServer(function(input, output, session) {
     varnames.orig <- reactive({
         names(dset.orig())  
     })
+    possgroupnames.orig <- reactive({
+        # dependencies. Goal here: not have groupvarFactorName() show up in list
+        input$useExampleData
+        # TODO: this isn't 100% right. If they click this but then don't
+        #   actually change the data file, groupvarFactorName() will show up.
+        input$changeUpFile
+
+        isolate(varnames.orig()[sapply(dset.orig(), 
+            function(vec) length(unique(vec)) == 2)])
+    })
     output$chooseGroup <- renderUI({
         if (is.null(dset.orig())) return(NULL)
+
         selectizeInput('treatmentVarName', 
-            #'Which variable is the treatment indicator?', #'
-            label= NULL, 
-            choices= c(
-                #"Choose one" = "", 
-                varnames.orig()[sapply(dset.orig(), 
-                    function(vec) length(unique(vec)) == 2)]
-                ), 
-            selected= NULL,
-            multiple= FALSE
+            label    = NULL, 
+            choices  = possgroupnames.orig(), 
+            selected = NULL,
+            multiple = FALSE
             )
     })
     groupvarname <- reactive({
@@ -376,6 +380,7 @@ shinyServer(function(input, output, session) {
         # Dependencies
         if (input$psTypedButton == 0 | 
             is.null(dset.orig())) return(NULL) 
+        dset.orig()
         useCompleteCasesOnly()
         
         isolate(input$formulaRHS)
@@ -385,7 +390,7 @@ shinyServer(function(input, output, session) {
     })    
     psForm <- reactive({
         tryCatch(as.formula(stringFormula()),
-            error= function(e) {return(NULL)})
+            error= function(e) return(NULL))
     })    
     psNotChecked <- reactive({
         if (input$psTypedButton == 0 | 
@@ -447,6 +452,7 @@ shinyServer(function(input, output, session) {
     PSIDs <- reactive({
         # dependencies
         if (input$PSCalcUpdateButton == 0) return(nonMissingIDs()) 
+        dset.orig()
         # this next one should be covered by nonMissingIDs,
         #    but just in case:
         useCompleteCasesOnly()   
@@ -475,6 +481,7 @@ shinyServer(function(input, output, session) {
     varnamesFromRHSOK <- reactive({
         if (psNotChecked()) return(NULL)
         if (is.null(psFormSyntaxOK())) return(NULL)
+        dset.orig()
         
         if (is.null(isolate(varnamesFromRHS()))) {
             FALSE
@@ -554,12 +561,14 @@ shinyServer(function(input, output, session) {
     output$psCopyText <- renderText({
         # dependencies
         if(is.null(lrmfit())) return(NULL)
+        dset.orig()
     
         isolate(stringFormula())
     })
 
     output$psFitProblemTextPrePruning <- renderUI({
         # dependencies
+        dset.orig()
         useCompleteCasesOnly()
         
         if (psNotChecked() | is.null(varnamesFromRHSOK())) {
@@ -586,6 +595,7 @@ shinyServer(function(input, output, session) {
         # dependencies
         if (psNotChecked() |  
             input$PSCalcUpdateButton  == 0) return (FALSE)
+        dset.orig()
 
         if (is.null(isolate(lrmfit()))) {
             TRUE
@@ -708,14 +718,13 @@ shinyServer(function(input, output, session) {
     })
 
     varsToView <- reactive({
-        #dependency
+        #dependencies
+        dset.orig()
         input$generalGraphUpdateButton
         
-        # TODO: I wish this were a dependency, but it doesn't seem to have an effect
-        input$psTypedButton
-
         # to cover switching between datasets
-        intersect(isolate(input$varsToRestrict), names(dset.orig()))
+        #intersect(isolate(input$varsToRestrict), names(dset.orig()))
+        isolate(input$varsToRestrict)
     })
     numvarsToView <- reactive({
         length(varsToView())    
@@ -731,9 +740,11 @@ shinyServer(function(input, output, session) {
     })
 
     varIsContinuous <- reactive({
-        #dependencies
-        input$generalGraphUpdateButton
         if (is.null(varsToView())) return(NULL)
+
+        #dependencies
+        dset.orig()
+        input$generalGraphUpdateButton
         
         vnames <- varsToView()
         myvec <- rep(FALSE, length(vnames))
@@ -750,16 +761,10 @@ shinyServer(function(input, output, session) {
     })    
 
     alphaval <- reactive({
-        #dependency
-        input$generalGraphUpdateButton
-
-        isolate(input$alphaSlider)
+        input$alphaSlider
     })
     pointsizeval <- reactive({
-        #dependency
-        input$generalGraphUpdateButton
-
-        isolate(input$pointsizeSlider)
+        input$pointsizeSlider
     })
     # number of decimal places to use w/ covariate graphs
     # TODO: get rid of this if not using brushing on PS
@@ -796,7 +801,7 @@ shinyServer(function(input, output, session) {
 
         mylist <- vector("list", numvarsToView())
 
-        for (i in 1:numvarsToView()) {
+        for (i in seq_along(varsToView())) {
             # doing it this way to fit w/ old code---
             #   could redo later
             mylist[[i]]  <- 
@@ -814,7 +819,7 @@ shinyServer(function(input, output, session) {
 
         mylist <- vector("list", numvarsToView())
 
-        for (i in 1:numvarsToView()) {
+        for (i in seq_along(varsToView())) {
             mylist[[i]]  <- input[[paste0("keepNAInput", i)]] == "1"
         }
         mylist
@@ -827,10 +832,11 @@ shinyServer(function(input, output, session) {
             input$PSCalcUpdateButton == 0) {
             return(NULL)
         }
+        dset.orig()
         
         mylist <- vector("list", numvarsToView())
         
-        for(i in 1:numvarsToView()) {
+        for (i in seq_along(varsToView())) {
             myvals  <- isolate(pruneValRawList())[[i]]
             keepna  <- isolate(keepNARawList())[[i]]
             varname <- varsToView()[i]
@@ -904,26 +910,6 @@ shinyServer(function(input, output, session) {
     colorScale.mod <- reactive({
         if (is.null(nonMissingIDs())) return(NULL)
 
-        #  colors, from http://www.sron.nl/~pault/
-        # these are slightly less cb-friendly, but optimized for screen
-        #s.red    <- "#EE3333"
-        #s.orange <- "#EE7722"
-        #s.yellow <- "#FFEE33"
-        #s.green  <- "#66AA55"
-        #s.teal   <- "#11AA99"
-        #s.dkblue <- "#3366AA"
-        #s.magenta<- "#992288"
-        #s.mustard<- "#CCCC55"
-        #myColorScale <- c(
-        #    s.magenta,
-        #    s.orange,
-        #    s.teal  ,
-        #    s.dkblue,
-        #    s.red    ,
-        #    s.yellow,
-        #    s.green ,
-        #    s.mustard
-        #)    
         #colors from  bootswatch sandstone
         primary <-         "#325D88"
         success <-         "#93C54B"
@@ -1084,7 +1070,7 @@ shinyServer(function(input, output, session) {
     # also from http://stackoverflow.com/questions/19130455/create-dynamic-number-of-input-elements-with-r-shiny
     observe({
         
-        for (i in 1:numvarsToView()) {
+        for (i in seq_along(varsToView())) {
             # My sources (above) say:
             # Need local so that each item gets its own number. 
             # Without it, the value # of i in the renderPlot() 
@@ -1092,18 +1078,9 @@ shinyServer(function(input, output, session) {
             # because of when the expression is evaluated.
             local({
                 my_i <- i
-
                 varname         <- varsToView()[my_i]
+
                 plotname        <- paste0("plot", my_i)
-                pruner1name      <- paste0("pruner1_", my_i)
-                pruner2name      <- paste0("pruner2_", my_i)
-                input1name       <- paste0("pruningChoices1_", my_i)
-                input2name       <- paste0("pruningChoices2_", my_i)
-                textCheck1Name   <- paste0("textcheck1_", my_i)
-                textCheck2Name   <- paste0("textcheck2_", my_i)
-                keepNAName      <- paste0("keepNA", my_i)
-                keepNAInputName <- paste0("keepNAInput", my_i)
-                naTableName     <- paste0("naTable", my_i)
      
                 # For plot alignment
                 testing <- FALSE
@@ -1420,6 +1397,20 @@ shinyServer(function(input, output, session) {
                     par(def.par)
                 }, res= 100
                 ) # end renderPlot
+            }) # end local
+        } # end for
+    }) # end observe    
+
+    observe({
+        for (i in seq_along(varsToView())) {
+            local({
+                my_i <- i
+                varname         <- varsToView()[my_i]
+
+                pruner1name      <- paste0("pruner1_", my_i)
+                pruner2name      <- paste0("pruner2_", my_i)
+                input1name       <- paste0("pruningChoices1_", my_i)
+                input2name       <- paste0("pruningChoices2_", my_i)
 
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
@@ -1459,7 +1450,19 @@ shinyServer(function(input, output, session) {
                         NULL
                     }
                 }) # end renderUI
+            }) # end local
+        } # end for
+    }) # end observe    
 
+    observe({
+        for (i in seq_along(varsToView())) {
+            local({
+                my_i <- i
+                varname         <- varsToView()[my_i]
+
+                keepNAName      <- paste0("keepNA", my_i)
+                keepNAInputName <- paste0("keepNAInput", my_i)
+     
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
                     radioButtons(keepNAInputName, NULL,
@@ -1469,7 +1472,18 @@ shinyServer(function(input, output, session) {
                         width = '100%'
                     )
                 }) # end renderUI
+            }) # end local
+        } # end for
+    }) # end observe    
 
+    observe({
+        for (i in seq_along(varsToView())) {
+            local({
+                my_i <- i
+                varname         <- varsToView()[my_i]
+
+                naTableName     <- paste0("naTable", my_i)
+     
                 # Create a missing-by-group table each variable
                 output[[naTableName]] <- renderTable({
                     dat <- dset.orig()[idsToKeepAfterPruning(), 
@@ -1485,7 +1499,7 @@ shinyServer(function(input, output, session) {
     
     # Keeping the observe for the textcheck separate
     observe({
-        for (i in 1:numvarsToView()) {
+        for (i in seq_along(varsToView())) {
             local({
                 my_i <- i
                 varname         <- varsToView()[my_i]
@@ -1516,19 +1530,22 @@ shinyServer(function(input, output, session) {
     
     
     # Now put them all together
-    output$univariatePlotsAndInputs <- renderUI({
+    output$covariatePlotsAndInputs <- renderUI({
         if (input$generalGraphUpdateButton == 0) return(NULL)
         if (is.null(varsToView())) return(NULL)
+
+        # this is to prevent graphs from showing after dset switching
+        if (any(!(varsToView() %in% names(dset.orig())))) return(NULL)
         
         plot_and_input_list <- vector("list", numvarsToView())
-        for(i in 1:numvarsToView()) {
-            varname       <- varsToView()[i]
-            plotname      <- paste0("plot", i)
+        for (i in seq_along(varsToView())) {
+            varname        <- varsToView()[i]
+            plotname       <- paste0("plot", i)
             pruner1name    <- paste0("pruner1_", i)
             pruner2name    <- paste0("pruner2_", i)
             textcheck1name <- paste0("textcheck1_", i)
-            keepNAName    <- paste0("keepNA", i)
-            naTableName   <- paste0("naTable", i)
+            keepNAName     <- paste0("keepNA", i)
+            naTableName    <- paste0("naTable", i)
             
             plot_and_input_list[[i]] <-
                 fluidRow(

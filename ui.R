@@ -8,9 +8,11 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6,
                 h4('Data:'),
                 radioButtons('useExampleData', NULL,
-                    c("Use example data" = 1,
-                    "Upload data (.csv or .rds)" = 0),
-                    1
+                    c(
+                        "Upload data (.csv or .rds)" = 0,
+                        "Use example data" = 1
+                    ),
+                    0
                 ),
                 uiOutput("changeUploadedFile"),
                 uiOutput("chooseDatafile"),
@@ -91,13 +93,18 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(5,
                 h4('Variables to view and restrict:'),
                 uiOutput("chooseVarsToRestrict"),
-                tags$br(),
-                h4('Preferences for graphs:'),
                 h5('View numeric variables as discrete if they have fewer than __ distinct values:'),
                 numericInput('numCont', 
                     NULL,
-                    value= 10, min= 1,
+                    value= 10, 
+                    min= 1,
+                    step= 1,
                     width= '33%'),
+                actionButton('generalGraphUpdateButton', 
+                    HTML("(re-)Make graphs using updated variable list<br/>and/or discreteness preferences")),
+                tags$br(),
+                tags$br(),
+                h4('Preferences for graphs:'),
                 h5("Point/histogram opacity ('alpha')"),
                 sliderInput('alphaSlider', NULL, 
                     min = 0.01, 
@@ -113,9 +120,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     value = 1, 
                     ticks= FALSE,
                     width= '33%'
-                    ),
-                actionButton('generalGraphUpdateButton', 
-                    HTML("(re-)Make graphs using updated variable list<br/>and/or graph preferences"))
+                    )
             ), # end column
             column(width= 6, offset = 1,
                 h4("Current sample size"),
@@ -146,7 +151,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 uiOutput('psFitProblemTextPostPruning')
             ) # end column
         ), # end fluidRow 
-        uiOutput("univariatePlotsAndInputs")
+        uiOutput("covariatePlotsAndInputs")
     ), # end variable-selection panel
     tabPanel("Copy",
         fluidRow(
