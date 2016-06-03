@@ -29,8 +29,8 @@ shinyServer(function(input, output, session) {
     datInfo$inFileInfo <- NULL
     observe ({
         if (input$useExampleData == 0) {
-            datInfo$inFileInfo <- input$dataInfo 
-        }
+            datInfo$inFileInfo <- input$datafileInfo 
+        } 
     })
     
     output$changeUploadedFile <- renderUI({
@@ -47,13 +47,13 @@ shinyServer(function(input, output, session) {
                 (input$useExampleData == 0 & !is.null(datInfo$inFileInfo))) return(NULL)
         
         # File input from example on shiny website.
-        # input$dataInfo will be NULL initially. 
+        # input$datafileInfo will be NULL initially. 
         # After the user selects
         # and uploads a file, it will be a data frame with 'name',
         # 'size', 'type', and 'datapath' columns. The 'datapath'
         # column will contain the local filenames where the data can
         # be found.
-        fileInput('dataInfo', 
+        fileInput('datafileInfo', 
             label= 'Upload file (.csv or .rds only):',
             accept= NULL
             # as far as I can tell, 'accept' does not actually limit anything
@@ -108,7 +108,6 @@ shinyServer(function(input, output, session) {
         # The name produced by this function will be used as
         #   the name of the id var
         if(is.null(dset.orig())) return (NULL)
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
         proposedName <- "MY__ID"
         while(proposedName %in% names(dset.orig())) {
@@ -116,50 +115,60 @@ shinyServer(function(input, output, session) {
         }    
         proposedName
     })    
-    psvarName <- reactive({
-        # The name produced by this function will be used as
-        #   the name of the ps var in dset.psgraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
+    observe({
+        # Add an ID variable so we can match obsns w/ the PS dataset
+        if (!is.null(idvarName())) { 
+            if (!(idvarName() %in% names(dset.orig()))) {
+                dset.orig()[, idvarName() := 1:nrow(dset.orig())]
+                setkeyv(dset.orig(), idvarName())
+            }
+        }
+    })
+    varnames.orig <- reactive({
         if(is.null(dset.orig())) return (NULL)
+        names(dset.orig())  
+    })
+    possgroupnames.orig <- reactive({
+        if(is.null(dset.orig())) return (NULL)
+        varnames.orig()[sapply(dset.orig(), 
+            function(vec) length(unique(vec)) == 2)]
+    })
+    output$chooseGroup <- renderUI({
+        if (is.null(dset.orig())) return(NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+
+        selectizeInput('treatmentVarName', 
+            label    = NULL, 
+            choices  = possgroupnames.orig(), 
+            selected = NULL,
+            multiple = FALSE
+            )
+    })
+    groupvarname <- reactive({
+        if (is.null(dset.orig())) return(NULL)
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
-        proposedName <- "MY__PS"
+        input$treatmentVarName
+    })
+    groupvarFactorName <- reactive({
+        # The name produced by this function will be used as
+        #     the name of the treatment group var 
+        if (is.null(dset.orig())) return(NULL)
+        if (is.null(groupvarname())) return(NULL)
+        
+        if (is.factor(dset.orig()[[groupvarname()]])) {
+            return(groupvarname())    
+        }    
+        proposedName <- paste0(groupvarname(), '.factor')
         while(proposedName %in% names(dset.orig())) {
-            proposedName <- paste0(proposedName, "_NEW")    
+            proposedName <- paste0(proposedName, "NEW")    
         }    
         proposedName
-    })    
-    logitpsvarName <- reactive({
-        # The name produced by this function will be used as
-        #   the name of the logit ps var in dset.psgraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
-        if(is.null(dset.orig())) return (NULL)
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
-        
-        proposedName <- "MY__LOGITPS"
-        while(proposedName %in% names(dset.orig())) {
-            proposedName <- paste0(proposedName, "_NEW")    
-        }    
-        proposedName
-    })    
-    naPrefix <- reactive({
-        # The phrase produced by this function will be used as
-        #   the prefix for the na.indicator vars
-        if(is.null(dset.orig())) return (NULL)
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
-        
-        proposedPrefix <- "is.na_"
-        while(any(grepl(paste0("^", proposedPrefix), names(dset.orig())))) {
-            proposedPrefix <- paste0(proposedPrefix, "_")    
-        }    
-        proposedPrefix
     })    
 
-    useCompleteCasesOnly <- reactive({
-        input$completeCasesOnly == 1
-    })
     nonMissingIDs <- reactive({
         # These are the IDs of people who can be used for PS calculation
+        if(is.null(idvarName())) return (NULL)
 
         if (is.null(varnamesFromRHS())) return(dset.orig()[[idvarName()]])
         
@@ -171,36 +180,25 @@ shinyServer(function(input, output, session) {
         }
     })
     
-    #observe({
-    #    # Add a factor version of the treatment indicator, 
-    #    #    for plotting
-    #    if (!is.null(groupvarFactorName())){
-    #        # I think this next line is necessary in case of dset switch. But it's possible it could be taken out.
-    #        if (groupvarname() %in% names(dset.orig())) {
-    #            if (!is.factor(dset.orig()[[groupvarname()]])) {
-    #                dset.orig()[, groupvarFactorName() := 
-    #                    factor(dset.orig()[[groupvarname()]])]
-    #            }
-    #        }
-    #    }
-    #})
     dset.groupvar <- reactive({
+        if (is.null(dset.orig())) return(NULL)
         if (is.null(groupvarFactorName())) return(NULL)
         if (is.null(idvarName())) return(NULL)
+
+        # To buy time in case of dataset switching
         if (!(idvarName() %in% names(dset.orig()))) return(NULL)
+        if (!(groupvarname() %in% names(dset.orig()))) return(NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
 
         dat <- data.table(dset.orig()[[idvarName()]])
         setnames(dat, old = names(dat), new = idvarName())
 
-        # I think this next line is necessary in case of dset switch, but I'm not sure. 
-        if (groupvarname() %in% names(dset.orig())) {
-            if (!is.factor(dset.orig()[[groupvarname()]])) {
-                dat[, groupvarFactorName() := 
-                    factor(dset.orig()[[groupvarname()]])]
-            } else {
-                dat[, groupvarFactorName() := 
-                    dset.orig()[[groupvarname()]]]
-            }
+        if (!is.factor(dset.orig()[[groupvarname()]])) {
+            dat[, groupvarFactorName() := 
+                factor(dset.orig()[[groupvarname()]])]
+        } else {
+            dat[, groupvarFactorName() := 
+                dset.orig()[[groupvarname()]]]
         }
         setkeyv(dat, idvarName())
         dat 
@@ -214,20 +212,50 @@ shinyServer(function(input, output, session) {
         names(tmp)[order(tmp, decreasing= TRUE)]
     })
 
-    observe({
-        # Add an ID variable so we can match obsns w/ the PS dataset
-        if (!is.null(idvarName())) { 
-            if (!(idvarName() %in% names(dset.orig()))) {
-                dset.orig()[, idvarName() := 1:nrow(dset.orig())]
-                setkeyv(dset.orig(), idvarName())
-            }
-        }
+    psvarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the ps var in dset.psgraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dset.orig())) return (NULL)
+        
+        proposedName <- "MY__PS"
+        while(proposedName %in% names(dset.orig())) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    logitpsvarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the logit ps var in dset.psgraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dset.orig())) return (NULL)
+        
+        proposedName <- "MY__LOGITPS"
+        while(proposedName %in% names(dset.orig())) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    naPrefix <- reactive({
+        # The phrase produced by this function will be used as
+        #   the prefix for the na.indicator vars
+        if(is.null(dset.orig())) return (NULL)
+        
+        proposedPrefix <- "is.na_"
+        while(any(grepl(paste0("^", proposedPrefix), names(dset.orig())))) {
+            proposedPrefix <- paste0(proposedPrefix, "_")    
+        }    
+        proposedPrefix
+    })    
+
+    useCompleteCasesOnly <- reactive({
+        input$completeCasesOnly == 1
     })
     
     dset.psgraphs <- reactive({
         # This dataset is used for making the PS plots.
-        if (is.null(logitPS())) return(NULL)
         if (is.null(dset.groupvar())) return(NULL)
+        if (is.null(logitPS())) return(NULL) 
         
         # todo: do this all using data.table
         dat1 <- data.frame(
@@ -258,46 +286,7 @@ shinyServer(function(input, output, session) {
     
     ############################################################
     ############################################################
-    ## Variable selection, etc.
     
-    varnames.orig <- reactive({
-        names(dset.orig())  
-    })
-    possgroupnames.orig <- reactive({
-        varnames.orig()[sapply(dset.orig(), 
-            function(vec) length(unique(vec)) == 2)]
-    })
-    output$chooseGroup <- renderUI({
-        if (is.null(dset.orig())) return(NULL)
-
-        selectizeInput('treatmentVarName', 
-            label    = NULL, 
-            choices  = possgroupnames.orig(), 
-            selected = NULL,
-            multiple = FALSE
-            )
-    })
-    groupvarname <- reactive({
-        if (input$useExampleData == 0 & 
-            is.null(datInfo$inFileInfo)) return(NULL)
-        
-        input$treatmentVarName
-    })
-    groupvarFactorName <- reactive({
-        # The name produced by this function will be used as
-        #     the name of the treatment group var 
-        if (is.null(dset.orig())) return(NULL)
-        if (is.null(groupvarname())) return(NULL)
-        
-        if (is.factor(dset.orig()[[groupvarname()]])) {
-            return(groupvarname())    
-        }    
-        proposedName <- paste0(groupvarname(), '.factor')
-        while(proposedName %in% names(dset.orig())) {
-            proposedName <- paste0(proposedName, "NEW")    
-        }    
-        proposedName
-    })    
 # info for css  
 #<p class="text-muted">Fusce dapibus, tellus ac cursus commodo, tortor mauris nibh.</p>
 #<p class="text-primary">Nullam id dolor id nibh ultricies vehicula ut id elit.</p>
@@ -306,7 +295,8 @@ shinyServer(function(input, output, session) {
 #<p class="text-success">Duis mollis, est non commodo luctus, nisi erat porttitor ligula.</p>
 #<p class="text-info">Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
     output$noDataChosenText <- renderUI({
-        if (is.null(dset.orig())) {
+        if (is.null(dset.orig()) | 
+            (input$useExampleData == 0 & is.null(datInfo$inFileInfo))) {
             HTML(paste0(tags$span(class="text-warning", "No dataset selected.")))
         } else return(NULL)
     })
@@ -375,8 +365,7 @@ shinyServer(function(input, output, session) {
     ############################################################
     ## Propensity score calculation
     output$getFormula <- renderUI({
-        if (is.null(dset.orig()) | 
-            is.null(groupvarname())) return(NULL)
+        if (is.null(groupvarname())) return(NULL)
 
         textInput('formulaRHS', 
             label= paste0(groupvarname(), ' ~ '), 
@@ -387,21 +376,27 @@ shinyServer(function(input, output, session) {
 
     formRHS <- reactive({
         # Dependencies
-        if (input$psTypedButton == 0 | 
-            is.null(dset.orig())) return(NULL) 
-        dset.orig()
+        if (is.null(dset.orig())) return(NULL)
+        if (input$psTypedButton == 0) return(NULL) 
+        groupvarname()
         useCompleteCasesOnly()
         
         isolate(input$formulaRHS)
     })
     stringFormula <- reactive({
+        if (is.null(groupvarname())) return(NULL)
+
         paste0(groupvarname(), ' ~ ', formRHS())
     })    
     psForm <- reactive({
+        if (is.null(stringFormula())) return(NULL)
+
         tryCatch(as.formula(stringFormula()),
             error= function(e) return(NULL))
     })    
     psNotChecked <- reactive({
+        if (is.null(stringFormula())) return(TRUE)
+
         if (input$psTypedButton == 0 | 
             paste0(groupvarname(), ' ~ ', input$formulaRHS) != 
                 stringFormula()) TRUE else FALSE
@@ -461,10 +456,10 @@ shinyServer(function(input, output, session) {
     PSIDs <- reactive({
         # dependencies
         if (input$PSCalcUpdateButton == 0) return(nonMissingIDs()) 
-        dset.orig()
-        # this next one should be covered by nonMissingIDs,
+        # these should be covered by nonMissingIDs,
         #    but just in case:
-        useCompleteCasesOnly()   
+        #dset.orig()
+        #useCompleteCasesOnly()   
         
         intersect(nonMissingIDs(), isolate(idsToKeepAfterPruning()))
     })
@@ -571,7 +566,8 @@ shinyServer(function(input, output, session) {
     output$psCopyText <- renderText({
         # dependencies
         if(is.null(lrmfit())) return(NULL)
-        dset.orig()
+        # really this should be covered by lrmfit
+        #dset.orig()
     
         isolate(stringFormula())
     })
@@ -709,10 +705,10 @@ shinyServer(function(input, output, session) {
         
     possVarsToRestrict <- reactive({
         if (is.null(groupvarname())) return(NULL)
+        if (is.null(idvarName())) return(NULL)
 
         # We don't want to allow restriction of the treatment var 
         setdiff(varnames.orig(), 
-            #c(groupvarname(), groupvarFactorName(), idvarName()))  
             c(groupvarname(), idvarName()))  
     })    
     output$chooseVarsToRestrict <- renderUI({
@@ -730,12 +726,12 @@ shinyServer(function(input, output, session) {
 
     varsToView <- reactive({
         #dependencies
-        dset.orig()
+        if (is.null(dset.orig())) return(NULL)
         input$generalGraphUpdateButton
         
-        # to cover switching between datasets
-        #intersect(isolate(input$varsToRestrict), names(dset.orig()))
-        isolate(input$varsToRestrict)
+        # trying to buy time when switching between datasets
+        intersect(isolate(input$varsToRestrict), names(dset.orig()))
+        #isolate(input$varsToRestrict)
     })
     numvarsToView <- reactive({
         length(varsToView())    
@@ -753,10 +749,6 @@ shinyServer(function(input, output, session) {
     varIsContinuous <- reactive({
         if (is.null(varsToView())) return(NULL)
 
-        #dependencies
-        dset.orig()
-        input$generalGraphUpdateButton
-        
         vnames <- varsToView()
         myvec <- rep(FALSE, length(vnames))
         
@@ -783,28 +775,6 @@ shinyServer(function(input, output, session) {
         #input$xDigits
         2
     })
-
-    # from http://stackoverflow.com/questions/18816666/shiny-change-data-input-of-buttons
-    # Create a reactiveValues object, to let us use settable reactive values
-    # We'll use this later on
-    buttonvalues <- reactiveValues()
-    # To start out, lastActionX == NULL, meaning nothing clicked yet
-    buttonvalues$lastActionX <- NULL
-    # An observe block for each button, to record that the action happened
-    observe({
-        if (input$xgraphsUpdateButton != 0 | 
-            input$PSCalcUpdateButton != 0 | 
-            input$xgraphsUpdateButton != 0) {
-            buttonvalues$lastActionX <- 'pruneOrPlot'
-        }
-    })
-    # TODO: am I still using this?
-    observe({
-        if (input$psTypedButton != 0 | input$completeCasesOnly %in% c(0,1)) {
-            buttonvalues$lastActionX <- 'specify'
-        }
-    })
-
 
     # Create the expression to use for pruning
     pruneValRawList <- reactive({
@@ -850,13 +820,16 @@ shinyServer(function(input, output, session) {
     })
     pruneValTextList <- reactive({
         # dependencies
+        # TODO: do I want the isolate in the RawLists instead?
         if (is.null(varsToView())) return(NULL)
+        # set to null if either of these changes. 
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+
 
         if (input$xgraphsUpdateButton == 0 & 
             input$PSCalcUpdateButton == 0) {
             return(NULL)
         }
-        dset.orig()
         
         mylist <- vector("list", numvarsToView())
         names(mylist) <- varsToView()
@@ -906,9 +879,6 @@ shinyServer(function(input, output, session) {
         } # next varname
         mylist
     })    
-    lastVarsPrunedOn <- reactive({
-        names(pruneValTextList())
-    })
 
     exprToKeepAfterPruning <- reactive({
         if (is.null(pruneValTextList())) return(NULL)
@@ -922,6 +892,11 @@ shinyServer(function(input, output, session) {
     })    
 
     idsToKeepAfterPruning <- reactive({
+        if (is.null(dset.orig())) return(NULL)
+        if (is.null(idvarName())) return(NULL)
+        # set to null if either of these changes. Buying time w/ dependencies.
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+
         if (is.null(exprToKeepAfterPruning())) return(dset.orig()[[idvarName()]])
         
         dset.orig()[eval(parse(text= 
@@ -929,7 +904,11 @@ shinyServer(function(input, output, session) {
     })    
     
     output$pruneTable <- renderTable({
-        if (is.null(nonMissingIDs())) return(NULL)
+        if (is.null(idsToKeepAfterPruning())) return(NULL)
+        if (is.null(dset.groupvar())) return(NULL)
+        # To buy time in case of dataset switching
+        if (!(groupvarname() %in% names(dset.orig()))) return(NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
     
         dat <- dset.groupvar()[idsToKeepAfterPruning(), .N, by= eval(groupvarFactorName())]
         setnames(dat, old = groupvarFactorName(), new = groupvarname())
@@ -941,7 +920,7 @@ shinyServer(function(input, output, session) {
     ## Plotting 
     
     colorScale.mod <- reactive({
-        if (is.null(nonMissingIDs())) return(NULL)
+        if (is.null(dset.groupvar())) return(NULL)
 
         #colors from  bootswatch sandstone
         primary <-         "#325D88"
@@ -1109,26 +1088,28 @@ shinyServer(function(input, output, session) {
             # Without it, the value # of i in the renderPlot() 
             # will be the same across all instances, 
             # because of when the expression is evaluated.
+
+
             local({
                 my_i <- i
                 varname         <- varsToView()[my_i]
 
-                #plotname        <- paste0("plot", my_i)
-                #naTableName     <- paste0("naTable", my_i)
                 plotname        <- paste0("plot_", varname)
                 naTableName     <- paste0("naTable_", varname)
 
-                # core dataset for plots and naTable: ID, group, x
-                datx <- dset.orig()[idsToKeepAfterPruning()][, 
-                    c(idvarName(), varname), 
-                    with= FALSE][dset.groupvar()[idsToKeepAfterPruning()]]
      
                 output[[plotname]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
+                    if (is.null(dset.groupvar())) return(NULL)
 
                     # For plot alignment
                     testing <- FALSE
 
+                    # core dataset for plots and naTable: ID, group, x
+                    #    Making within each because of dependency problems
+                    datx <- dset.orig()[idsToKeepAfterPruning()][, 
+                        c(idvarName(), varname), 
+                        with= FALSE][dset.groupvar()[idsToKeepAfterPruning()]]
                     # convert character & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
                             (is.numeric(datx[[varname]]) & 
@@ -1437,6 +1418,15 @@ shinyServer(function(input, output, session) {
 
                 # Create a missing-by-group table for each variable
                 output[[naTableName]] <- renderTable({
+                    if (is.null(dset.psgraphs())) return(NULL)
+                    if (is.null(dset.groupvar())) return(NULL)
+                    if (is.null(idsToKeepAfterPruning())) return(NULL)
+
+                    # core dataset for plots and naTable: ID, group, x
+                    #    Making within each because of dependency problems
+                    datx <- dset.orig()[idsToKeepAfterPruning()][, 
+                        c(idvarName(), varname), 
+                        with= FALSE][dset.groupvar()[idsToKeepAfterPruning()]]
                     dat <- datx[, .(pct.missing = 100 * mean(is.na(get(varname)))), 
                         by= eval(groupvarFactorName())]
                     setnames(dat, old = groupvarFactorName(), new = groupvarname())
@@ -1461,6 +1451,10 @@ shinyServer(function(input, output, session) {
 
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
+                    if (is.null(varIsContinuous())) return(NULL)
+                    if (is.null(varIsContinuous()[varname])) return(NULL)
+                    if (is.null(idsToKeepAfterPruning())) return(NULL)
+
                     if (varIsContinuous()[varname]) {
                         #textInputRow(
                         textInput(
@@ -1484,6 +1478,10 @@ shinyServer(function(input, output, session) {
                 }) # end renderUI
 
                 output[[pruner2name]] <- renderUI({
+                    if (is.null(varIsContinuous())) return(NULL)
+                    if (is.null(varIsContinuous()[varname])) return(NULL)
+                    if (is.null(idsToKeepAfterPruning())) return(NULL)
+
                     if (varIsContinuous()[varname]) {
                         textInput(
                             inputId= input2name, 
