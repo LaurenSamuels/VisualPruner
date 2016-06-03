@@ -253,15 +253,6 @@ shinyServer(function(input, output, session) {
         dat
     })    
     
-    # TODO: can I get rid of this and just use idsToKeepAfterPruning()?
-    xgraphs.ids <- reactive({
-        # IDs for making the covariate plots.
-        #if (is.null(nonMissingIDs())) return(NULL)
-        if (is.null(idsToKeepAfterPruning())) return(dset.orig()[[idvarName()]])
-
-        #intersect(nonMissingIDs(), idsToKeepAfterPruning())
-        idsToKeepAfterPruning()
-    })    
     
     
     
@@ -696,7 +687,7 @@ shinyServer(function(input, output, session) {
         
         ids <- dset.psgraphs()[hasScoreOutside(), ][[idvarName()]]
         
-        intersect(ids, xgraphs.ids())
+        intersect(ids, idsToKeepAfterPruning())
     })  
 
     # todo: is there a way to do this w/o making a third dataset?
@@ -729,8 +720,8 @@ shinyServer(function(input, output, session) {
         selectizeInput('varsToRestrict', 
             NULL, 
             choices= possVarsToRestrict(), 
-            selected= if (is.null(varnamesFromRHS())) NULL else 
-                varnamesFromRHS(),
+            # Do not autopopulate w/ a reactive var! Will reset & cause problems.
+            selected = NULL,
             multiple= TRUE,
             width= '100%'
         )
@@ -824,15 +815,19 @@ shinyServer(function(input, output, session) {
         for (vname in varsToView()) {
             # doing it this way to fit w/ old code---
             #   could redo later
-            print("rawlist")
-            print(vname)
-            mylist[[vname]]  <- 
-                input[[paste0("pruningChoices1_", vname)]]
-            if (varIsContinuous()[vname]) {
-                mylist[[vname]]  <- paste(mylist[[vname]],
-                    input[[paste0("pruningChoices2_", vname)]],
-                    collapse= " ")
-            } 
+
+            # this is to help with the timing of the dependencies
+            if (is.null(input[[paste0("pruningChoices1_", vname)]])) {
+                mylist[[vname]] <-  NULL
+            } else {
+                mylist[[vname]] <- 
+                    input[[paste0("pruningChoices1_", vname)]]
+                if (varIsContinuous()[vname]) {
+                    mylist[[vname]]  <- paste(mylist[[vname]],
+                        input[[paste0("pruningChoices2_", vname)]],
+                        collapse= " ")
+                } 
+            }
         }
         mylist
     })
@@ -843,7 +838,12 @@ shinyServer(function(input, output, session) {
         names(mylist) <- varsToView()
 
         for (vname in varsToView()) {
-            mylist[[vname]]  <- input[[paste0("keepNAInput_", vname)]] == "1"
+            # this is to help with the timing of the dependencies
+            if (is.null(input[[paste0("keepNAInput_", vname)]])) {
+                mylist[[vname]] <-  NULL
+            } else {
+                mylist[[vname]]  <- input[[paste0("keepNAInput_", vname)]] == "1"
+            }
         }
         mylist
     })
@@ -865,41 +865,50 @@ shinyServer(function(input, output, session) {
             keepna  <- isolate(keepNARawList())[[varname]]
             
             # We are coding for the ones to KEEP
-            mylist[[varname]] <-  paste0(
-                "((",
-                if (keepna) "is.na(" else "!is.na(",
-                varname, 
-                if (keepna) ")) | " else  ")) & ",
+            # give the dependencies time to catch up
+            if (is.null(myvals) | is.null(keepna)) {
+                mylist[[varname]] <-  NULL
+            } else {
+                mylist[[varname]] <-  paste0(
+                    "((",
+                    if (keepna) "is.na(" else "!is.na(",
+                    varname, 
+                    if (keepna) ")) | " else  ")) & ",
 
-                if (varIsContinuous()[varname]) {
-                    myvals_numeric <- suppressWarnings(as.numeric(
-                        unlist(strsplit(as.character(myvals), " "))))
-                    if (length(na.omit(myvals_numeric)) == 2) {
-                        paste0(
-                            "(", varname, " >= ", myvals_numeric[1], 
-                            " & ", varname, " <= ", myvals_numeric[2], ")"
-                        )
-                    } else { # user entered invalid text
-                        TRUE
-                    }
-                } else { # var is not continuous
-                    if (is.numeric(dset.orig()[[varname]])) {
-                        paste0(
-                            "(", varname, " %in% c(", paste(myvals, collapse= ","),"))"
-                        ) 
-                    } else { # character var
-                        paste0(
-                            "(", paste(varname, " == ", 
-                            paste0("'", myvals, "'"), collapse= " | "),
-                            ")"
-                        )
-                    }    
-                }, 
-                ")"
-            ) # end of paste0
+                    if (varIsContinuous()[varname]) {
+                        myvals_numeric <- suppressWarnings(as.numeric(
+                            unlist(strsplit(as.character(myvals), " "))))
+                        if (length(na.omit(myvals_numeric)) == 2) {
+                            paste0(
+                                "(", varname, " >= ", myvals_numeric[1], 
+                                " & ", varname, " <= ", myvals_numeric[2], ")"
+                            )
+                        } else { # user entered invalid text
+                            TRUE
+                        }
+                    } else { # var is not continuous
+                        if (is.numeric(dset.orig()[[varname]])) {
+                            paste0(
+                                "(", varname, " %in% c(", paste(myvals, collapse= ","),"))"
+                            ) 
+                        } else { # character var
+                            paste0(
+                                "(", paste(varname, " == ", 
+                                paste0("'", myvals, "'"), collapse= " | "),
+                                ")"
+                            )
+                        }    
+                    }, 
+                    ")"
+                ) # end of paste0
+            }
         } # next varname
         mylist
     })    
+    lastVarsPrunedOn <- reactive({
+        names(pruneValTextList())
+    })
+
     exprToKeepAfterPruning <- reactive({
         if (is.null(pruneValTextList())) return(NULL)
         
@@ -1458,7 +1467,7 @@ shinyServer(function(input, output, session) {
                             label="Min:", 
                             width= '75%',
                             value = floor(10^xdig() *   
-                                min(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig()
+                                min(unlist(dset.orig()[idsToKeepAfterPruning(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig()
 
                         )
                         
@@ -1468,7 +1477,7 @@ shinyServer(function(input, output, session) {
                             NULL,
                             # as.character corrects the printing of factor levels
                             choices=  as.character(sort(unique(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE])))),
-                            selected= as.character(sort(unique(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]))))
+                            selected= as.character(sort(unique(unlist(dset.orig()[idsToKeepAfterPruning(), eval(varname), with= FALSE]))))
                         )
                     }
                 }) # end renderUI
@@ -1480,7 +1489,7 @@ shinyServer(function(input, output, session) {
                             label="Max:", 
                             width= '75%',
                             value = ceiling(10^xdig() * 
-                                max(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig()
+                                max(unlist(dset.orig()[idsToKeepAfterPruning(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig()
 
                         )
                     } else { # we have categorical var, either factor or char
@@ -1523,15 +1532,20 @@ shinyServer(function(input, output, session) {
 
                 textCheck1Name   <- paste0("textcheck1_", varname)
                 #textCheck2Name   <- paste0("textcheck2_", varname)
+                input1name       <- paste0("pruningChoices1_", varname)
+                input2name       <- paste0("pruningChoices2_", varname)
                 
                 # Check the textInput for each variable
                 # TODO: break this up for the two input boxes
                 output[[textCheck1Name]] <- renderUI({
-                    print("textcheck")
-                    print(varname)
+                    # give the dependencies time to catch up
+                    if (is.null(varIsContinuous()[varname])) return(NULL)
+                    if (is.null(input[[input1name]])) return(NULL)
+                    if (is.null(input[[input2name]])) return(NULL)
+                    
                     if (varIsContinuous()[varname]) {
-                        if (is.na(as.numeric(input[[paste0("pruningChoices1_", varname)]])) | 
-                            is.na(as.numeric(input[[paste0("pruningChoices2_", varname)]]))) {    
+                        if (is.na(as.numeric(input[[input1name]])) | 
+                            is.na(as.numeric(input[[input2name]]))) {    
                             HTML(paste0(tags$span(class="text-danger", "Please make sure both boxes contain numbers.")))
                         } else { # no problem
                             return(NULL)
