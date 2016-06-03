@@ -819,15 +819,18 @@ shinyServer(function(input, output, session) {
         if (is.null(varsToView())) return(NULL)
 
         mylist <- vector("list", numvarsToView())
+        names(mylist) <- varsToView()
 
-        for (i in seq_along(varsToView())) {
+        for (vname in varsToView()) {
             # doing it this way to fit w/ old code---
             #   could redo later
-            mylist[[i]]  <- 
-                input[[paste0("pruningChoices1_", i)]]
-            if (varIsContinuous()[varsToView()[i]]) {
-                mylist[[i]]  <- paste(mylist[[i]],
-                    input[[paste0("pruningChoices2_", i)]],
+            print("rawlist")
+            print(vname)
+            mylist[[vname]]  <- 
+                input[[paste0("pruningChoices1_", vname)]]
+            if (varIsContinuous()[vname]) {
+                mylist[[vname]]  <- paste(mylist[[vname]],
+                    input[[paste0("pruningChoices2_", vname)]],
                     collapse= " ")
             } 
         }
@@ -837,9 +840,10 @@ shinyServer(function(input, output, session) {
         if (is.null(varsToView())) return(NULL)
 
         mylist <- vector("list", numvarsToView())
+        names(mylist) <- varsToView()
 
-        for (i in seq_along(varsToView())) {
-            mylist[[i]]  <- input[[paste0("keepNAInput", i)]] == "1"
+        for (vname in varsToView()) {
+            mylist[[vname]]  <- input[[paste0("keepNAInput_", vname)]] == "1"
         }
         mylist
     })
@@ -854,14 +858,14 @@ shinyServer(function(input, output, session) {
         dset.orig()
         
         mylist <- vector("list", numvarsToView())
+        names(mylist) <- varsToView()
         
-        for (i in seq_along(varsToView())) {
-            myvals  <- isolate(pruneValRawList())[[i]]
-            keepna  <- isolate(keepNARawList())[[i]]
-            varname <- varsToView()[i]
+        for (varname in varsToView()) {
+            myvals  <- isolate(pruneValRawList())[[varname]]
+            keepna  <- isolate(keepNARawList())[[varname]]
             
             # We are coding for the ones to KEEP
-            mylist[[i]] <-  paste0(
+            mylist[[varname]] <-  paste0(
                 "((",
                 if (keepna) "is.na(" else "!is.na(",
                 varname, 
@@ -893,7 +897,7 @@ shinyServer(function(input, output, session) {
                 }, 
                 ")"
             ) # end of paste0
-        } # next i
+        } # next varname
         mylist
     })    
     exprToKeepAfterPruning <- reactive({
@@ -1099,8 +1103,10 @@ shinyServer(function(input, output, session) {
                 my_i <- i
                 varname         <- varsToView()[my_i]
 
-                plotname        <- paste0("plot", my_i)
-                naTableName     <- paste0("naTable", my_i)
+                #plotname        <- paste0("plot", my_i)
+                #naTableName     <- paste0("naTable", my_i)
+                plotname        <- paste0("plot_", varname)
+                naTableName     <- paste0("naTable_", varname)
 
                 # core dataset for plots and naTable: ID, group, x
                 datx <- dset.orig()[idsToKeepAfterPruning()][, 
@@ -1438,10 +1444,10 @@ shinyServer(function(input, output, session) {
                 my_i <- i
                 varname         <- varsToView()[my_i]
 
-                pruner1name      <- paste0("pruner1_", my_i)
-                pruner2name      <- paste0("pruner2_", my_i)
-                input1name       <- paste0("pruningChoices1_", my_i)
-                input2name       <- paste0("pruningChoices2_", my_i)
+                pruner1name      <- paste0("pruner1_", varname)
+                pruner2name      <- paste0("pruner2_", varname)
+                input1name       <- paste0("pruningChoices1_", varname)
+                input2name       <- paste0("pruningChoices2_", varname)
 
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
@@ -1491,8 +1497,8 @@ shinyServer(function(input, output, session) {
                 my_i <- i
                 varname         <- varsToView()[my_i]
 
-                keepNAName      <- paste0("keepNA", my_i)
-                keepNAInputName <- paste0("keepNAInput", my_i)
+                keepNAName      <- paste0("keepNA_", varname)
+                keepNAInputName <- paste0("keepNAInput_", varname)
      
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
@@ -1515,17 +1521,17 @@ shinyServer(function(input, output, session) {
                 my_i <- i
                 varname         <- varsToView()[my_i]
 
-                textCheck1Name   <- paste0("textcheck1_", my_i)
-                #textCheck2Name   <- paste0("textcheck2_", my_i)
+                textCheck1Name   <- paste0("textcheck1_", varname)
+                #textCheck2Name   <- paste0("textcheck2_", varname)
                 
                 # Check the textInput for each variable
                 # TODO: break this up for the two input boxes
                 output[[textCheck1Name]] <- renderUI({
-                    if (is.null(pruneValTextList())) return(NULL)
-                    
+                    print("textcheck")
+                    print(varname)
                     if (varIsContinuous()[varname]) {
-                        if (is.na(as.numeric(input[[paste0("pruningChoices1_", my_i)]])) | 
-                            is.na(as.numeric(input[[paste0("pruningChoices2_", my_i)]]))) {    
+                        if (is.na(as.numeric(input[[paste0("pruningChoices1_", varname)]])) | 
+                            is.na(as.numeric(input[[paste0("pruningChoices2_", varname)]]))) {    
                             HTML(paste0(tags$span(class="text-danger", "Please make sure both boxes contain numbers.")))
                         } else { # no problem
                             return(NULL)
@@ -1550,12 +1556,12 @@ shinyServer(function(input, output, session) {
         plot_and_input_list <- vector("list", numvarsToView())
         for (i in seq_along(varsToView())) {
             varname        <- varsToView()[i]
-            plotname       <- paste0("plot", i)
-            pruner1name    <- paste0("pruner1_", i)
-            pruner2name    <- paste0("pruner2_", i)
-            textcheck1name <- paste0("textcheck1_", i)
-            keepNAName     <- paste0("keepNA", i)
-            naTableName    <- paste0("naTable", i)
+            plotname       <- paste0("plot_", varname)
+            pruner1name    <- paste0("pruner1_", varname)
+            pruner2name    <- paste0("pruner2_", varname)
+            textcheck1name <- paste0("textcheck1_", varname)
+            keepNAName     <- paste0("keepNA_", varname)
+            naTableName    <- paste0("naTable_", varname)
             
             plot_and_input_list[[i]] <-
                 fluidRow(
