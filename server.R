@@ -727,10 +727,19 @@ shinyServer(function(input, output, session) {
     varsToView <- reactive({
         #dependencies
         if (is.null(dset.orig())) return(NULL)
+        # To buy time in case of dataset switching
+        if (is.null(varnames.orig())) return(NULL)
+        if (is.null(groupvarname())) return(NULL)
+        if (!(groupvarname() %in% varnames.orig())) return(NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+
         input$generalGraphUpdateButton
         
         # trying to buy time when switching between datasets
-        intersect(isolate(input$varsToRestrict), names(dset.orig()))
+        print("here")
+        vec <- intersect(isolate(input$varsToRestrict), varnames.orig())
+        print(vec)
+        vec
         #isolate(input$varsToRestrict)
     })
     numvarsToView <- reactive({
@@ -820,16 +829,20 @@ shinyServer(function(input, output, session) {
     })
     pruneValTextList <- reactive({
         # dependencies
+        if (is.null(dset.orig())) return(NULL)
         # TODO: do I want the isolate in the RawLists instead?
-        if (is.null(varsToView())) return(NULL)
-        # set to null if either of these changes. 
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
-
-
         if (input$xgraphsUpdateButton == 0 & 
             input$PSCalcUpdateButton == 0) {
             return(NULL)
         }
+        if (is.null(varsToView())) return(NULL)
+        if (numvarsToView() == 0) return(NULL)
+
+        # To buy time in case of dataset switching
+        if (is.null(varnames.orig())) return(NULL)
+        if (is.null(groupvarname())) return(NULL)
+        if (!(groupvarname() %in% varnames.orig())) return(NULL)
+        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
         mylist <- vector("list", numvarsToView())
         names(mylist) <- varsToView()
@@ -877,6 +890,8 @@ shinyServer(function(input, output, session) {
                 ) # end of paste0
             }
         } # next varname
+        print("there")
+        print(mylist)
         mylist
     })    
 
