@@ -638,7 +638,7 @@ shinyServer(function(input, output, session) {
     psFitProblemPostPruning <- reactive({
         # -- contains an isolate -- #
         # dependencies
-        if (datInfo$newData == TRUE) return(NULL)
+        if (datInfo$newData == TRUE) return(FALSE)
         if (psNotChecked() |  
             input$PSCalcUpdateButton  == 0) return (FALSE)
 
@@ -1132,19 +1132,17 @@ shinyServer(function(input, output, session) {
     # also from http://stackoverflow.com/questions/19130455/create-dynamic-number-of-input-elements-with-r-shiny
     observe({
         
-        for (i in seq_along(varsToView())) {
+        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             # My sources (above) say:
             # Need local so that each item gets its own number. 
             # Without it, the value # of i in the renderPlot() 
             # will be the same across all instances, 
             # because of when the expression is evaluated.
-
-
             local({
                 my_i <- i
-                varname         <- varsToView()[my_i]
+                varname  <- varsToView()[my_i]
 
-                plotname        <- paste0("plot_", varname)
+                plotname <- paste0("plot_", varname)
      
                 output[[plotname]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
@@ -1468,7 +1466,7 @@ shinyServer(function(input, output, session) {
 
 
     observe({
-        for (i in seq_along(varsToView())) {
+        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             local({
                 my_i <- i
                 varname         <- varsToView()[my_i]
@@ -1498,7 +1496,7 @@ shinyServer(function(input, output, session) {
     }) # end observe    
 
     observe({
-        for (i in seq_along(varsToView())) {
+        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             local({
                 my_i <- i
                 varname         <- varsToView()[my_i]
@@ -1562,7 +1560,7 @@ shinyServer(function(input, output, session) {
     }) # end observe    
 
     observe({
-        for (i in seq_along(varsToView())) {
+        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             local({
                 my_i <- i
                 varname         <- varsToView()[my_i]
@@ -1586,7 +1584,7 @@ shinyServer(function(input, output, session) {
     
     # Keeping the observe for the textcheck separate
     observe({
-        for (i in seq_along(varsToView())) {
+        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             local({
                 my_i <- i
                 varname         <- varsToView()[my_i]
