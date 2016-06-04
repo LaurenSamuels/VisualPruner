@@ -37,7 +37,6 @@ shinyServer(function(input, output, session) {
         } 
     })
     observeEvent(input$changeUpFile, {
-        print("changeUpFile Flag triggered")
         datInfo$inFileInfo <- NULL
         datInfo$newData <- TRUE
         datInfo$newDataNoVarsChosen <- TRUE
@@ -45,26 +44,22 @@ shinyServer(function(input, output, session) {
     })    
     observe({
         input$useExampleData
-        print("useExampleData Flag triggered")
         datInfo$newData <- TRUE
         datInfo$newDataNoVarsChosen <- TRUE
         datInfo$newDataNotYetPruned <- TRUE
     })
     observe({
         if (input$psTypedButton > 0) {
-            print("False Flag triggered")
             datInfo$newData <- FALSE
         }
     })
     observe({
         if (input$generalGraphUpdateButton > 0) {
-            print("NVC False Flag triggered")
             datInfo$newDataNoVarsChosen <- FALSE
         }
     })
     observe({
         if (input$xgraphsUpdateButton > 0 | input$PSCalcUpdateButton > 0) {
-            print("NYP False Flag triggered")
             datInfo$newDataNotYetPruned <- FALSE
         }
     })
@@ -774,11 +769,9 @@ shinyServer(function(input, output, session) {
 
         input$generalGraphUpdateButton
         
-        print("here")
         # trying to buy time when switching between datasets
         #vec <- intersect(isolate(input$varsToRestrict), varnames.orig())
         vec <- isolate(input$varsToRestrict)
-        print(vec)
         vec
     })
     numvarsToView <- reactive({
@@ -876,12 +869,10 @@ shinyServer(function(input, output, session) {
         # dependencies
         if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
         if (is.null(varsToView())) return(NULL)
-        print("pVTL passed two ifs")
         if (input$xgraphsUpdateButton == 0 & 
             input$PSCalcUpdateButton == 0) {
             return(NULL)
         }
-        print("pVTL passed last if")
         
         mylist <- vector("list", numvarsToView())
         names(mylist) <- varsToView()
@@ -929,8 +920,6 @@ shinyServer(function(input, output, session) {
                 ) # end of paste0
             }
         } # next varname
-        print("there")
-        print(mylist)
         mylist
     })    
 
@@ -1622,11 +1611,12 @@ shinyServer(function(input, output, session) {
     
     # Now put them all together
     output$covariatePlotsAndInputs <- renderUI({
+        if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
         if (input$generalGraphUpdateButton == 0) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
         # this is to prevent graphs from showing after dset switching
-        if (any(!(varsToView() %in% names(dset.orig())))) return(NULL)
+        #if (any(!(varsToView() %in% names(dset.orig())))) return(NULL)
         
         plot_and_input_list <- vector("list", numvarsToView())
         for (i in seq_along(varsToView())) {
