@@ -29,34 +29,51 @@ shinyServer(function(input, output, session) {
     datInfo <- reactiveValues()
     datInfo$inFileInfo <- NULL
     datInfo$newData <- NULL
+    datInfo$newDataNoVarsChosen <- NULL
+    datInfo$newDataNotYetPruned <- NULL
     observe({
         if (input$useExampleData == 0) {
             datInfo$inFileInfo <- input$datafileInfo 
         } 
     })
-    
-    output$changeUploadedFile <- renderUI({
-        if (input$useExampleData == 1 | is.null(datInfo$inFileInfo)) return(NULL)
-        actionButton("changeUpFile", "Upload different file")
-    })
     observeEvent(input$changeUpFile, {
         print("changeUpFile Flag triggered")
         datInfo$inFileInfo <- NULL
         datInfo$newData <- TRUE
+        datInfo$newDataNoVarsChosen <- TRUE
+        datInfo$newDataNotYetPruned <- TRUE
     })    
     observe({
         input$useExampleData
         print("useExampleData Flag triggered")
         datInfo$newData <- TRUE
+        datInfo$newDataNoVarsChosen <- TRUE
+        datInfo$newDataNotYetPruned <- TRUE
     })
     observe({
-        if(input$psTypedButton > 0 | input$generalGraphUpdateButton > 0)
-
-        print("False Flag triggered")
-        datInfo$newData <- FALSE
+        if (input$psTypedButton > 0) {
+            print("False Flag triggered")
+            datInfo$newData <- FALSE
+        }
+    })
+    observe({
+        if (input$generalGraphUpdateButton > 0) {
+            print("NVC False Flag triggered")
+            datInfo$newDataNoVarsChosen <- FALSE
+        }
+    })
+    observe({
+        if (input$xgraphsUpdateButton > 0 | input$PSCalcUpdateButton > 0) {
+            print("NYP False Flag triggered")
+            datInfo$newDataNotYetPruned <- FALSE
+        }
     })
     # TODO: keep in mind: input$mainNavbarPage gives name of current tab. could use this too
     
+    output$changeUploadedFile <- renderUI({
+        if (input$useExampleData == 1 | is.null(datInfo$inFileInfo)) return(NULL)
+        actionButton("changeUpFile", "Upload different file")
+    })
     output$chooseDatafile <- renderUI({
         if (input$useExampleData == 1 |
                 (input$useExampleData == 0 & !is.null(datInfo$inFileInfo))) return(NULL)
@@ -183,6 +200,7 @@ shinyServer(function(input, output, session) {
 
     nonMissingIDs <- reactive({
         # These are the IDs of people who can be used for PS calculation
+        #   (will be used in intersection w/ keepAfterPruning IDs)
         if (datInfo$newData == TRUE) return(NULL)
         if (is.null(idvarName())) return (NULL)
 
@@ -197,14 +215,15 @@ shinyServer(function(input, output, session) {
     })
     
     dset.groupvar <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(dset.orig())) return(NULL)
         if (is.null(groupvarFactorName())) return(NULL)
         if (is.null(idvarName())) return(NULL)
 
         # To buy time in case of dataset switching
-        if (!(idvarName() %in% names(dset.orig()))) return(NULL)
-        if (!(groupvarname() %in% names(dset.orig()))) return(NULL)
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+        #if (!(idvarName() %in% names(dset.orig()))) return(NULL)
+        #if (!(groupvarname() %in% names(dset.orig()))) return(NULL)
+        #if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
 
         dat <- data.table(dset.orig()[[idvarName()]])
         setnames(dat, old = names(dat), new = idvarName())
@@ -222,7 +241,7 @@ shinyServer(function(input, output, session) {
 
     groupvarFactorLevelsSorted <- reactive({
         # for use in graphs
-        if (is.null(groupvarFactorName())) return(NULL)
+        if (is.null(dset.groupvar())) return(NULL)
 
         tmp <- table(dset.groupvar()[[groupvarFactorName()]])
         names(tmp)[order(tmp, decreasing= TRUE)]
@@ -393,8 +412,8 @@ shinyServer(function(input, output, session) {
     formRHS <- reactive({
         # -- contains an isolate -- #
         # Dependencies
-        if (is.null(dset.orig())) return(NULL)
         if (datInfo$newData == TRUE) return(NULL)
+        if (is.null(dset.orig())) return(NULL)
         if (input$psTypedButton == 0) return(NULL) 
         groupvarname()
         useCompleteCasesOnly()
@@ -429,10 +448,6 @@ shinyServer(function(input, output, session) {
         }
     })
 
-    output$psHelpText <- renderText({
-        "    age + gender"
-    })
-    
     output$psHelpGen1 <- renderUI({
         HTML(paste0(
             "Type RHS of ", 
@@ -541,6 +556,7 @@ shinyServer(function(input, output, session) {
     dset.imputed <- reactive({
         if (datInfo$newData == TRUE) return(NULL)
         if (is.null(varnamesFromRHS())) return(NULL)
+        if (is.null(PSIDs())) return(NULL)
         if (useCompleteCasesOnly()) return(NULL)
         
         origvars <- unique(gsub(paste0("^", naPrefix()), "", varnamesFromRHS()))
@@ -588,14 +604,13 @@ shinyServer(function(input, output, session) {
     output$psCopyText <- renderText({
         # -- contains an isolate -- #
         # dependencies
-        if (datInfo$newData == TRUE) return(NULL)
         if(is.null(lrmfit())) return(NULL)
     
         isolate(stringFormula())
     })
 
     output$psFitProblemTextPrePruning <- renderUI({
-        # -- contains an isolate -- #
+        # -- contains an isolate -- (waiting for the "done typing" button)
         # dependencies
         if (datInfo$newData == TRUE) return(NULL)
         useCompleteCasesOnly()
@@ -643,13 +658,11 @@ shinyServer(function(input, output, session) {
     })
 
     logitPS <- reactive({
-        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(lrmfit())) return(NULL)
         
         lrmfit()$linear.predictors
     })
     PS <- reactive({
-        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(logitPS())) return(NULL)
         
         exp(logitPS()) / (1 + exp(logitPS()))
@@ -755,17 +768,14 @@ shinyServer(function(input, output, session) {
     varsToView <- reactive({
         # -- contains an isolate -- #
         #dependencies
-        if (datInfo$newData == TRUE) return(NULL)
+        if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
         if (is.null(dset.orig())) return(NULL)
-        # To buy time in case of dataset switching
-        if (is.null(varnames.orig())) return(NULL)
-        if (is.null(groupvarname())) return(NULL)
-        if (is.null(idvarName())) return(NULL)
+        if (is.null(possVarsToRestrict())) return(NULL)
 
         input$generalGraphUpdateButton
         
-        # trying to buy time when switching between datasets
         print("here")
+        # trying to buy time when switching between datasets
         #vec <- intersect(isolate(input$varsToRestrict), varnames.orig())
         vec <- isolate(input$varsToRestrict)
         print(vec)
@@ -818,7 +828,7 @@ shinyServer(function(input, output, session) {
 
     # Create the expression to use for pruning
     pruneValRawList <- reactive({
-        if (datInfo$newData == TRUE) return(NULL)
+        if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
         mylist <- vector("list", numvarsToView())
@@ -844,7 +854,7 @@ shinyServer(function(input, output, session) {
         mylist
     })
     keepNARawList <- reactive({
-        if (datInfo$newData == TRUE) return(NULL)
+        if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
         mylist <- vector("list", numvarsToView())
@@ -864,14 +874,14 @@ shinyServer(function(input, output, session) {
         # -- contains an isolate -- #
         # TODO: do I want the isolate in the RawLists instead?
         # dependencies
-        if (datInfo$newData == TRUE) return(NULL)
-        if (is.null(dset.orig())) return(NULL)
+        if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
+        if (is.null(varsToView())) return(NULL)
+        print("pVTL passed two ifs")
         if (input$xgraphsUpdateButton == 0 & 
             input$PSCalcUpdateButton == 0) {
             return(NULL)
         }
-        if (is.null(varsToView())) return(NULL)
-        if (numvarsToView() == 0) return(NULL)
+        print("pVTL passed last if")
         
         mylist <- vector("list", numvarsToView())
         names(mylist) <- varsToView()
@@ -949,9 +959,6 @@ shinyServer(function(input, output, session) {
     output$pruneTable <- renderTable({
         if (is.null(idsToKeepAfterPruning())) return(NULL)
         if (is.null(dset.groupvar())) return(NULL)
-        # To buy time in case of dataset switching
-        if (!(groupvarname() %in% names(dset.orig()))) return(NULL)
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
     
         dat <- dset.groupvar()[idsToKeepAfterPruning(), .N, by= eval(groupvarFactorName())]
         setnames(dat, old = groupvarFactorName(), new = groupvarname())
@@ -1138,8 +1145,6 @@ shinyServer(function(input, output, session) {
                 varname         <- varsToView()[my_i]
 
                 plotname        <- paste0("plot_", varname)
-                naTableName     <- paste0("naTable_", varname)
-
      
                 output[[plotname]] <- renderPlot({
                     if (is.null(dset.psgraphs())) return(NULL)
@@ -1457,11 +1462,22 @@ shinyServer(function(input, output, session) {
                     par(def.par)
                 }, res= 100
                 ) # end renderPlot
+            }) # end local
+        } # end for
+    }) # end observe    
 
+
+    observe({
+        for (i in seq_along(varsToView())) {
+            local({
+                my_i <- i
+                varname         <- varsToView()[my_i]
+
+                naTableName     <- paste0("naTable_", varname)
 
                 # Create a missing-by-group table for each variable
                 output[[naTableName]] <- renderTable({
-                    if (is.null(dset.psgraphs())) return(NULL)
+                    if (is.null(dset.orig())) return(NULL)
                     if (is.null(dset.groupvar())) return(NULL)
                     if (is.null(idsToKeepAfterPruning())) return(NULL)
 
@@ -1494,7 +1510,6 @@ shinyServer(function(input, output, session) {
 
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
-                    if (datInfo$newData == TRUE) return(NULL)
                     if (is.null(varIsContinuous())) return(NULL)
                     if (is.null(varIsContinuous()[varname])) return(NULL)
                     if (is.null(idsToKeepAfterPruning())) return(NULL)
@@ -1506,8 +1521,9 @@ shinyServer(function(input, output, session) {
                             label="Min:", 
                             width= '75%',
                             value = floor(10^xdig() *   
-                                min(unlist(dset.orig()[idsToKeepAfterPruning(), eval(varname), with= FALSE]), na.rm = TRUE)) / 10^xdig()
-
+                                min(unlist(dset.orig()[idsToKeepAfterPruning(), 
+                                    eval(varname), with= FALSE]), 
+                                    na.rm = TRUE)) / 10^xdig()
                         )
                         
                     } else { # we have categorical var, either factor or char
@@ -1515,14 +1531,15 @@ shinyServer(function(input, output, session) {
                             input1name, 
                             NULL,
                             # as.character corrects the printing of factor levels
-                            choices=  as.character(sort(unique(na.omit(unlist(dset.orig()[, eval(varname), with= FALSE]))))),
-                            selected= as.character(sort(unique(unlist(dset.orig()[idsToKeepAfterPruning(), eval(varname), with= FALSE]))))
+                            choices=  as.character(sort(unique(na.omit(unlist(
+                                dset.orig()[, eval(varname), with= FALSE]))))),
+                            selected= as.character(sort(unique(unlist(
+                                dset.orig()[idsToKeepAfterPruning(), eval(varname), with= FALSE]))))
                         )
                     }
                 }) # end renderUI
 
                 output[[pruner2name]] <- renderUI({
-                    if (datInfo$newData == TRUE) return(NULL)
                     if (is.null(varIsContinuous())) return(NULL)
                     if (is.null(varIsContinuous()[varname])) return(NULL)
                     if (is.null(idsToKeepAfterPruning())) return(NULL)
@@ -1555,7 +1572,6 @@ shinyServer(function(input, output, session) {
      
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
-                    if (datInfo$newData == TRUE) return(NULL)
                     radioButtons(keepNAInputName, NULL,
                         c("Keep units with missing values for this variable" = 1,
                         "Exclude units with missing values for this variable" = 0),
@@ -1583,8 +1599,8 @@ shinyServer(function(input, output, session) {
                 # Check the textInput for each variable
                 # TODO: break this up for the two input boxes
                 output[[textCheck1Name]] <- renderUI({
-                    if (datInfo$newData == TRUE) return(NULL)
                     # give the dependencies time to catch up
+                    if (is.null(varIsContinuous())) return(NULL)
                     if (is.null(varIsContinuous()[varname])) return(NULL)
                     if (is.null(input[[input1name]])) return(NULL)
                     if (is.null(input[[input2name]])) return(NULL)
@@ -1592,7 +1608,8 @@ shinyServer(function(input, output, session) {
                     if (varIsContinuous()[varname]) {
                         if (is.na(as.numeric(input[[input1name]])) | 
                             is.na(as.numeric(input[[input2name]]))) {    
-                            HTML(paste0(tags$span(class="text-danger", "Please make sure both boxes contain numbers.")))
+                            HTML(paste0(tags$span(class="text-danger", 
+                                "Please make sure both boxes contain numbers.")))
                         } else { # no problem
                             return(NULL)
                         }
@@ -1607,7 +1624,6 @@ shinyServer(function(input, output, session) {
     
     # Now put them all together
     output$covariatePlotsAndInputs <- renderUI({
-        if (datInfo$newData == TRUE) return(NULL)
         if (input$generalGraphUpdateButton == 0) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
