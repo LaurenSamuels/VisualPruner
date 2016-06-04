@@ -25,9 +25,11 @@ shinyServer(function(input, output, session) {
     
     # I'm using reactiveValues() here so I can set the fileInfo
     #   to NULL when the user decides to upload a new file.
+    # Also I need a flag for when user switches datasets
     datInfo <- reactiveValues()
     datInfo$inFileInfo <- NULL
-    observe ({
+    datInfo$newData <- NULL
+    observe({
         if (input$useExampleData == 0) {
             datInfo$inFileInfo <- input$datafileInfo 
         } 
@@ -38,9 +40,22 @@ shinyServer(function(input, output, session) {
         actionButton("changeUpFile", "Upload different file")
     })
     observeEvent(input$changeUpFile, {
+        print("changeUpFile Flag triggered")
         datInfo$inFileInfo <- NULL
+        datInfo$newData <- TRUE
     })    
-    
+    observe({
+        input$useExampleData
+        print("useExampleData Flag triggered")
+        datInfo$newData <- TRUE
+    })
+    observe({
+        if(input$psTypedButton > 0 | input$generalGraphUpdateButton > 0)
+
+        print("False Flag triggered")
+        datInfo$newData <- FALSE
+    })
+    # TODO: keep in mind: input$mainNavbarPage gives name of current tab. could use this too
     
     output$chooseDatafile <- renderUI({
         if (input$useExampleData == 1 |
@@ -168,7 +183,8 @@ shinyServer(function(input, output, session) {
 
     nonMissingIDs <- reactive({
         # These are the IDs of people who can be used for PS calculation
-        if(is.null(idvarName())) return (NULL)
+        if (datInfo$newData == TRUE) return(NULL)
+        if (is.null(idvarName())) return (NULL)
 
         if (is.null(varnamesFromRHS())) return(dset.orig()[[idvarName()]])
         
@@ -375,8 +391,10 @@ shinyServer(function(input, output, session) {
     })
 
     formRHS <- reactive({
+        # -- contains an isolate -- #
         # Dependencies
         if (is.null(dset.orig())) return(NULL)
+        if (datInfo$newData == TRUE) return(NULL)
         if (input$psTypedButton == 0) return(NULL) 
         groupvarname()
         useCompleteCasesOnly()
@@ -454,12 +472,10 @@ shinyServer(function(input, output, session) {
     })
 
     PSIDs <- reactive({
+        # -- contains an isolate -- #
         # dependencies
+        if (datInfo$newData == TRUE) return(NULL)
         if (input$PSCalcUpdateButton == 0) return(nonMissingIDs()) 
-        # these should be covered by nonMissingIDs,
-        #    but just in case:
-        #dset.orig()
-        #useCompleteCasesOnly()   
         
         intersect(nonMissingIDs(), isolate(idsToKeepAfterPruning()))
     })
@@ -478,11 +494,14 @@ shinyServer(function(input, output, session) {
         }
     })    
     varnamesForIndicators <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(varnamesFromRHS())) return(NULL)
         
         setdiff(varnamesFromRHS(), names(dset.orig()))
     })
     varnamesFromRHSOK <- reactive({
+        # -- contains an isolate -- #
+        if (datInfo$newData == TRUE) return(NULL)
         if (psNotChecked()) return(NULL)
         if (is.null(psFormSyntaxOK())) return(NULL)
         dset.orig()
@@ -520,6 +539,7 @@ shinyServer(function(input, output, session) {
     })
 
     dset.imputed <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(varnamesFromRHS())) return(NULL)
         if (useCompleteCasesOnly()) return(NULL)
         
@@ -549,6 +569,8 @@ shinyServer(function(input, output, session) {
     })
     
     lrmfit <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
+
         if (is.null(psForm()) | 
             is.null(varnamesFromRHS())) return(NULL)
         
@@ -564,17 +586,18 @@ shinyServer(function(input, output, session) {
     })
 
     output$psCopyText <- renderText({
+        # -- contains an isolate -- #
         # dependencies
+        if (datInfo$newData == TRUE) return(NULL)
         if(is.null(lrmfit())) return(NULL)
-        # really this should be covered by lrmfit
-        #dset.orig()
     
         isolate(stringFormula())
     })
 
     output$psFitProblemTextPrePruning <- renderUI({
+        # -- contains an isolate -- #
         # dependencies
-        dset.orig()
+        if (datInfo$newData == TRUE) return(NULL)
         useCompleteCasesOnly()
         
         if (psNotChecked() | is.null(varnamesFromRHSOK())) {
@@ -598,10 +621,11 @@ shinyServer(function(input, output, session) {
         }
     })
     psFitProblemPostPruning <- reactive({
+        # -- contains an isolate -- #
         # dependencies
+        if (datInfo$newData == TRUE) return(NULL)
         if (psNotChecked() |  
             input$PSCalcUpdateButton  == 0) return (FALSE)
-        dset.orig()
 
         if (is.null(isolate(lrmfit()))) {
             TRUE
@@ -619,11 +643,13 @@ shinyServer(function(input, output, session) {
     })
 
     logitPS <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(lrmfit())) return(NULL)
         
         lrmfit()$linear.predictors
     })
     PS <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(logitPS())) return(NULL)
         
         exp(logitPS()) / (1 + exp(logitPS()))
@@ -704,6 +730,8 @@ shinyServer(function(input, output, session) {
     ## Reactive text related to covariate graphs
         
     possVarsToRestrict <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
+        if (is.null(varnames.orig())) return(NULL)
         if (is.null(groupvarname())) return(NULL)
         if (is.null(idvarName())) return(NULL)
 
@@ -725,22 +753,23 @@ shinyServer(function(input, output, session) {
     })
 
     varsToView <- reactive({
+        # -- contains an isolate -- #
         #dependencies
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(dset.orig())) return(NULL)
         # To buy time in case of dataset switching
         if (is.null(varnames.orig())) return(NULL)
         if (is.null(groupvarname())) return(NULL)
-        if (!(groupvarname() %in% varnames.orig())) return(NULL)
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
+        if (is.null(idvarName())) return(NULL)
 
         input$generalGraphUpdateButton
         
         # trying to buy time when switching between datasets
         print("here")
-        vec <- intersect(isolate(input$varsToRestrict), varnames.orig())
+        #vec <- intersect(isolate(input$varsToRestrict), varnames.orig())
+        vec <- isolate(input$varsToRestrict)
         print(vec)
         vec
-        #isolate(input$varsToRestrict)
     })
     numvarsToView <- reactive({
         length(varsToView())    
@@ -756,10 +785,12 @@ shinyServer(function(input, output, session) {
     })
 
     varIsContinuous <- reactive({
+        # -- contains an isolate -- #
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
         vnames <- varsToView()
-        myvec <- rep(FALSE, length(vnames))
+        myvec  <- rep(FALSE, length(vnames))
         
         for(i in seq_along(vnames)) {
             varname <- vnames[i]
@@ -787,6 +818,7 @@ shinyServer(function(input, output, session) {
 
     # Create the expression to use for pruning
     pruneValRawList <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
         mylist <- vector("list", numvarsToView())
@@ -812,6 +844,7 @@ shinyServer(function(input, output, session) {
         mylist
     })
     keepNARawList <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
         mylist <- vector("list", numvarsToView())
@@ -828,21 +861,17 @@ shinyServer(function(input, output, session) {
         mylist
     })
     pruneValTextList <- reactive({
-        # dependencies
-        if (is.null(dset.orig())) return(NULL)
+        # -- contains an isolate -- #
         # TODO: do I want the isolate in the RawLists instead?
+        # dependencies
+        if (datInfo$newData == TRUE) return(NULL)
+        if (is.null(dset.orig())) return(NULL)
         if (input$xgraphsUpdateButton == 0 & 
             input$PSCalcUpdateButton == 0) {
             return(NULL)
         }
         if (is.null(varsToView())) return(NULL)
         if (numvarsToView() == 0) return(NULL)
-
-        # To buy time in case of dataset switching
-        if (is.null(varnames.orig())) return(NULL)
-        if (is.null(groupvarname())) return(NULL)
-        if (!(groupvarname() %in% varnames.orig())) return(NULL)
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
         mylist <- vector("list", numvarsToView())
         names(mylist) <- varsToView()
@@ -907,10 +936,9 @@ shinyServer(function(input, output, session) {
     })    
 
     idsToKeepAfterPruning <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
         if (is.null(dset.orig())) return(NULL)
         if (is.null(idvarName())) return(NULL)
-        # set to null if either of these changes. Buying time w/ dependencies.
-        if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
 
         if (is.null(exprToKeepAfterPruning())) return(dset.orig()[[idvarName()]])
         
@@ -1466,6 +1494,7 @@ shinyServer(function(input, output, session) {
 
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
+                    if (datInfo$newData == TRUE) return(NULL)
                     if (is.null(varIsContinuous())) return(NULL)
                     if (is.null(varIsContinuous()[varname])) return(NULL)
                     if (is.null(idsToKeepAfterPruning())) return(NULL)
@@ -1486,13 +1515,14 @@ shinyServer(function(input, output, session) {
                             input1name, 
                             NULL,
                             # as.character corrects the printing of factor levels
-                            choices=  as.character(sort(unique(unlist(dset.orig()[nonMissingIDs(), eval(varname), with= FALSE])))),
+                            choices=  as.character(sort(unique(na.omit(unlist(dset.orig()[, eval(varname), with= FALSE]))))),
                             selected= as.character(sort(unique(unlist(dset.orig()[idsToKeepAfterPruning(), eval(varname), with= FALSE]))))
                         )
                     }
                 }) # end renderUI
 
                 output[[pruner2name]] <- renderUI({
+                    if (datInfo$newData == TRUE) return(NULL)
                     if (is.null(varIsContinuous())) return(NULL)
                     if (is.null(varIsContinuous()[varname])) return(NULL)
                     if (is.null(idsToKeepAfterPruning())) return(NULL)
@@ -1525,6 +1555,7 @@ shinyServer(function(input, output, session) {
      
                 # Create "keep NA?" input function for each variable
                 output[[keepNAName]] <- renderUI({
+                    if (datInfo$newData == TRUE) return(NULL)
                     radioButtons(keepNAInputName, NULL,
                         c("Keep units with missing values for this variable" = 1,
                         "Exclude units with missing values for this variable" = 0),
@@ -1552,6 +1583,7 @@ shinyServer(function(input, output, session) {
                 # Check the textInput for each variable
                 # TODO: break this up for the two input boxes
                 output[[textCheck1Name]] <- renderUI({
+                    if (datInfo$newData == TRUE) return(NULL)
                     # give the dependencies time to catch up
                     if (is.null(varIsContinuous()[varname])) return(NULL)
                     if (is.null(input[[input1name]])) return(NULL)
@@ -1575,6 +1607,7 @@ shinyServer(function(input, output, session) {
     
     # Now put them all together
     output$covariatePlotsAndInputs <- renderUI({
+        if (datInfo$newData == TRUE) return(NULL)
         if (input$generalGraphUpdateButton == 0) return(NULL)
         if (is.null(varsToView())) return(NULL)
 
