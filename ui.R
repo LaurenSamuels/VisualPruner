@@ -160,7 +160,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 htmlOutput("keepAfterPruningCopyText"),
                 tags$hr(),
                 h4('Current propensity score formula:'),
-                textOutput("psCopyText")
+                uiOutput("psCopyText")
             ) # end column
         ) # end fluidRow 
     ), # end Copy panel
@@ -168,11 +168,15 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     tabPanel("About",
         h1("About Visual Pruner"),
         'Visual Pruner is a study-design tool for use with observational studies.', 
-        'Some documentation can be found at ',
-        a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
-            href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
-            target="_blank"),
-        '. We hope to provide further documentation soon.',
+        tags$br(),
+        tags$br(),
+        HTML(paste0(
+            'Some documentation can be found at ',
+            a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
+                href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
+                target="_blank"),
+            '. We hope to provide further documentation soon.' 
+        )),
         tags$hr(),
         h4('Version'),
         '0.0.0.9007',
@@ -181,21 +185,29 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         h4('Authors'),
         'Lauren R. Samuels and Robert A. Greevy, Jr.',
         h4('Contact'),
-        a("http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
-            href="http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
-            target="_blank"),
+        HTML(paste0(
+            a("http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
+                href="http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
+                target="_blank")
+        )),
         tags$br(),
         'We welcome bug reports, suggestions, and requests.',
         tags$hr(),
         h4('Acknowledgements'),
-        'Many thanks to Qi Liu for helpful suggestions.',
+        HTML(paste0(
+            'Visual Pruner is built using the ', 
+            a("R Shiny", 
+                href="http://shiny.rstudio.com", 
+                target="_blank"),
+                ' framework',
+            ', with CSS from ',
+            a("Bootswatch", 
+                href="http://bootswatch.com", 
+                target="_blank"),
+            '.'
+        )),
         tags$br(),
-        'Visual Pruner is built using the', tags$code('R shiny'), 'framework',
-        ' (see the R tab for more information), with CSS from ',
-        a("http://bootswatch.com", 
-            href="http://bootswatch.com", 
-            target="_blank"),
-        '.'
+        'Many thanks to Qi Liu for helpful suggestions.'
     ), # end About panel
 
     tabPanel("R",

@@ -6,8 +6,14 @@
 library(shiny)
 library(rms)
 library(data.table)
-#library(Cairo) # for better graphics on Linux servers
-#options(shiny.usecairo= TRUE)
+
+# graphics look slightly different on the dept server
+onServer <- FALSE
+
+if (onServer) {
+    library(Cairo) # for better graphics on Linux servers
+    options(shiny.usecairo= TRUE)
+}
 
 
 # number of decimal places to use w/ propensity scores
@@ -450,9 +456,9 @@ shinyServer(function(input, output, session) {
                     href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html", 
                     target="_blank"),
             " for ", 
-            tags$span(style="font-family:courier", "lrm()"), 
+            tags$code(class="text-primary", "lrm()"), 
             ", e.g. ",
-            tags$b(style="font-family:courier", "age + gender"), 
+            tags$code(class="text-primary", "age + gender"), 
             "."
         ))
     })
@@ -463,9 +469,9 @@ shinyServer(function(input, output, session) {
             HTML(paste0(
                 "To include missingness indicators, ", 
                 "prefix the variable name with ",
-                tags$b(style="font-family:courier", naPrefix()),
+                tags$code(class="text-primary", naPrefix()),
                 ", e.g. ", 
-                tags$b(style="font-family:courier", paste0(naPrefix(), "age")), 
+                tags$code(class="text-primary", paste0(naPrefix(), "age")), 
                 "."
             ))
         }
@@ -596,12 +602,14 @@ shinyServer(function(input, output, session) {
         }    
     })
 
-    output$psCopyText <- renderText({
+    output$psCopyText <- renderUI({
         # -- contains an isolate -- #
         # dependencies
         if(is.null(lrmfit())) return(NULL)
     
-        isolate(stringFormula())
+        HTML(paste0(
+            tags$code(class="text-primary", isolate(stringFormula())) 
+        ))
     })
 
     output$psFitProblemTextPrePruning <- renderUI({
@@ -931,7 +939,10 @@ shinyServer(function(input, output, session) {
     output$keepAfterPruningCopyText <- renderUI({
         if (is.null(pruneValTextList())) return(NULL)
 
-        HTML(do.call("paste", list(pruneValTextList(), collapse= " & <br/>" )))
+        mytext <- do.call("paste", list(pruneValTextList(), collapse= " & <br/>" ))
+        HTML(paste0(
+            tags$code(class="text-primary", HTML(mytext)) 
+        ))
     })    
 
     idsToKeepAfterPruning <- reactive({
@@ -1006,11 +1017,12 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
+            myColor <- adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()) 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
-                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
                     freq   = TRUE, 
-                    border = NA,
+                    col    = myColor,
+                    border = if (onServer) myColor else NA,
                     add    = TRUE
                 )
             }
@@ -1043,11 +1055,12 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
+            myColor <- adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()) 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
-                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
                     freq   = TRUE, 
-                    border = NA,
+                    col    = myColor,
+                    border = if (onServer) myColor else NA,
                     add    = TRUE
                 )
             }
@@ -1091,11 +1104,12 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
+            myColor <- adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()) 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
-                    col= adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()), 
                     freq   = TRUE, 
-                    border = NA,
+                    col    = myColor,
+                    border = if (onServer) myColor else NA,
                     add    = TRUE
                 )
             }
@@ -1325,12 +1339,13 @@ shinyServer(function(input, output, session) {
                         )
                         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
                         for (lev in groupvarFactorLevelsSorted()) {
+                            myColor <- colorScale.mod()[lev] 
                             if (!is.null(histlist[[lev]])) {
                                 plot(histlist[[lev]], 
-                                    col    = adjustcolor(colorScale.mod()[lev], 
-                                                alpha.f= alphaval()), 
                                     freq   = TRUE, 
-                                    border = NA,
+                                    col    = adjustcolor(myColor, alpha.f= alphaval()),
+                                    #border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/100) else NA,
+                                    border = if (TRUE) adjustcolor(myColor, alpha.f= alphaval()/100) else NA,
                                     add    = TRUE
                                 )
                             }
