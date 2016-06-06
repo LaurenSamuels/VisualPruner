@@ -1021,6 +1021,7 @@ shinyServer(function(input, output, session) {
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaval()),
                     border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
             }
@@ -1059,6 +1060,7 @@ shinyServer(function(input, output, session) {
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaval()),
                     border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
             }
@@ -1108,6 +1110,7 @@ shinyServer(function(input, output, session) {
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaval()),
                     border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
             }
@@ -1379,6 +1382,7 @@ shinyServer(function(input, output, session) {
                                     freq   = TRUE, 
                                     col    = adjustcolor(myColor, alpha.f= alphaval()),
                                     border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
                                     add    = TRUE
                                 )
                             }
