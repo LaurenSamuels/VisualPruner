@@ -5,34 +5,19 @@ date: ""
 output: html_document
 ---
 
-* from RG, 13 Jan 2016: on the R tab, include a short paragraph on running it locally (update: this is now on the wiki)
-
 * Make it a package
 
-* Handle missing data: From RG, 16 Feb 2016 email:
-If checking allow missing, it does mean imputation for any missing values (effectively nullifying them from the PS model) and automatically creates indicators for all the variables with missingness (as recommended by D'Agostino and Rubin and as better explained by Sarah and Jeffrey). 
-Then VP would show the indicator variables as covariates. 
-ALSO: before PS calc, need processing to get rid of redundant (collinear) missingness indicators 1st (e.g. sys & dias. bp). Why doesn't it work if I use is.imputed() in model? Would that work w/ the other non-lrm function?
-
-* Have some sort of smart model adjustment, where if we're down to one value of a variable, that variable is dropped from model? This seems like a good idea, but I think it might have implications I haven't thought through.
-
-* change remaining tags$head's to uiOutput--- I think it's clearer that way
-
 * clean up the naming!
-
-* **Upload new version to server. Remember to change version # and Cairo. Might need to ask Dale to update packages on server. Check the readme and description files too.**
 
 * Come up w/ a plot alternative for v large datasets (too many points).
 
 * For discrete vars, try angling axis labels
 
-* Try bigger font size on x-axis
+* Add note about # of underscores if > 1
 
-* Can we get higher res on the graphs, esp. the text?
+* Keep trying to eliminate borders on histograms on server
 
-* Look into the warnings: graphical parameter "type" is obsolete
-
-* For the histograms & bar charts, consider leaving the orig. histogram there as a shell (would mean specifying the breaks in advance) 
+* For the histograms & bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance) 
 
 * Think about the example dset included w/ pkg.  
 Should it be the same as the one in the documentation? 
@@ -41,23 +26,16 @@ If I'm going to use it, how reference from w/in app?
 
 * Add note "This may take a minute for large dsets"
 
-* Keep testing going back & forth btw tabs
-
 * Incorporate some sort of "rollback" button or a temporary "test PS" button so that graphs aren't totally lost when PS model can't be fit on new sample
 
 * Add option to save a file of all the steps (written every time PS is recalculated).  
 This might help with the "rollback" too.
 
-* I'm not sure that the plots will work right when the datasets for PS calc and for plotting are very different (that is, when just rows w/ nonmissing values are used for PS calc). Especially w/ the barcharts. Figure out how to test this. Related: why am I getting "Warning: Removed 2 rows containing missing values (geom_bar)."?
-
-* remove the code for the old plots and brushing
-
-* Add Robert's 'default pruning' idea?
-
 * Later: allow > 2 tx groups
 
-* Move the PS formula example to farther down, or to its own tab?
-Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
+* Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
+
+* Put in note: user-specified pruning limits will be moved inwards to nearest sample point 
 
 * Add option to use prognostic score instead?
 
@@ -67,7 +45,7 @@ Add to formula help: use ~1 if you don't want to bother/ just want to see covari
 
 * Maybe: add weighted histograms
 
-* Add standardized diff plot?
+* Maybe: Add standardized diff plot?
     + Thoughts about standardized difference plot
     + For continuous & binary see Austin, P. C. (2009). Balance diagnostics for comparing the distribution of baseline covariates between treatment groups in propensity-score matched samples. Statistics in Medicine, 28(25), 3083–3107. http://doi.org/10.1002/sim.3697
 
