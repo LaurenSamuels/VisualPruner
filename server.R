@@ -704,41 +704,39 @@ shinyServer(function(input, output, session) {
     # TODO: not currently using these
     psbrushmin <- reactive({
         if (is.null(dset.psgraphs()) ) return(NULL)
-        #if (useLogit()) input$logitpsPlot_brush$xmin else input$psPlot_brush$xmin
-        NULL
+        input$logitpsPlot_brush$xmin 
     })
     psbrushmax <- reactive({
         if (is.null(dset.psgraphs()) ) return(NULL)
-        #if (useLogit()) input$logitpsPlot_brush$xmax else input$psPlot_brush$xmax
-        NULL
+        input$logitpsPlot_brush$xmax
     })
-    hasScoreOutside <- reactive({
-        if (is.null(dset.psgraphs())) return(NULL)
+    #hasScoreOutside <- reactive({
+    #    if (is.null(dset.psgraphs())) return(NULL)
 
-        if (is.null(psbrushmin())) return(rep(FALSE, dset.psgraphs()[, .N]))
+    #    if (is.null(psbrushmin())) return(rep(FALSE, dset.psgraphs()[, .N]))
 
-        psdig <- 2
-        round(dset.psgraphs()[[logitpsvarName()]], psdig) < psbrushmin() |
-            round(dset.psgraphs()[[logitpsvarName()]], psdig) > psbrushmax()
-    })
-    idsForRug <- reactive({
-        if (is.null(hasScoreOutside())) return(NULL)
-        
-        ids <- dset.psgraphs()[hasScoreOutside(), ][[idvarName()]]
-        
-        intersect(ids, idsToKeepAfterPruning())
-    })  
+    #    psdig <- 2
+    #    round(dset.psgraphs()[[logitpsvarName()]], psdig) < psbrushmin() |
+    #        round(dset.psgraphs()[[logitpsvarName()]], psdig) > psbrushmax()
+    #})
+    #idsForRug <- reactive({
+    #    if (is.null(hasScoreOutside())) return(NULL)
+    #    
+    #    ids <- dset.psgraphs()[hasScoreOutside(), ][[idvarName()]]
+    #    
+    #    intersect(ids, idsToKeepAfterPruning())
+    #})  
 
-    # todo: is there a way to do this w/o making a third dataset?
-    # TODO: might not need this anyway
-    dset.psgraphs.plus <- reactive({
-        if (is.null(hasScoreOutside())) return(NULL)
+    ## todo: is there a way to do this w/o making a third dataset?
+    ## TODO: might not need this anyway
+    #dset.psgraphs.plus <- reactive({
+    #    if (is.null(hasScoreOutside())) return(NULL)
 
-        dat <- copy(dset.psgraphs())
+    #    dat <- copy(dset.psgraphs())
 
-        dat[, outside := hasScoreOutside()]
-        dat
-    })
+    #    dat[, outside := hasScoreOutside()]
+    #    dat
+    #})
     
 
     ############################################################
@@ -973,11 +971,11 @@ shinyServer(function(input, output, session) {
         if (is.null(dset.groupvar())) return(NULL)
 
         #colors from  bootswatch sandstone
-        primary <-         "#325D88"
-        success <-         "#93C54B"
-        info <-            "#29ABE0"
-        warning <-         "#F47C3C"
-        danger <-          "#d9534f"
+        primary <- "#325D88"
+        success <- "#93C54B"
+        info    <- "#29ABE0"
+        warning <- "#F47C3C"
+        danger  <- "#d9534f"
         myColorScale <- c(
             primary,
             warning,
@@ -986,8 +984,8 @@ shinyServer(function(input, output, session) {
             danger
         )
         
-        sc <- myColorScale[1:length(unique(dset.groupvar()[[groupvarFactorName()]]))]
-        names(sc) <- levels(dset.groupvar()[[groupvarFactorName()]])
+        sc <- myColorScale[1:length(groupvarFactorLevelsSorted())]
+        names(sc) <- groupvarFactorLevelsSorted()
         sc
     })
     
@@ -1017,12 +1015,12 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
-            myColor <- adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()) 
+            myColor <- colorScale.mod()[lev] 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
-                    col    = myColor,
-                    border = if (onServer) myColor else NA,
+                    col    = adjustcolor(myColor, alpha.f= alphaval()),
+                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
                     add    = TRUE
                 )
             }
@@ -1055,12 +1053,12 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
-            myColor <- adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()) 
+            myColor <- colorScale.mod()[lev] 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
-                    col    = myColor,
-                    border = if (onServer) myColor else NA,
+                    col    = adjustcolor(myColor, alpha.f= alphaval()),
+                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
                     add    = TRUE
                 )
             }
@@ -1078,7 +1076,7 @@ shinyServer(function(input, output, session) {
                 adjustcolor(colorScale.mod()[x], alpha.f= alphaval())))
         )
     }, res= 100)    
-    output$logitpsPlot2 <- renderPlot({
+    output$logitpsPlotForBrushing <- renderPlot({
         # exact duplicate of the other one; can't call the same plot twice in the UI 
         if (is.null(dset.psgraphs())) return(NULL)
 
@@ -1104,12 +1102,12 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupvarFactorLevelsSorted()) {
-            myColor <- adjustcolor(colorScale.mod()[lev], alpha.f= alphaval()) 
+            myColor <- colorScale.mod()[lev] 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
-                    col    = myColor,
-                    border = if (onServer) myColor else NA,
+                    col    = adjustcolor(myColor, alpha.f= alphaval()),
+                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
                     add    = TRUE
                 )
             }
@@ -1127,6 +1125,30 @@ shinyServer(function(input, output, session) {
                 adjustcolor(colorScale.mod()[x], alpha.f= alphaval())))
         )
     }, res= 100)    
+
+    output$logitpsPlotBrushable <- renderUI({
+        if (is.null(dset.psgraphs())) return(NULL)
+
+        # from sandstone.css variables:
+        #gray:                   #98978B;
+        #gray-light:             #DFD7CA;
+        #gray-lighter:           #F8F5F0;
+        plotOutput("logitpsPlotForBrushing", 
+            height = 300,
+            width  = 'auto',
+            brush  = brushOpts(
+                id = "logitpsPlot_brush",
+                fill = "#DFD7CA",
+                stroke = "#98978B",
+                delay = 300,
+                delayType = "debounce",
+                direction = "x",
+                clip = TRUE,
+                resetOnNew = TRUE
+            )
+        )
+    })
+    
     
     #############################################################
 
@@ -1174,7 +1196,7 @@ shinyServer(function(input, output, session) {
                     datx.xna <- datx[is.na(get(varname)), ]
                     
                     # subset of datx that has a PS
-                    datxps <- datx[dset.psgraphs.plus()]
+                    datxps <- datx[dset.psgraphs()]
                     
                     # use datxps.nona for central scatterplot/stripchart
                     datxps.nona <- na.omit(datxps)
@@ -1304,6 +1326,18 @@ shinyServer(function(input, output, session) {
                         axes = FALSE,
                         type = "n"
                     )
+                    if (input$shadeBrushedArea == TRUE & !is.null(psbrushmin())) {
+                        par.usr <- par("usr")
+                        rect(
+                            xleft   = par.usr[1], 
+                            ybottom = psbrushmin(), 
+                            xright  = par.usr[2], 
+                            ytop    = psbrushmax(),
+                            density = NA,
+                            border  = NA,
+                            col     = "#DFD7CA"
+                        )
+                    }
                     for (lev in groupvarFactorLevelsSorted()) {
                         y <- datxps.xna[get(groupvarFactorName()) == lev, 
                             get(logitpsvarName())]
@@ -1344,8 +1378,7 @@ shinyServer(function(input, output, session) {
                                 plot(histlist[[lev]], 
                                     freq   = TRUE, 
                                     col    = adjustcolor(myColor, alpha.f= alphaval()),
-                                    #border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/100) else NA,
-                                    border = if (TRUE) adjustcolor(myColor, alpha.f= alphaval()/100) else NA,
+                                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
                                     add    = TRUE
                                 )
                             }
@@ -1391,6 +1424,28 @@ shinyServer(function(input, output, session) {
                             bty  = if (testing) "o" else "n",
                             type = "n"
                         )
+                    } else {
+                        par(las= 2) #TODO: try to angle instead
+
+                        plot(1, 0,
+                            xlim = c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
+                            ylim = my.ylim.ps, 
+                            axes = FALSE,
+                            type = "n")
+                    }
+                    if (input$shadeBrushedArea == TRUE & !is.null(psbrushmin())) {
+                        par.usr <- par("usr")
+                        rect(
+                            xleft   = par.usr[1], 
+                            ybottom = psbrushmin(), 
+                            xright  = par.usr[2], 
+                            ytop    = psbrushmax(),
+                            density = NA,
+                            border  = NA,
+                            col     = "#DFD7CA"
+                        )
+                    }
+                    if (varIsContinuous()[varname]) {    
                         for (lev in groupvarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
                             y <- datxps.nona[get(groupvarFactorName()) == lev, 
@@ -1402,13 +1457,6 @@ shinyServer(function(input, output, session) {
                                     alpha.f= alphaval()))
                         }
                     } else {
-                        par(las= 2) #TODO: try to angle instead
-
-                        plot(1, 0,
-                            xlim = c(min(my.at.orig) - 1, max(my.at.orig) + 1), 
-                            ylim = my.ylim.ps, 
-                            axes = FALSE,
-                            type = "n")
                         for (lev in groupvarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupvarFactorName()) == lev, get(varname)]
                             y <- datxps.nona[get(groupvarFactorName()) == lev, 
