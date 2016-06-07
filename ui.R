@@ -2,7 +2,7 @@ library(shiny)
 #library(shinythemes)
 
 shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
-    theme= "sandstone.css",
+    theme= "sandstone_LS.css",
     tabPanel("Upload",
         fluidRow(
             column(6,

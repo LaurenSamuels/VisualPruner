@@ -8,16 +8,11 @@ library(rms)
 library(data.table)
 
 # graphics look slightly different on the dept server
-onServer <- FALSE
-
+onServer <- grepl("linux", sessionInfo()$platform, fixed= TRUE)
 if (onServer) {
     library(Cairo) # for better graphics on Linux servers
     options(shiny.usecairo= TRUE)
 }
-
-
-# number of decimal places to use w/ propensity scores
-
 
 # Allow upload of bigger files
 # from http://stackoverflow.com/questions/18037737/how-to-change-maximum-upload-size-exceeded-restriction-in-shiny-and-save-user
@@ -104,6 +99,16 @@ shinyServer(function(input, output, session) {
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
     
         if (input$useExampleData == 1) {
+            # Take care of the random seed
+            # from Cole's code in nbpMatching pkg
+            if(exists(".Random.seed", envir = .GlobalEnv)) {
+                save.seed <- get(".Random.seed", envir= .GlobalEnv)
+                on.exit(assign(".Random.seed", save.seed, envir = .GlobalEnv))
+            } else {
+                on.exit(rm(".Random.seed", envir = .GlobalEnv))
+            }
+            set.seed(3517)
+            
             nt <- 300
             nc <- 700
             N <- nt + nc
@@ -456,9 +461,9 @@ shinyServer(function(input, output, session) {
                     href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html", 
                     target="_blank"),
             " for ", 
-            tags$code(class="text-primary", "lrm()"), 
+            tags$code("lrm()"), 
             ", e.g. ",
-            tags$code(class="text-primary", "age + gender"), 
+            tags$code("age + gender"), 
             "."
         ))
     })
@@ -469,9 +474,9 @@ shinyServer(function(input, output, session) {
             HTML(paste0(
                 "To include missingness indicators, ", 
                 "prefix the variable name with ",
-                tags$code(class="text-primary", naPrefix()),
+                tags$code(naPrefix()),
                 ", e.g. ", 
-                tags$code(class="text-primary", paste0(naPrefix(), "age")), 
+                tags$code(paste0(naPrefix(), "age")), 
                 "."
             ))
         }
@@ -608,7 +613,7 @@ shinyServer(function(input, output, session) {
         if(is.null(lrmfit())) return(NULL)
     
         HTML(paste0(
-            tags$code(class="text-primary", isolate(stringFormula())) 
+            tags$code(isolate(stringFormula())) 
         ))
     })
 
@@ -939,7 +944,7 @@ shinyServer(function(input, output, session) {
 
         mytext <- do.call("paste", list(pruneValTextList(), collapse= " & <br/>" ))
         HTML(paste0(
-            tags$code(class="text-primary", HTML(mytext)) 
+            tags$code(HTML(mytext)) 
         ))
     })    
 

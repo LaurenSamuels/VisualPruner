@@ -7,6 +7,12 @@ output: html_document
 
 * Make it a package
 
+* Check to see which datasets I'm using for 2 table types on prune page & 1 message on specify page
+
+* Think about the top central plots in cases where some people don't have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.
+
+* If keeping my same example dataset, add third category for gender, or pick different catvar
+
 * clean up the naming!
 
 * Come up w/ a plot alternative for v large datasets (too many points).
