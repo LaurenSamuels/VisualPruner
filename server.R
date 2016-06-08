@@ -54,10 +54,10 @@ shinyServer(function(input, output, session) {
             datInfo$newData <- FALSE
         }
     })
-    observe({
-        if (input$generalGraphUpdateButton > 0) {
+    observeEvent(input$generalGraphUpdateButton, {
+        #if (input$generalGraphUpdateButton > 0) {
             datInfo$newDataNoVarsChosen <- FALSE
-        }
+        #}
     })
     observe({
         if (input$xgraphsUpdateButton > 0 | input$PSCalcUpdateButton > 0) {
@@ -1700,37 +1700,36 @@ shinyServer(function(input, output, session) {
             keepNAName     <- paste0("keepNA_", varname)
             naTableName    <- paste0("naTable_", varname)
             
-            plot_and_input_list[[i]] <-
-                fluidRow(
-                    tags$hr(),
-                    h4(paste0("Variable: ", varname)),
-                    column(width= 5, offset= 1, 
-                        plotOutput(plotname, 
-                            #inline= TRUE
-                            height= 300,
-                            width  = "auto"
-                        ) # end plotOutput   
-                    ), # end column
-                    column(6,
-                        if (varIsContinuous()[varname]) {
-                            h5("Keep only units in this range (inclusive):") 
-                        } else {
-                            h5('Keep only units with the following value(s):')
-                        },
-                        uiOutput(textcheck1name),
-                        fluidRow(
-                            column(3, 
-                                uiOutput(pruner1name)
-                            ),
-                            column(3, 
-                                uiOutput(pruner2name)
-                            )
+            plot_and_input_list[[i]] <- fluidRow(
+                tags$hr(),
+                h4(paste0("Variable: ", varname)),
+                column(width= 5, offset= 1, 
+                    plotOutput(plotname, 
+                        #inline= TRUE
+                        height= 300,
+                        width  = "auto"
+                    ) # end plotOutput   
+                ), # end column
+                column(6,
+                    if (varIsContinuous()[varname]) {
+                        h5("Keep only units in this range (inclusive):") 
+                    } else {
+                        h5('Keep only units with the following value(s):')
+                    },
+                    uiOutput(textcheck1name),
+                    fluidRow(
+                        column(3, 
+                            uiOutput(pruner1name)
                         ),
-                        tags$br(),
-                        uiOutput(naTableName),
-                        uiOutput(keepNAName)
-                    ) # end column
-                )# end fluidRow
+                        column(3, 
+                            uiOutput(pruner2name)
+                        )
+                    ),
+                    tags$br(),
+                    uiOutput(naTableName),
+                    uiOutput(keepNAName)
+                ) # end column
+            )# end fluidRow
         } 
         plot_and_input_list
     })
