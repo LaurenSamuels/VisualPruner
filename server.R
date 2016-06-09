@@ -24,8 +24,8 @@ shinyServer(function(input, output, session) {
     #   to NULL when the user decides to upload a new file.
     # Also I need a flag for when user switches datasets
     datInfo <- reactiveValues()
-    datInfo$inFileInfo <- NULL
-    datInfo$newData <- NULL
+    datInfo$inFileInfo          <- NULL
+    datInfo$newData             <- NULL
     datInfo$newDataNoVarsChosen <- NULL
     datInfo$newDataNotYetPruned <- NULL
     observe({
@@ -33,30 +33,33 @@ shinyServer(function(input, output, session) {
             datInfo$inFileInfo <- input$datafileInfo 
         } 
     })
-    observeEvent(input$changeUpFile, {
+    observeEvent(input$changeUpFileButton, {
         datInfo$inFileInfo <- NULL
-        datInfo$newData <- TRUE
+
+        datInfo$newData             <- TRUE
         datInfo$newDataNoVarsChosen <- TRUE
         datInfo$newDataNotYetPruned <- TRUE
     })    
     observe({
         input$useExampleData
-        datInfo$newData <- TRUE
+
+        datInfo$newData             <- TRUE
         datInfo$newDataNoVarsChosen <- TRUE
         datInfo$newDataNotYetPruned <- TRUE
     })
-    observe({
-        if (input$psTypedButton > 0) {
+    observeEvent(input$psTypedButton, {
+        if (!is.null(dset.orig())) {
             datInfo$newData <- FALSE
         }
     })
     observeEvent(input$generalGraphUpdateButton, {
-        #if (input$generalGraphUpdateButton > 0) {
+        if (!datInfo$newData) {
             datInfo$newDataNoVarsChosen <- FALSE
-        #}
+        }
     })
-    observe({
-        if (input$xgraphsUpdateButton > 0 | input$PSCalcUpdateButton > 0) {
+    observeEvent(
+        input$xgraphsUpdateButton | input$PSCalcUpdateButton, {
+        if (!(datInfo$newData | datInfo$newDataNoVarsChosen)) {
             datInfo$newDataNotYetPruned <- FALSE
         }
     })
@@ -64,7 +67,7 @@ shinyServer(function(input, output, session) {
     
     output$changeUploadedFile <- renderUI({
         if (input$useExampleData == 1 | is.null(datInfo$inFileInfo)) return(NULL)
-        actionButton("changeUpFile", "Upload different file")
+        actionButton("changeUpFileButton", "Upload different file")
     })
     output$chooseDatafile <- renderUI({
         if (input$useExampleData == 1 |
