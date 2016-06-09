@@ -21,8 +21,6 @@ output: html_document
 
 * Add note about # of underscores if > 1
 
-* Keep trying to eliminate borders on histograms on server
-
 * For the histograms & bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance) 
 
 * Think about the example dset included w/ pkg.  

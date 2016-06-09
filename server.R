@@ -7,12 +7,8 @@ library(shiny)
 library(rms)
 library(data.table)
 
-# graphics look slightly different on the dept server
-onServer <- grepl("linux", sessionInfo()$platform, fixed= TRUE)
-if (onServer) {
-    library(Cairo) # for better graphics on Linux servers
-    options(shiny.usecairo= TRUE)
-}
+# On the department server, Cairo plots look worse
+options(shiny.usecairo= FALSE)
 
 # Allow upload of bigger files
 # from http://stackoverflow.com/questions/18037737/how-to-change-maximum-upload-size-exceeded-restriction-in-shiny-and-save-user
@@ -1025,7 +1021,7 @@ shinyServer(function(input, output, session) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaval()),
-                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                    border = NA,
                     lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
@@ -1064,7 +1060,7 @@ shinyServer(function(input, output, session) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaval()),
-                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                    border = NA,
                     lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
@@ -1114,7 +1110,7 @@ shinyServer(function(input, output, session) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaval()),
-                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                    border = NA,
                     lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
@@ -1386,7 +1382,7 @@ shinyServer(function(input, output, session) {
                                 plot(histlist[[lev]], 
                                     freq   = TRUE, 
                                     col    = adjustcolor(myColor, alpha.f= alphaval()),
-                                    border = if (onServer) adjustcolor(myColor, alpha.f= alphaval()/10) else NA,
+                                    border = NA,
                                     lty    = 0, # this is to help with rendering on server. Not sure it does though.
                                     add    = TRUE
                                 )
