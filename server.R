@@ -98,8 +98,8 @@ shinyServer(function(input, output, session) {
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
     
         if (input$useExampleData == 1) {
-            # Take care of the random seed
-            # from Cole's code in nbpMatching pkg
+            # Take care of the random seed.
+            #    Code from Cole in nbpMatching pkg
             if(exists(".Random.seed", envir = .GlobalEnv)) {
                 save.seed <- get(".Random.seed", envir= .GlobalEnv)
                 on.exit(assign(".Random.seed", save.seed, envir = .GlobalEnv))
@@ -113,19 +113,34 @@ shinyServer(function(input, output, session) {
             N <- nt + nc
             nmiss <- 0.05 * N
 
-            group <- rep(c("Exposed", "Unexposed"), times= c(nt, nc))
+            exposed <- rep(c("Yes", "No"), times= c(nt, nc))
             height_ft <- c(rnorm(nt, 5.4, .3), rnorm(nc, 5.6, .2))
             height_ft[sample(N, nmiss, replace= FALSE)] <- NA
-            gender <- c(rbinom(nt, 1, .66), rbinom(nc, 1, .5))
+
+            gender <- c(
+                sample(0:2, nt, replace= TRUE, prob= c(.546, .451, .003)),
+                sample(0:2, nc, replace= TRUE, prob= c(.506, .491, .003))
+            )
             gender[gender == 0] <- "Male"
             gender[gender == 1] <- "Female"
+            gender[gender == 2] <- "Other"
             gender[sample(N, nmiss, replace= FALSE)] <- NA
+
             age <- c(rnorm(nt, 45, 5), rnorm(nc, 50, 10))
             age[sample(N, nmiss, replace= FALSE)] <- NA
-            systolic_bp <- c(rnorm(nt, 115, 5), rnorm(nc, 110, 7)) 
-            systolic_bp [sample(N, nmiss, replace= FALSE)] <- NA
 
-            mydat <- data.table(group, height_ft, gender, age, systolic_bp)
+            # Blood pressure is unrelated to tx in theory
+            #systolic_bp <- c(rnorm(nt, 115, 5), rnorm(nc, 110, 7))
+            systolicBP <- rnorm(N, 115, 5)
+            systolicBP [sample(N, nmiss, replace= FALSE)] <- NA
+
+
+            mydat <- data.table(exposed, height_ft, gender, age, systolicBP)
+            #tmpfit <- lrm(exposed ~ rcs(age) + rcs(height_ft) + rcs(systolicBP) + gender, data= mydat)
+            #tmplogit <- tmpfit$linear.predictors
+            #tmpprob <- exp(tmplogit) / (1 + exp(tmplogit))
+            #tmpbinom <- rbinom(N, 1, tmpprob)
+            #mydat[, exposed := ifelse(tmpbinom == 1, "Yes", "No")]
         }  else if (!is.null(datInfo$inFileInfo)) {
             if (grepl("\\.csv\\>", datInfo$inFileInfo$name)) {
                 mydat <- fread(datInfo$inFileInfo$datapath,
