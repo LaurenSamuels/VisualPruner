@@ -9,6 +9,10 @@ output: html_document
 
 * Check to see which datasets I'm using for 2 table types on prune page & 1 message on specify page
 
+* Consider adding loess line/bars for means in central plots.
+
+* In Copy, find a way to wrap long PS formula
+
 * Think about the top central plots in cases where some people don't have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.
 
 * If keeping my same example dataset, add third category for gender, or pick different catvar

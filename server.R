@@ -1234,9 +1234,10 @@ shinyServer(function(input, output, session) {
                     }
                     # for RH plots for continuous, and all plots for cat.
                     num.levs <- length(groupVarFactorLevelsSorted())
-                    # jitter: we want the points to take up half
-                    #    the available space, regardless of # groups
-                    my.jitter <- (1 / num.levs) / 4
+                    # jitter: we want the points to take up 7/8 of the
+                    #    the available space, regardless of # groups;
+                    #    and the jitter extends in each direction
+                    my.jitter <- (1 / num.levs) * (7/8) / 2
                     # alignment for each group
                     my.at.adds <- 2 * my.jitter * (1:num.levs)
                     #shift so centered at 0
