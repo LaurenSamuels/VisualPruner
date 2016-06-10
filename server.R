@@ -115,9 +115,8 @@ shinyServer(function(input, output, session) {
             
             exposed <- rep(c("Yes", "No"), times= c(nt, nc))
             
-            # Tx group is more spread out in terms of height
-            height_ft <- c(rnorm(nt, 5.6, .3), rnorm(nc, 5.6, .2))
-            height_ft[sample(N, nmiss, replace= FALSE)] <- NA
+            # Tx group is older on average, but less spread out
+            age <- c(rnorm(nt, 50, 5), rnorm(nc, 45, 8))
             
             # Tx group has higher proportion of males
             gender <- c(
@@ -128,8 +127,9 @@ shinyServer(function(input, output, session) {
             gender[gender == 1] <- "Female"
             gender[gender == 2] <- "Other"
             
-            # Tx group is older on average, but less spread out
-            age <- c(rnorm(nt, 50, 5), rnorm(nc, 45, 8))
+            # Tx group is more spread out in terms of height
+            height_ft <- c(rnorm(nt, 5.6, .3), rnorm(nc, 5.6, .2))
+            height_ft[sample(N, nmiss, replace= FALSE)] <- NA
             
             # Blood pressure is more likely to be missing in the treated group
             #systolic_bp <- c(rnorm(nt, 115, 5), rnorm(nc, 110, 7))
@@ -138,7 +138,7 @@ shinyServer(function(input, output, session) {
             systolicBP[nt + sample(nc, nmiss * 1/4, replace= FALSE)] <- NA
             
             
-            mydat <- data.table(exposed, height_ft, gender, age, systolicBP)
+            mydat <- data.table(age, gender, exposed, height_ft, systolicBP)
             #tmpfit <- lrm(exposed ~ rcs(age) + rcs(height_ft) + rcs(systolicBP) + gender, data= mydat)
             #tmplogit <- tmpfit$linear.predictors
             #tmpprob <- exp(tmplogit) / (1 + exp(tmplogit))
@@ -1243,7 +1243,8 @@ shinyServer(function(input, output, session) {
                     # jitter: we want the points to take up 7/8 of the
                     #    the available space, regardless of # groups;
                     #    and the jitter extends in each direction
-                    my.jitter <- (1 / num.levs) * (7/8) / 2
+                    myWidth <- 7/8
+                    my.jitter <- (1 / num.levs) * myWidth / 2
                     # alignment for each group
                     my.at.adds <- 2 * my.jitter * (1:num.levs)
                     #shift so centered at 0
@@ -1371,6 +1372,11 @@ shinyServer(function(input, output, session) {
                                         alpha.f= alphaVal())
                         )
                     }
+                    my.mean <- mean(datxps.xna[[logitpsVarName()]])   
+                    segments(
+                        1 - myWidth / 2, my.mean,
+                        1 + myWidth / 2, my.mean
+                    )
                     axis(1, at = 1, labels= "Missing")
                     if (testing) box("figure", col= "green")
                     if (testing) box("plot", col= "black")
@@ -1476,6 +1482,7 @@ shinyServer(function(input, output, session) {
                                 col = adjustcolor(colorScale.mod()[lev], 
                                     alpha.f= alphaVal()))
                         }
+                        lines(loess.smooth(datxps.nona[[varname]], datxps.nona[[logitpsVarName()]]))
                     } else {
                         for (lev in groupVarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupVarFactorName()) == lev, get(varname)]
@@ -1491,6 +1498,17 @@ shinyServer(function(input, output, session) {
                                 cex      = pointSizeVal(),
                                 col      = adjustcolor(colorScale.mod()[lev], 
                                             alpha.f= alphaVal())
+                            )
+                        }
+                        means <- unlist(lapply(levels(datxps.nona[[varname]]), function(levl)
+                            mean(datxps.nona[get(varname) == levl, get(logitpsVarName())])))
+                        for (i in seq_along(levels(datxps.nona[[varname]]))) {
+                            levl <- levels(datxps.nona[[varname]])[i]
+                            my.mean <- mean(datxps.nona[get(varname) == levl, 
+                                get(logitpsVarName())])   
+                            segments(
+                                my.atOrig[i] - myWidth / 2, my.mean,
+                                my.atOrig[i] + myWidth / 2, my.mean
                             )
                         }
                         axis(1, at = my.atOrig, labels = names(my.atOrig))
