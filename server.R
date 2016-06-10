@@ -1380,26 +1380,28 @@ shinyServer(function(input, output, session) {
                             col     = "#DFD7CA"
                         )
                     }
-                    for (lev in groupVarFactorLevelsSorted()) {
-                        y <- datxps.xna[get(groupVarFactorName()) == lev, 
-                            get(logitpsVarName())]
-                        stripchart(y,
-                            vertical = TRUE,
-                            add      = TRUE,
-                            method   = "jitter",
-                            jitter   = my.jitter,
-                            pch      = 20,
-                            at       = 1 + my.at.adds[lev],
-                            cex      = pointSizeVal(),
-                            col      = adjustcolor(colorScale.mod()[lev], 
-                                        alpha.f= alphaVal())
+                    if (datxps.xna[, .N] >= 1) {
+                        for (lev in groupVarFactorLevelsSorted()) {
+                            y <- datxps.xna[get(groupVarFactorName()) == lev, 
+                                get(logitpsVarName())]
+                            stripchart(y,
+                                vertical = TRUE,
+                                add      = TRUE,
+                                method   = "jitter",
+                                jitter   = my.jitter,
+                                pch      = 20,
+                                at       = 1 + my.at.adds[lev],
+                                cex      = pointSizeVal(),
+                                col      = adjustcolor(colorScale.mod()[lev], 
+                                            alpha.f= alphaVal())
+                            )
+                        }
+                        my.mean <- mean(datxps.xna[[logitpsVarName()]])   
+                        segments(
+                            1 - myWidth / 2, my.mean,
+                            1 + myWidth / 2, my.mean
                         )
                     }
-                    my.mean <- mean(datxps.xna[[logitpsVarName()]])   
-                    segments(
-                        1 - myWidth / 2, my.mean,
-                        1 + myWidth / 2, my.mean
-                    )
                     axis(1, at = 1, labels= "Missing")
                     if (testing) box("figure", col= "green")
                     if (testing) box("plot", col= "black")
