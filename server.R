@@ -116,7 +116,7 @@ shinyServer(function(input, output, session) {
             exposed <- rep(c("Yes", "No"), times= c(nt, nc))
             
             # Tx group is older on average
-            age <- c(rnorm(nt, 50, 8), rnorm(nc, 45, 8))
+            age <- c(rnorm(nt, 53, 8), rnorm(nc, 45, 8))
             
             # Tx group is less spread out in terms of height
             height_ft <- c(rnorm(nt, 5.6, .15), rnorm(nc, 5.6, .3))
@@ -130,8 +130,8 @@ shinyServer(function(input, output, session) {
             
             # Tx group has higher proportion of males
             gender <- c(
-                sample(0:2, nt, replace= TRUE, prob= c(.746, .251, .003)),
-                sample(0:2, nc, replace= TRUE, prob= c(.505, .492, .003))
+                sample(0:2, nt, replace= TRUE, prob= c(.746, .252, .002)),
+                sample(0:2, nc, replace= TRUE, prob= c(.506, .492, .002))
             )
             gender[gender == 0] <- "Male"
             gender[gender == 1] <- "Female"
@@ -148,8 +148,12 @@ shinyServer(function(input, output, session) {
             smoker[sample(N, nmiss, replace= FALSE)] <- NA
             
             # ABO is unrelated
-            ABO <- sample(c('O', 'A', 'B', 'AB'), N, 
-                replace= TRUE, prob= c(.44, .42, .10, .04))
+            ABO <- c(
+                rep(c('O', 'A', 'B', 'AB'), 
+                    times= c(.44, .42, .10, .04) * nt),
+                rep(c('O', 'A', 'B', 'AB'), 
+                    times= c(.44, .42, .10, .04) * nc)
+            )
             
             
             mydat <- data.table(exposed, age, height_ft, systolicBP, 
