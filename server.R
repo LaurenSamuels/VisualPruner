@@ -112,29 +112,32 @@ shinyServer(function(input, output, session) {
             nc <- 700
             N <- nt + nc
             nmiss <- 0.05 * N
-
+            
             exposed <- rep(c("Yes", "No"), times= c(nt, nc))
-            height_ft <- c(rnorm(nt, 5.4, .3), rnorm(nc, 5.6, .2))
+            
+            # Tx group is more spread out in terms of height
+            height_ft <- c(rnorm(nt, 5.6, .3), rnorm(nc, 5.6, .2))
             height_ft[sample(N, nmiss, replace= FALSE)] <- NA
-
+            
+            # Tx group has higher proportion of males
             gender <- c(
-                sample(0:2, nt, replace= TRUE, prob= c(.546, .451, .003)),
-                sample(0:2, nc, replace= TRUE, prob= c(.506, .491, .003))
+                sample(0:2, nt, replace= TRUE, prob= c(.746, .250, .004)),
+                sample(0:2, nc, replace= TRUE, prob= c(.505, .491, .004))
             )
             gender[gender == 0] <- "Male"
             gender[gender == 1] <- "Female"
             gender[gender == 2] <- "Other"
-            gender[sample(N, nmiss, replace= FALSE)] <- NA
-
-            age <- c(rnorm(nt, 45, 5), rnorm(nc, 50, 10))
-            age[sample(N, nmiss, replace= FALSE)] <- NA
-
-            # Blood pressure is unrelated to tx in theory
+            
+            # Tx group is older on average, but less spread out
+            age <- c(rnorm(nt, 50, 5), rnorm(nc, 45, 8))
+            
+            # Blood pressure is more likely to be missing in the treated group
             #systolic_bp <- c(rnorm(nt, 115, 5), rnorm(nc, 110, 7))
             systolicBP <- rnorm(N, 115, 5)
-            systolicBP [sample(N, nmiss, replace= FALSE)] <- NA
-
-
+            systolicBP[sample(nt, nmiss * 3/4, replace= FALSE)] <- NA
+            systolicBP[nt + sample(nc, nmiss * 1/4, replace= FALSE)] <- NA
+            
+            
             mydat <- data.table(exposed, height_ft, gender, age, systolicBP)
             #tmpfit <- lrm(exposed ~ rcs(age) + rcs(height_ft) + rcs(systolicBP) + gender, data= mydat)
             #tmplogit <- tmpfit$linear.predictors
@@ -1168,9 +1171,12 @@ shinyServer(function(input, output, session) {
     # modified from https://gist.github.com/wch/5436415/, with
     # help from a SO post I forgot to get the URL for
     # also from http://stackoverflow.com/questions/19130455/create-dynamic-number-of-input-elements-with-r-shiny
-    observe({
+    observe({if (datInfo$newDataNoVarsChosen == FALSE) {
         
-        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
+        # all vars: ylim for row2 plots
+        my.ylim.ps <- range(dsetPSGraphs()[[logitpsVarName()]])
+        
+        for (i in seq_along(varsToView())) {
             # My sources (above) say:
             # Need local so that each item gets its own number. 
             # Without it, the value # of i in the renderPlot() 
@@ -1183,7 +1189,7 @@ shinyServer(function(input, output, session) {
                 plotname <- paste0("plot_", varname)
      
                 output[[plotname]] <- renderPlot({
-                    if (is.null(dsetPSGraphs())) return(NULL)
+                    #if (is.null(dsetPSGraphs())) return(NULL)
                     if (is.null(dsetGroupvar())) return(NULL)
 
                     # For plot alignment
@@ -1244,8 +1250,6 @@ shinyServer(function(input, output, session) {
                     my.at.adds <- my.at.adds - mean(my.at.adds)
                     names(my.at.adds) <- groupVarFactorLevelsSorted()
                     
-                    # all vars: ylim for row2 plots
-                    my.ylim.ps <- range(datxps[[logitpsVarName()]])
 
                     # ylim for top plots: 
                     datx.xna.counts <- table(datx.xna[[groupVarFactorName()]])
@@ -1436,6 +1440,7 @@ shinyServer(function(input, output, session) {
                     if (varIsContinuous()[varname]) {    
                         plot(datxps.nona[[varname]], datxps.nona[[logitpsVarName()]], 
                             xlim = my.xlim, 
+                            ylim = my.ylim.ps, 
                             bty  = if (testing) "o" else "n",
                             type = "n"
                         )
@@ -1529,7 +1534,7 @@ shinyServer(function(input, output, session) {
                 ) # end renderPlot
             }) # end local
         } # end for
-    }) # end observe    
+    }}) # end observe    
 
 
     observe({
