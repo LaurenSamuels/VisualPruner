@@ -114,14 +114,15 @@ $(document).ready(function () {
 
 <ul>
 <li><p>Make it a package</p></li>
+<li><p>Add button to reset all pruning, and/or provide the original sample limits</p></li>
+<li><p>Add button to select all vars?</p></li>
 <li><p>Check to see which datasets I’m using for 2 table types on prune page &amp; 1 message on specify page</p></li>
+<li><p>In Copy, find a way to wrap long PS formula</p></li>
 <li><p>Think about the top central plots in cases where some people don’t have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.</p></li>
-<li><p>If keeping my same example dataset, add third category for gender, or pick different catvar</p></li>
-<li><p>clean up the naming!</p></li>
+<li><p>keep cleaning up the naming!</p></li>
 <li><p>Come up w/ a plot alternative for v large datasets (too many points).</p></li>
 <li><p>For discrete vars, try angling axis labels</p></li>
 <li><p>Add note about # of underscores if &gt; 1</p></li>
-<li><p>Keep trying to eliminate borders on histograms on server</p></li>
 <li><p>For the histograms &amp; bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance)</p></li>
 <li><p>Think about the example dset included w/ pkg.<br />
 Should it be the same as the one in the documentation? That one is slow. If I’m going to use it, how reference from w/in app?</p></li>
@@ -136,52 +137,8 @@ This might help with the “rollback” too.</p></li>
 <li><p>Maybe: change # bins (put in binwidth controls)</p></li>
 <li><p>Maybe: add KDE &amp; % overlap (Tomarken)</p></li>
 <li><p>Maybe: add weighted histograms</p></li>
-<li>Maybe: Add standardized diff plot?
-<ul>
-<li>Thoughts about standardized difference plot</li>
-<li><p>For continuous &amp; binary see Austin, P. C. (2009). Balance diagnostics for comparing the distribution of baseline covariates between treatment groups in propensity-score matched samples. Statistics in Medicine, 28(25), 3083–3107. <a href="http://doi.org/10.1002/sim.3697" class="uri">http://doi.org/10.1002/sim.3697</a></p></li>
-<li>steps:</li>
-<li>Calc standardized diffs for selected vars in original sample.</li>
-<li>So far: just continuous</li>
-<li>Later: binary &amp; categorical</li>
-<li>Later: squared terms &amp; interactions</li>
-<li>Calculate unweighted standardized diffs for continuous and binary vars in pruned sample</li>
-<li><p>Calculate IPT-weighted standardized diffs for those vars (see Austin, P. C., &amp; Stuart, E. A. (2015). Moving towards best practice when using inverse probability of treatment weighting (IPTW) using the propensity score to estimate causal treatment effects in observational studies. Statistics in Medicine. <a href="http://doi.org/10.1002/sim.6607" class="uri">http://doi.org/10.1002/sim.6607</a>)</p></li>
-</ul></li>
+<li><p>Maybe: Add standardized diff plot?</p></li>
 </ul>
-<pre class="r"><code># Here's some starter code, may or may not be useful:
-ggplot(aes(x= smd, y= Var, colour= Sample, shape= Sample), data= smdsAll) + 
-    geom_point(alpha= 0.8) +
-    xlab(&quot;Standardized Mean Difference&quot;) +
-    theme(axis.title.y = element_blank()) +
-    scale_colour_manual(&quot;Sample&quot;, values= c(s.mustard, s.teal, s.magenta)) +
-    #scale_colour_manual(&quot;Sample&quot;, values= c(ltblue, olive, magenta)) +
-    # from http://www.win-vector.com/blog/2013/02/revisiting-clevelands-the-elements-of-graphing-data-in-ggplot2/
-    #theme( # remove the vertical grid lines
-        #panel.grid.major.x = element_blank() ,
-        # explicitly set the horizontal lines (or they will disappear too)
-        #panel.grid.major.y = element_line(linetype=3, color=&quot;darkgray&quot;),
-        #axis.text.y= element_text(size=rel(0.9)), 
-       # axis.text.x= element_text(size=rel(0.7)) ) +
-
-    geom_vline(aes(xintercept= 0.1), colour=&quot;*999999&quot;, linetype=&quot;dashed&quot;)
-
-idvars &lt;- Cs(map.id, enrolled.dx.factor)
-MyReshape &lt;- function(dat, widevars, idvars) {
-    longdat &lt;- reshape(dat[ c(idvars, widevars)],
-        direction= 'long',
-        varying= list(widevars),
-        times= widevars,
-        timevar= 'variable',
-        v.names= 'value',
-        idvar= idvars
-    )
-    longdat &lt;- within(longdat, {
-        variable &lt;- ordered(variable, levels= widevars)
-    }) 
-}
-talldat &lt;- MyReshape(mydat, outcomes, idvars)
-names(talldat)[names(talldat) == &quot;value&quot;] &lt;- &quot;outcome.value&quot;</code></pre>
 
 
 

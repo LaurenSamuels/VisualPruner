@@ -18,9 +18,7 @@ output: html_document
 
 * Think about the top central plots in cases where some people don't have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.
 
-* If keeping my same example dataset, add third category for gender, or pick different catvar
-
-* clean up the naming!
+* keep cleaning up the naming!
 
 * Come up w/ a plot alternative for v large datasets (too many points).
 
@@ -57,52 +55,3 @@ This might help with the "rollback" too.
 * Maybe: add weighted histograms
 
 * Maybe: Add standardized diff plot?
-    + Thoughts about standardized difference plot
-    + For continuous & binary see Austin, P. C. (2009). Balance diagnostics for comparing the distribution of baseline covariates between treatment groups in propensity-score matched samples. Statistics in Medicine, 28(25), 3083–3107. http://doi.org/10.1002/sim.3697
-
-    + steps:
-    + Calc standardized diffs for selected vars in original sample.
-    +   So far: just continuous
-    +   Later: binary & categorical
-    +   Later: squared terms & interactions
-    + Calculate unweighted standardized diffs for continuous and binary vars in pruned sample
-    + Calculate IPT-weighted standardized diffs for those vars (see Austin, P. C., & Stuart, E. A. (2015). Moving towards best practice when using inverse probability of treatment weighting (IPTW) using the propensity score to estimate causal treatment effects in observational studies. Statistics in Medicine. http://doi.org/10.1002/sim.6607)
-    
-```{r, eval=FALSE}    
-# Here's some starter code, may or may not be useful:
-ggplot(aes(x= smd, y= Var, colour= Sample, shape= Sample), data= smdsAll) + 
-    geom_point(alpha= 0.8) +
-    xlab("Standardized Mean Difference") +
-    theme(axis.title.y = element_blank()) +
-    scale_colour_manual("Sample", values= c(s.mustard, s.teal, s.magenta)) +
-    #scale_colour_manual("Sample", values= c(ltblue, olive, magenta)) +
-    # from http://www.win-vector.com/blog/2013/02/revisiting-clevelands-the-elements-of-graphing-data-in-ggplot2/
-    #theme( # remove the vertical grid lines
-        #panel.grid.major.x = element_blank() ,
-        # explicitly set the horizontal lines (or they will disappear too)
-        #panel.grid.major.y = element_line(linetype=3, color="darkgray"),
-        #axis.text.y= element_text(size=rel(0.9)), 
-       # axis.text.x= element_text(size=rel(0.7)) ) +
-
-    geom_vline(aes(xintercept= 0.1), colour="*999999", linetype="dashed")
-
-idvars <- Cs(map.id, enrolled.dx.factor)
-MyReshape <- function(dat, widevars, idvars) {
-    longdat <- reshape(dat[ c(idvars, widevars)],
-        direction= 'long',
-        varying= list(widevars),
-        times= widevars,
-        timevar= 'variable',
-        v.names= 'value',
-        idvar= idvars
-    )
-    longdat <- within(longdat, {
-        variable <- ordered(variable, levels= widevars)
-    }) 
-}
-talldat <- MyReshape(mydat, outcomes, idvars)
-names(talldat)[names(talldat) == "value"] <- "outcome.value"
-```
-
-
-
