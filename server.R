@@ -115,20 +115,11 @@ shinyServer(function(input, output, session) {
             
             exposed <- rep(c("Yes", "No"), times= c(nt, nc))
             
-            # Tx group is older on average, but less spread out
-            age <- c(rnorm(nt, 50, 5), rnorm(nc, 45, 8))
+            # Tx group is older on average
+            age <- c(rnorm(nt, 50, 8), rnorm(nc, 45, 8))
             
-            # Tx group has higher proportion of males
-            gender <- c(
-                sample(0:2, nt, replace= TRUE, prob= c(.746, .250, .004)),
-                sample(0:2, nc, replace= TRUE, prob= c(.505, .491, .004))
-            )
-            gender[gender == 0] <- "Male"
-            gender[gender == 1] <- "Female"
-            gender[gender == 2] <- "Other"
-            
-            # Tx group is more spread out in terms of height
-            height_ft <- c(rnorm(nt, 5.6, .3), rnorm(nc, 5.6, .2))
+            # Tx group is less spread out in terms of height
+            height_ft <- c(rnorm(nt, 5.6, .15), rnorm(nc, 5.6, .3))
             height_ft[sample(N, nmiss, replace= FALSE)] <- NA
             
             # Blood pressure is more likely to be missing in the treated group
@@ -137,8 +128,32 @@ shinyServer(function(input, output, session) {
             systolicBP[sample(nt, nmiss * 3/4, replace= FALSE)] <- NA
             systolicBP[nt + sample(nc, nmiss * 1/4, replace= FALSE)] <- NA
             
+            # Tx group has higher proportion of males
+            gender <- c(
+                sample(0:2, nt, replace= TRUE, prob= c(.746, .251, .003)),
+                sample(0:2, nc, replace= TRUE, prob= c(.505, .492, .003))
+            )
+            gender[gender == 0] <- "Male"
+            gender[gender == 1] <- "Female"
+            gender[gender == 2] <- "Other"
             
-            mydat <- data.table(age, gender, exposed, height_ft, systolicBP)
+            # Hardly any current smokers in tx group
+            smoker <- c(
+                sample(0:2, nt, replace= TRUE, prob= c(.895, .10, .005)),
+                sample(0:2, nc, replace= TRUE, prob= c(.75, .05, .2))
+            )
+            smoker[smoker == 0] <- "Never"
+            smoker[smoker == 1] <- "Former"
+            smoker[smoker == 2] <- "Current"
+            smoker[sample(N, nmiss, replace= FALSE)] <- NA
+            
+            # ABO is unrelated
+            ABO <- sample(c('O', 'A', 'B', 'AB'), N, 
+                replace= TRUE, prob= c(.44, .42, .10, .04))
+            
+            
+            mydat <- data.table(exposed, age, height_ft, systolicBP, 
+                gender, smoker, ABO)
             #tmpfit <- lrm(exposed ~ rcs(age) + rcs(height_ft) + rcs(systolicBP) + gender, data= mydat)
             #tmplogit <- tmpfit$linear.predictors
             #tmpprob <- exp(tmplogit) / (1 + exp(tmplogit))
@@ -1174,7 +1189,11 @@ shinyServer(function(input, output, session) {
     observe({if (datInfo$newDataNoVarsChosen == FALSE) {
         
         # all vars: ylim for row2 plots
-        my.ylim.ps <- range(dsetPSGraphs()[[logitpsVarName()]])
+        my.ylim.ps <- if (is.null(dsetPSGraphs())) {
+            NA
+        } else {
+            range(dsetPSGraphs()[[logitpsVarName()]])
+        }
         
         for (i in seq_along(varsToView())) {
             # My sources (above) say:
@@ -1189,7 +1208,7 @@ shinyServer(function(input, output, session) {
                 plotname <- paste0("plot_", varname)
      
                 output[[plotname]] <- renderPlot({
-                    #if (is.null(dsetPSGraphs())) return(NULL)
+                    if (is.null(dsetPSGraphs())) return(NULL)
                     if (is.null(dsetGroupvar())) return(NULL)
 
                     # For plot alignment

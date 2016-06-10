@@ -7,9 +7,12 @@ output: html_document
 
 * Make it a package
 
+* Add button to reset all pruning, and/or provide the original sample limits
+
+* Add button to select all vars?
+
 * Check to see which datasets I'm using for 2 table types on prune page & 1 message on specify page
 
-* Consider adding loess line/bars for means in central plots.
 
 * In Copy, find a way to wrap long PS formula
 
