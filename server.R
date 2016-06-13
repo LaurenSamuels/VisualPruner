@@ -281,6 +281,12 @@ shinyServer(function(input, output, session) {
         tmp <- table(dsetGroupvar()[[groupVarFactorName()]])
         names(tmp)[order(tmp, decreasing= TRUE)]
     })
+    smallestGroup <- reactive({
+        if (is.null(groupVarFactorLevelsSorted())) return(NULL)
+
+        groupVarFactorLevelsSorted()[length(
+            groupVarFactorLevelsSorted())]
+    })
     colorScale.mod <- reactive({
         if (is.null(dsetGroupvar())) return(NULL)
 
@@ -945,6 +951,11 @@ shinyServer(function(input, output, session) {
         names(myvec) <- vnames
         myvec
     })    
+    catVars <- reactive({
+        if (is.null(varIsContinuous())) return(NULL)
+        
+        varsToView()[!varIsContinuous()[varsToView()]]
+    })
 
     alphaVal <- reactive({
         input$alphaSlider
@@ -1312,8 +1323,10 @@ shinyServer(function(input, output, session) {
                     topPlots.mar.t <- 0.35
                     
                     # "row2Plots" appear as the bottom (nothing but labels in row 3)
-                    row2Plots.mar.b <- if (varIsContinuous()[varname]) 2 else {
-                        max(min(max(nchar(levels(datx[[varname]])))[1] / 2, 8), 2)
+                    row2Plots.mar.b <- 
+                        if (varIsContinuous()[varname]) 2 else {
+                            max(min(max(nchar(levels(
+                                datx[[varname]])))[1] / 2, 8), 2)
                     }
                     row2Plots.mar.t <- 0.65 
                     
@@ -1788,7 +1801,125 @@ shinyServer(function(input, output, session) {
         input$showATM
     })
     
+    # adapted from https://github.com/kaz-yos/tableone/blob/master/vignettes/smd.Rmd
+    tabOrig <- reactive({
+        if (is.null(varsToView())) return(NULL)
+
+        ## Create a TableOne object
+        tab2 <- CreateTableOne(
+            vars       = varsToView(),
+            strata     = groupVarName(),
+            data       = dsetOrig(),
+            factorVars = catVars(),
+            includeNA  = TRUE,
+            test       = FALSE,
+            smd        = TRUE
+        )
+    })    
+    tabPruned <- reactive({
+        if (is.null(varsToView())) return(NULL)
+        if (is.null(exprToKeepAfterPruning())) return(NULL)
+        if (is.null(idsToKeepAfterPruning())) return(NULL)
+
+        ## Create a TableOne object
+        tab2 <- CreateTableOne(
+            vars       = varsToView(),
+            strata     = groupVarName(),
+            data       = dsetOrig()[idsToKeepAfterPruning()],
+            factorVars = catVars(),
+            includeNA  = TRUE,
+            test       = FALSE,
+            smd        = TRUE
+        )
+    })    
+
+    #output$tabonetest <- renderPrint({
+    #    if (is.null(tabOrig())) return(NULL)
+
+    #    print(tabPruned())
+    #})
+
+    ## Construct a data frame containing variable name and SMD from all methods
+    dsetSMDs <- reactive({
+        if (is.null(tabOrig())) return(NULL)
+
+        dat <- data.table(
+            variable  = names(ExtractSmd(tabOrig())),
+            Original  = ExtractSmd(tabOrig())
+        )
+        if (!is.null(tabPruned())) {
+            dat[, Pruned := ExtractSmd(tabPruned())]
+        }
+        # todo: add for 3 other options here
+        setkey(dat, variable)
+        
+        varNames <- as.character(dat[, variable])[order(
+                dat[, Original])]
+
+        datSorted <- dat[varNames]
+
+        datSorted[, varnum := 1:.N]
+        setkey(datSorted, varnum)
+    })
+    output$SMDPlot <- renderPlot({
+        if (is.null(dsetSMDs())) return(NULL)
+
+        nvars <- nrow(dsetSMDs())
+        tabTypes <- intersect(
+            c("Original", "Pruned", "ATE", "ATT", "ATM"),
+            names(dsetSMDs())
+        )  
+        nTabTypes <- length(tabTypes)      
+        myColors <- c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00')[1:nTabTypes]
+        myShapes <- (21:25)[1:nTabTypes]
     
+        maxX <- max(dsetSMDs()[, tabTypes, with= FALSE], na.rm= TRUE)
+        
+        def.par <- par(no.readonly = TRUE)
+        par(
+            ann      = FALSE,
+            oma      = c(0,0,0,0),
+            cex.axis = 1.1
+        ) 
+        plot(0, 1,
+            type= "n",
+            bty = "n",
+            xlim = c(0, maxX),
+            ylim = c(0.5, nvars),
+            axes= FALSE
+        )
+        axis(1)
+        axis(2, at= 1:nvars, labels= dsetSMDs()[, variable])
+        # TODO next:
+        # increase L margin
+        # rotate L margin text
+        # add linetypes
+        # add legend
+        # change shape (put into a column in ui, w/ width & height)
+        # then move on to weighted tableone's!
+        for (j in 1:nTabTypes) {
+            lines(
+                x= as.numeric(dsetSMDs()[[tabTypes[j]]]),
+                y= 1:nvars,
+                #lty= TODO,
+                col= myColors[j]
+            )
+        }
+        for (i in 1:nvars) {
+            abline(h= i, lty= 'dotted', col= 'gray')
+            points(
+                x= as.numeric(dsetSMDs()[i][, tabTypes, with= FALSE]), 
+                y= rep(i, nTabTypes), 
+                pch= myShapes,
+                col= myColors,
+                bg= myColors
+            )
+        }
+
+        # reset the graphics
+        par(def.par)
+    })
+
     ############################################################
     ############################################################
     # Session Information

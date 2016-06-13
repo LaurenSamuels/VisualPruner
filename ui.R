@@ -167,6 +167,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             checkboxInput('showATM',
                 label= 'Show SMDs for ATM weighting in pruned sample (may take several minutes)',
                 value = FALSE),
+            #verbatimTextOutput("tabonetest"),
+            plotOutput('SMDPlot'),
             h4('SMD plots coming soon')
         ) # end fluidRow
     ), # end SMD panel
