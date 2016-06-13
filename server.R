@@ -6,6 +6,8 @@
 library(shiny)
 library(rms)
 library(data.table)
+library(survey)
+library(tableone)
 
 # On the department server, Cairo plots look worse
 options(shiny.usecairo= FALSE)
@@ -15,10 +17,18 @@ options(shiny.usecairo= FALSE)
 # The first number is the number of MB
 options(shiny.maxRequestSize=30*1024^2)
 
+# text types for use w/ CSS
+#<"text-muted">
+#<"text-primary">
+#<"text-warning">
+#<"text-danger">
+#<"text-success">
+#<"text-info">
+
 shinyServer(function(input, output, session) {
     ############################################################
     ############################################################
-    ## Datasets 
+    ## Flags 
     
     # I'm using reactiveValues() here so I can set the fileInfo
     #   to NULL when the user decides to upload a new file.
@@ -28,6 +38,7 @@ shinyServer(function(input, output, session) {
     datInfo$newData             <- NULL
     datInfo$newDataNoVarsChosen <- NULL
     datInfo$newDataNotYetPruned <- NULL
+
     observe({
         if (input$useExampleData == 0) {
             datInfo$inFileInfo <- input$datafileInfo 
@@ -65,6 +76,10 @@ shinyServer(function(input, output, session) {
     })
     # TODO: keep in mind: input$mainNavbarPage gives name of current tab. could use this too
     
+    ############################################################
+    ############################################################
+    ## Data import, etc.
+    
     output$changeUploadedFile <- renderUI({
         if (input$useExampleData == 1 | is.null(datInfo$inFileInfo)) return(NULL)
         actionButton("changeUpFileButton", "Upload different file")
@@ -92,7 +107,6 @@ shinyServer(function(input, output, session) {
             #    )
         )
     })
-    
     
     dsetOrig <- reactive({
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
@@ -240,22 +254,6 @@ shinyServer(function(input, output, session) {
         proposedName
     })    
 
-    nonMissingIDs <- reactive({
-        # These are the IDs of people who can be used for PS calculation
-        #   (will be used in intersection w/ keepAfterPruning IDs)
-        if (datInfo$newData == TRUE) return(NULL)
-        if (is.null(idVarName())) return (NULL)
-
-        if (is.null(varnamesFromRHS())) return(dsetOrig()[[idVarName()]])
-        
-        if (useCompleteCasesOnly()) {
-            na.omit(dsetOrig()[, c(varnamesFromRHS(), idVarName()), 
-                with= FALSE])[[idVarName()]]
-        } else {
-            dsetOrig()[[idVarName()]]
-        }
-    })
-    
     dsetGroupvar <- reactive({
         if (datInfo$newData == TRUE) return(NULL)
         if (is.null(dsetOrig())) return(NULL)
@@ -283,89 +281,28 @@ shinyServer(function(input, output, session) {
         tmp <- table(dsetGroupvar()[[groupVarFactorName()]])
         names(tmp)[order(tmp, decreasing= TRUE)]
     })
-
-    psVarName <- reactive({
-        # The name produced by this function will be used as
-        #   the name of the ps var in dsetPSGraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
-        if(is.null(dsetOrig())) return (NULL)
-        
-        proposedName <- "MY__PS"
-        while(proposedName %in% varnamesOrig()) {
-            proposedName <- paste0(proposedName, "_NEW")    
-        }    
-        proposedName
-    })    
-    logitpsVarName <- reactive({
-        # The name produced by this function will be used as
-        #   the name of the logit ps var in dsetPSGraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
-        if(is.null(dsetOrig())) return (NULL)
-        
-        proposedName <- "MY__LOGITPS"
-        while(proposedName %in% varnamesOrig()) {
-            proposedName <- paste0(proposedName, "_NEW")    
-        }    
-        proposedName
-    })    
-    naPrefix <- reactive({
-        # The phrase produced by this function will be used as
-        #   the prefix for the na.indicator vars
-        if(is.null(dsetOrig())) return (NULL)
-        
-        proposedPrefix <- "is.na_"
-        while(any(grepl(paste0("^", proposedPrefix), varnamesOrig()))) {
-            proposedPrefix <- paste0(proposedPrefix, "_")    
-        }    
-        proposedPrefix
-    })    
-
-    useCompleteCasesOnly <- reactive({
-        input$completeCasesOnly == 1
-    })
-    
-    dsetPSGraphs <- reactive({
-        # This dataset is used for making the PS plots.
+    colorScale.mod <- reactive({
         if (is.null(dsetGroupvar())) return(NULL)
-        if (is.null(logitPS())) return(NULL) 
-        
-        # todo: do this all using data.table
-        dat1 <- data.frame(
-            id    = unlist(dsetOrig()[nonMissingIDs(), 
-                idVarName(), with= FALSE]),
-            group = unlist(dsetGroupvar()[nonMissingIDs(), 
-                groupVarFactorName(), with= FALSE])
+
+        #colors from  bootswatch sandstone
+        primary <- "#325D88"
+        success <- "#93C54B"
+        info    <- "#29ABE0"
+        warning <- "#F47C3C"
+        danger  <- "#d9534f"
+        myColorScale <- c(
+            primary,
+            warning,
+            success,
+            info,
+            danger
         )
-        dat2 <- data.frame(
-            id       = PSIDs(),
-            logit.ps = logitPS(), 
-            ps       = PS()
-        )
-        # keep only subjects with values in both dsets
-        dat <- merge(dat1, dat2, by= "id")  
-        names(dat)[names(dat) == "id"] <- idVarName()
-        names(dat)[names(dat) == "ps"] <- psVarName()
-        names(dat)[names(dat) == "logit.ps"] <- logitpsVarName()
-        names(dat)[names(dat) == "group"] <- groupVarFactorName()
         
-        dat <- as.data.table(dat)  
-        setkeyv(dat, idVarName())
-        dat
-    })    
-    
-    
-    
-    
-    ############################################################
-    ############################################################
-    
-    # text types for use w/ CSS
-    #<"text-muted">
-    #<"text-primary">
-    #<"text-warning">
-    #<"text-danger">
-    #<"text-success">
-    #<"text-info">
+        sc <- myColorScale[1:length(groupVarFactorLevelsSorted())]
+        names(sc) <- groupVarFactorLevelsSorted()
+        sc
+    })
+
     output$noDataChosenText <- renderUI({
         if (is.null(dsetOrig()) | 
             (input$useExampleData == 0 & is.null(datInfo$inFileInfo))) {
@@ -432,10 +369,95 @@ shinyServer(function(input, output, session) {
         data.frame(Variables= setdiff(varnamesOrig(), namesToExclude)) 
     }, include.rownames = FALSE, include.colnames= FALSE)
 
+    ############################################################
+    ############################################################
+    ## PS specification, etc.
+    
+    useCompleteCasesOnly <- reactive({
+        input$completeCasesOnly == 1
+    })
+    
+    nonMissingIDs <- reactive({
+        # These are the IDs of people who can be used for PS calculation
+        #   (will be used in intersection w/ keepAfterPruning IDs)
+        if (datInfo$newData == TRUE) return(NULL)
+        if (is.null(idVarName())) return (NULL)
 
-    ############################################################
-    ############################################################
-    ## Propensity score calculation
+        if (is.null(varnamesFromRHS())) return(dsetOrig()[[idVarName()]])
+        
+        if (useCompleteCasesOnly()) {
+            na.omit(dsetOrig()[, c(varnamesFromRHS(), idVarName()), 
+                with= FALSE])[[idVarName()]]
+        } else {
+            dsetOrig()[[idVarName()]]
+        }
+    })
+    
+    psVarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the ps var in dsetPSGraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dsetOrig())) return (NULL)
+        
+        proposedName <- "MY__PS"
+        while(proposedName %in% varnamesOrig()) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    logitpsVarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the logit ps var in dsetPSGraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dsetOrig())) return (NULL)
+        
+        proposedName <- "MY__LOGITPS"
+        while(proposedName %in% varnamesOrig()) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    naPrefix <- reactive({
+        # The phrase produced by this function will be used as
+        #   the prefix for the na.indicator vars
+        if(is.null(dsetOrig())) return (NULL)
+        
+        proposedPrefix <- "is.na_"
+        while(any(grepl(paste0("^", proposedPrefix), varnamesOrig()))) {
+            proposedPrefix <- paste0(proposedPrefix, "_")    
+        }    
+        proposedPrefix
+    })    
+
+    dsetPSGraphs <- reactive({
+        # This dataset is used for making the PS plots.
+        if (is.null(dsetGroupvar())) return(NULL)
+        if (is.null(logitPS())) return(NULL) 
+        
+        # todo: do this all using data.table
+        dat1 <- data.frame(
+            id    = unlist(dsetOrig()[nonMissingIDs(), 
+                idVarName(), with= FALSE]),
+            group = unlist(dsetGroupvar()[nonMissingIDs(), 
+                groupVarFactorName(), with= FALSE])
+        )
+        dat2 <- data.frame(
+            id       = PSIDs(),
+            logit.ps = logitPS(), 
+            ps       = PS()
+        )
+        # keep only subjects with values in both dsets
+        dat <- merge(dat1, dat2, by= "id")  
+        names(dat)[names(dat) == "id"] <- idVarName()
+        names(dat)[names(dat) == "ps"] <- psVarName()
+        names(dat)[names(dat) == "logit.ps"] <- logitpsVarName()
+        names(dat)[names(dat) == "group"] <- groupVarFactorName()
+        
+        dat <- as.data.table(dat)  
+        setkeyv(dat, idVarName())
+        dat
+    })    
+
     output$getFormula <- renderUI({
         if (is.null(groupVarName())) return(NULL)
 
@@ -732,18 +754,98 @@ shinyServer(function(input, output, session) {
         paste0("After removal of rows with missing values for the variables selected for the PS model, ",
             "the dataset has ", length(nonMissingIDs()), " rows.")
     })
+    output$psPlot <- renderPlot({
+        if (is.null(dsetPSGraphs())) return(NULL)
+        
+        histlist <- vector("list", length(groupVarFactorLevelsSorted()))
+        names(histlist) <- groupVarFactorLevelsSorted() 
+        for (lev in groupVarFactorLevelsSorted()) {
+            x <- dsetPSGraphs()[get(groupVarFactorName()) == lev, get(psVarName())]
+            if (length(x) > 0) {
+                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
+            } else {
+                histlist[[lev]] <- NULL
+            }
+        }
+        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
+        plot(dsetPSGraphs()[[psVarName()]], runif(dsetPSGraphs()[, .N]), 
+            ylim= c(0, max(histcounts)), 
+            xlab= "PS",
+            ylab= "Count",
+            bty= "n",
+            type= "n",
+            cex.lab= 1,
+            cex.axis= 0.8
+        )
+        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+        for (lev in groupVarFactorLevelsSorted()) {
+            myColor <- colorScale.mod()[lev] 
+            if (!is.null(histlist[[lev]])) {
+                plot(histlist[[lev]], 
+                    freq   = TRUE, 
+                    col    = adjustcolor(myColor, alpha.f= alphaVal()),
+                    border = NA,
+                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
+                    add    = TRUE
+                )
+            }
+        }
+    }, res= 100)    
+    
+    
+    output$logitpsPlot <- renderPlot({
+        if (is.null(dsetPSGraphs())) return(NULL)
+
+        histlist <- vector("list", length(groupVarFactorLevelsSorted()))
+        names(histlist) <- groupVarFactorLevelsSorted() 
+        for (lev in groupVarFactorLevelsSorted()) {
+            x <- dsetPSGraphs()[get(groupVarFactorName()) == lev, get(logitpsVarName())]
+            if (length(x) > 0) {
+                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
+            } else {
+                histlist[[lev]] <- NULL
+            }
+        }
+        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
+        plot(dsetPSGraphs()[[logitpsVarName()]], runif(dsetPSGraphs()[, .N]), 
+            ylim= c(0, max(histcounts)), 
+            xlab= "Logit PS",
+            ylab= "Count",
+            bty= "n",
+            type= "n",
+            cex.lab= 1,
+            cex.axis= 0.8
+        )
+        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+        for (lev in groupVarFactorLevelsSorted()) {
+            myColor <- colorScale.mod()[lev] 
+            if (!is.null(histlist[[lev]])) {
+                plot(histlist[[lev]], 
+                    freq   = TRUE, 
+                    col    = adjustcolor(myColor, alpha.f= alphaVal()),
+                    border = NA,
+                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
+                    add    = TRUE
+                )
+            }
+        }
+        legend(
+            "topleft",
+            inset= .05,
+            cex = .8,
+            title= NULL,
+            groupVarFactorLevelsSorted(),
+            horiz = FALSE,
+            bty= "n",
+            border= NA,
+            fill = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
+                adjustcolor(colorScale.mod()[x], alpha.f= alphaVal())))
+        )
+    }, res= 100)    
     
     ############################################################
     ############################################################
     
-    psbrushmin <- reactive({
-        if (is.null(dsetPSGraphs()) ) return(NULL)
-        input$logitpsPlot_brush$xmin 
-    })
-    psbrushmax <- reactive({
-        if (is.null(dsetPSGraphs()) ) return(NULL)
-        input$logitpsPlot_brush$xmax
-    })
     #hasScoreOutside <- reactive({
     #    if (is.null(dsetPSGraphs())) return(NULL)
 
@@ -771,11 +873,9 @@ shinyServer(function(input, output, session) {
     #    dat[, outside := hasScoreOutside()]
     #    dat
     #})
-    
-
     ############################################################
     ############################################################
-    ## Reactive text related to covariate graphs
+    ## Covariate selection & graphs
         
     possVarsToRestrict <- reactive({
         if (datInfo$newData == TRUE) return(NULL)
@@ -857,6 +957,14 @@ shinyServer(function(input, output, session) {
         2
     })
 
+    psbrushmin <- reactive({
+        if (is.null(dsetPSGraphs()) ) return(NULL)
+        input$logitpsPlot_brush$xmin 
+    })
+    psbrushmax <- reactive({
+        if (is.null(dsetPSGraphs()) ) return(NULL)
+        input$logitpsPlot_brush$xmax
+    })
     # Create the expression to use for pruning
     pruneValRawList <- reactive({
         if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
@@ -994,122 +1102,7 @@ shinyServer(function(input, output, session) {
         setnames(dat, old = groupVarFactorName(), new = groupVarName())
         rbind(dat, list("Total", dsetOrig()[idsToKeepAfterPruning(), .N]))
     }, include.rownames = FALSE)
-
-    ############################################################
-    ############################################################
-    ## Plotting 
     
-    colorScale.mod <- reactive({
-        if (is.null(dsetGroupvar())) return(NULL)
-
-        #colors from  bootswatch sandstone
-        primary <- "#325D88"
-        success <- "#93C54B"
-        info    <- "#29ABE0"
-        warning <- "#F47C3C"
-        danger  <- "#d9534f"
-        myColorScale <- c(
-            primary,
-            warning,
-            success,
-            info,
-            danger
-        )
-        
-        sc <- myColorScale[1:length(groupVarFactorLevelsSorted())]
-        names(sc) <- groupVarFactorLevelsSorted()
-        sc
-    })
-    
-    #############################################################
-    output$psPlot <- renderPlot({
-        if (is.null(dsetPSGraphs())) return(NULL)
-        
-        histlist <- vector("list", length(groupVarFactorLevelsSorted()))
-        names(histlist) <- groupVarFactorLevelsSorted() 
-        for (lev in groupVarFactorLevelsSorted()) {
-            x <- dsetPSGraphs()[get(groupVarFactorName()) == lev, get(psVarName())]
-            if (length(x) > 0) {
-                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
-            } else {
-                histlist[[lev]] <- NULL
-            }
-        }
-        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-        plot(dsetPSGraphs()[[psVarName()]], runif(dsetPSGraphs()[, .N]), 
-            ylim= c(0, max(histcounts)), 
-            xlab= "PS",
-            ylab= "Count",
-            bty= "n",
-            type= "n",
-            cex.lab= 1,
-            cex.axis= 0.8
-        )
-        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
-        for (lev in groupVarFactorLevelsSorted()) {
-            myColor <- colorScale.mod()[lev] 
-            if (!is.null(histlist[[lev]])) {
-                plot(histlist[[lev]], 
-                    freq   = TRUE, 
-                    col    = adjustcolor(myColor, alpha.f= alphaVal()),
-                    border = NA,
-                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
-                    add    = TRUE
-                )
-            }
-        }
-    }, res= 100)    
-    
-    
-    output$logitpsPlot <- renderPlot({
-        if (is.null(dsetPSGraphs())) return(NULL)
-
-        histlist <- vector("list", length(groupVarFactorLevelsSorted()))
-        names(histlist) <- groupVarFactorLevelsSorted() 
-        for (lev in groupVarFactorLevelsSorted()) {
-            x <- dsetPSGraphs()[get(groupVarFactorName()) == lev, get(logitpsVarName())]
-            if (length(x) > 0) {
-                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
-            } else {
-                histlist[[lev]] <- NULL
-            }
-        }
-        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-        plot(dsetPSGraphs()[[logitpsVarName()]], runif(dsetPSGraphs()[, .N]), 
-            ylim= c(0, max(histcounts)), 
-            xlab= "Logit PS",
-            ylab= "Count",
-            bty= "n",
-            type= "n",
-            cex.lab= 1,
-            cex.axis= 0.8
-        )
-        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
-        for (lev in groupVarFactorLevelsSorted()) {
-            myColor <- colorScale.mod()[lev] 
-            if (!is.null(histlist[[lev]])) {
-                plot(histlist[[lev]], 
-                    freq   = TRUE, 
-                    col    = adjustcolor(myColor, alpha.f= alphaVal()),
-                    border = NA,
-                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
-                    add    = TRUE
-                )
-            }
-        }
-        legend(
-            "topleft",
-            inset= .05,
-            cex = .8,
-            title= NULL,
-            groupVarFactorLevelsSorted(),
-            horiz = FALSE,
-            bty= "n",
-            border= NA,
-            fill = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
-                adjustcolor(colorScale.mod()[x], alpha.f= alphaVal())))
-        )
-    }, res= 100)    
     output$logitpsPlotForBrushing <- renderPlot({
         # exact duplicate of the other one; can't call the same plot twice in the UI 
         if (is.null(dsetPSGraphs())) return(NULL)
@@ -1193,7 +1186,7 @@ shinyServer(function(input, output, session) {
     observe({if (datInfo$newDataNoVarsChosen == FALSE) {
         
         # all vars: ylim for row2 plots
-        my.ylim.ps <- if (is.null(dsetPSGraphs())) {
+        myYlimPS <- if (is.null(dsetPSGraphs())) {
             NA
         } else {
             range(dsetPSGraphs()[[logitpsVarName()]])
@@ -1244,9 +1237,9 @@ shinyServer(function(input, output, session) {
                     datxps.nona <- na.omit(datxps)
                     # preserve any levels that might have been lost
                     if(is.factor(datx[[varname]])) {
-                        my.levels <- levels(datx[[varname]])
+                        myLevels <- levels(datx[[varname]])
                         datxps.nona[, eval(varname) := factor(get(varname),
-                            levels= my.levels)]
+                            levels= myLevels)]
                     }
                     
                     # for the right-hand central (row2) plot
@@ -1254,12 +1247,10 @@ shinyServer(function(input, output, session) {
                     
                     # x-axis limits, etc. for col2 plots
                     if(varIsContinuous()[varname]) {
-                        my.xlim <- range(datx.nona[[varname]])
-                        #my.jitter <- 0.1
+                        myXlim <- range(datx.nona[[varname]])
                     } else {
-                        my.atOrig <- seq_along(levels(datx.nona[[varname]]))
-                        names(my.atOrig) <- levels(datx.nona[[varname]])
-                        #my.jitter <- min(0.1, 1 / length(my.atOrig))
+                        myAtOrig <- seq_along(levels(datx.nona[[varname]]))
+                        names(myAtOrig) <- levels(datx.nona[[varname]])
                     }
                     # for RH plots for continuous, and all plots for cat.
                     num.levs <- length(groupVarFactorLevelsSorted())
@@ -1267,12 +1258,12 @@ shinyServer(function(input, output, session) {
                     #    the available space, regardless of # groups;
                     #    and the jitter extends in each direction
                     myWidth <- 7/8
-                    my.jitter <- (1 / num.levs) * myWidth / 2
+                    myJitter <- (1 / num.levs) * myWidth / 2
                     # alignment for each group
-                    my.at.adds <- 2 * my.jitter * (1:num.levs)
+                    myAtAdds <- 2 * myJitter * (1:num.levs)
                     #shift so centered at 0
-                    my.at.adds <- my.at.adds - mean(my.at.adds)
-                    names(my.at.adds) <- groupVarFactorLevelsSorted()
+                    myAtAdds <- myAtAdds - mean(myAtAdds)
+                    names(myAtAdds) <- groupVarFactorLevelsSorted()
                     
 
                     # ylim for top plots: 
@@ -1291,13 +1282,13 @@ shinyServer(function(input, output, session) {
                             }
                         }
                         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-                        my.ylim.counts <- max(c(histcounts, datx.xna.counts)) 
+                        myYlimCounts <- max(c(histcounts, datx.xna.counts)) 
                     } else {
                         xtbl <- table(
                             datx.nona[[groupVarFactorName()]],
                             datx.nona[[varname]] 
                         )
-                        my.ylim.counts <- max(c(xtbl, datx.xna.counts))
+                        myYlimCounts <- max(c(xtbl, datx.xna.counts))
                     }
                     
                     # multi-panel plot adapted from 
@@ -1364,7 +1355,7 @@ shinyServer(function(input, output, session) {
                     
                     plot(1, 0,
                         xlim = c(0, 2), 
-                        ylim = my.ylim.ps, 
+                        ylim = myYlimPS, 
                         axes = FALSE,
                         type = "n"
                     )
@@ -1388,18 +1379,18 @@ shinyServer(function(input, output, session) {
                                 vertical = TRUE,
                                 add      = TRUE,
                                 method   = "jitter",
-                                jitter   = my.jitter,
+                                jitter   = myJitter,
                                 pch      = 20,
-                                at       = 1 + my.at.adds[lev],
+                                at       = 1 + myAtAdds[lev],
                                 cex      = pointSizeVal(),
                                 col      = adjustcolor(colorScale.mod()[lev], 
                                             alpha.f= alphaVal())
                             )
                         }
-                        my.mean <- mean(datxps.xna[[logitpsVarName()]])   
+                        myMean <- mean(datxps.xna[[logitpsVarName()]])   
                         segments(
-                            1 - myWidth / 2, my.mean,
-                            1 + myWidth / 2, my.mean
+                            1 - myWidth / 2, myMean,
+                            1 + myWidth / 2, myMean
                         )
                     }
                     axis(1, at = 1, labels= "Missing")
@@ -1416,7 +1407,7 @@ shinyServer(function(input, output, session) {
                     )
                     if (varIsContinuous()[varname]) {    
                         plot(datx.nona[[varname]], runif(datx.nona[, .N]), 
-                            ylim = c(0, my.ylim.counts), 
+                            ylim = c(0, myYlimCounts), 
                             bty  = if (testing) "o" else "n",
                             type = "n"
                         )
@@ -1436,17 +1427,17 @@ shinyServer(function(input, output, session) {
                     } else { # discrete
                         # https://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/
                         plot(1, 0,
-                            xlim = c(min(my.atOrig) - 1, max(my.atOrig) + 1), 
-                            ylim = c(0, my.ylim.counts), 
+                            xlim = c(min(myAtOrig) - 1, max(myAtOrig) + 1), 
+                            ylim = c(0, myYlimCounts), 
                             bty  = if (testing) "o" else "n",
                             type = "n")
 
                         for (grouplev in groupVarFactorLevelsSorted()) {
                             for (varlev in levels(datx.nona[[varname]])) {
                                 rect(
-                                    xleft   = my.atOrig[varlev] + my.at.adds[grouplev] - my.jitter,
+                                    xleft   = myAtOrig[varlev] + myAtAdds[grouplev] - myJitter,
                                     ybottom = 0,
-                                    xright  = my.atOrig[varlev] + my.at.adds[grouplev] + my.jitter,
+                                    xright  = myAtOrig[varlev] + myAtAdds[grouplev] + myJitter,
                                     ytop    = xtbl[grouplev, varlev],
                                     density = NA,
                                     border  = NA,
@@ -1470,8 +1461,8 @@ shinyServer(function(input, output, session) {
                     )
                     if (varIsContinuous()[varname]) {    
                         plot(datxps.nona[[varname]], datxps.nona[[logitpsVarName()]], 
-                            xlim = my.xlim, 
-                            ylim = my.ylim.ps, 
+                            xlim = myXlim, 
+                            ylim = myYlimPS, 
                             bty  = if (testing) "o" else "n",
                             type = "n"
                         )
@@ -1479,8 +1470,8 @@ shinyServer(function(input, output, session) {
                         par(las= 2) #TODO: try to angle instead
 
                         plot(1, 0,
-                            xlim = c(min(my.atOrig) - 1, max(my.atOrig) + 1), 
-                            ylim = my.ylim.ps, 
+                            xlim = c(min(myAtOrig) - 1, max(myAtOrig) + 1), 
+                            ylim = myYlimPS, 
                             axes = FALSE,
                             type = "n")
                     }
@@ -1517,9 +1508,9 @@ shinyServer(function(input, output, session) {
                                 vertical = TRUE,
                                 add      = TRUE,
                                 method   = "jitter",
-                                jitter   = my.jitter,
+                                jitter   = myJitter,
                                 pch      = 20,
-                                at       = my.atOrig + my.at.adds[lev],
+                                at       = myAtOrig + myAtAdds[lev],
                                 cex      = pointSizeVal(),
                                 col      = adjustcolor(colorScale.mod()[lev], 
                                             alpha.f= alphaVal())
@@ -1529,14 +1520,14 @@ shinyServer(function(input, output, session) {
                             mean(datxps.nona[get(varname) == levl, get(logitpsVarName())])))
                         for (i in seq_along(levels(datxps.nona[[varname]]))) {
                             levl <- levels(datxps.nona[[varname]])[i]
-                            my.mean <- mean(datxps.nona[get(varname) == levl, 
+                            myMean <- mean(datxps.nona[get(varname) == levl, 
                                 get(logitpsVarName())])   
                             segments(
-                                my.atOrig[i] - myWidth / 2, my.mean,
-                                my.atOrig[i] + myWidth / 2, my.mean
+                                myAtOrig[i] - myWidth / 2, myMean,
+                                myAtOrig[i] + myWidth / 2, myMean
                             )
                         }
-                        axis(1, at = my.atOrig, labels = names(my.atOrig))
+                        axis(1, at = myAtOrig, labels = names(myAtOrig))
                         axis(2)
                     }
                     if (testing) box("figure", col= "green")
@@ -1553,15 +1544,15 @@ shinyServer(function(input, output, session) {
                     )
                     plot(1, 0,
                         xlim = c(0, 2), 
-                        ylim = c(0, my.ylim.counts), 
+                        ylim = c(0, myYlimCounts), 
                         bty  = if (testing) "o" else "n",
                         type = "n")
 
                     for (grouplev in groupVarFactorLevelsSorted()) {
                         rect(
-                            xleft   = 1 + my.at.adds[grouplev] - my.jitter,
+                            xleft   = 1 + myAtAdds[grouplev] - myJitter,
                             ybottom = 0,
-                            xright  = 1 + my.at.adds[grouplev] + my.jitter,
+                            xright  = 1 + myAtAdds[grouplev] + myJitter,
                             ytop    = datx.xna.counts[grouplev],
                             density = NA,
                             border  = NA,
@@ -1584,9 +1575,8 @@ shinyServer(function(input, output, session) {
         if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             local({
                 my_i <- i
-                varname         <- varsToView()[my_i]
-
-                naTableName     <- paste0("naTable_", varname)
+                varname     <- varsToView()[my_i]
+                naTableName <- paste0("naTable_", varname)
 
                 # Create a missing-by-group table for each variable
                 output[[naTableName]] <- renderTable({
@@ -1785,6 +1775,19 @@ shinyServer(function(input, output, session) {
         plot_and_input_list
     })
  
+    ############################################################
+    ############################################################
+    ## SMDs
+    wantATEWts <- reactive({
+        input$showATE
+    })
+    wantATTWts <- reactive({
+        input$showATT
+    })
+    wantATMWts <- reactive({
+        input$showATM
+    })
+    
     
     ############################################################
     ############################################################

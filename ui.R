@@ -156,6 +156,20 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         ), # end fluidRow 
         uiOutput("covariatePlotsAndInputs")
     ), # end variable-selection panel
+    tabPanel("Compare",
+        fluidRow(
+            checkboxInput('showATE',
+                label= 'Show SMDs for ATE weighting in pruned sample (may take several minutes)',
+                value = FALSE),
+            checkboxInput('showATT',
+                label= 'Show SMDs for ATT weighting in pruned sample (may take several minutes)',
+                value = FALSE),
+            checkboxInput('showATM',
+                label= 'Show SMDs for ATM weighting in pruned sample (may take several minutes)',
+                value = FALSE),
+            h4('SMD plots coming soon')
+        ) # end fluidRow
+    ), # end SMD panel
     tabPanel("Copy",
         fluidRow(
             column(12,
