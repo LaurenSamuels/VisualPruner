@@ -74,7 +74,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         ), # end fluidRow 
         tags$hr(),
         fluidRow(
-            h2("Estimated propensity score distributions"),
+            h3("Estimated propensity score distributions"),
             uiOutput('psGraphsNotReady'),
             column(6,
                 plotOutput("psPlot",
@@ -185,8 +185,10 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         fluidRow(
             column(12,
                 h4('The following R expression can be copied to select rows to KEEP:'),
-                htmlOutput("keepAfterPruningCopyText"),
-                tags$hr(),
+                htmlOutput("keepAfterPruningCopyText")
+            ), # end column
+            tags$hr(),
+            column(6,
                 h4('Current propensity score formula:'),
                 uiOutput("psCopyText")
             ) # end column
@@ -194,61 +196,69 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     ), # end Copy panel
 
     tabPanel("About",
-        h1("About Visual Pruner"),
-        'Visual Pruner is a study-design tool for use with observational studies.', 
-        tags$br(),
-        tags$br(),
-        HTML(paste0(
-            'Some documentation can be found at ',
-            a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
-                href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
-                target="_blank"),
-            '. We hope to provide further documentation soon.' 
-        )),
-        tags$hr(),
-        h4('Version'),
-        # see http://r-pkgs.had.co.nz/release.html
-        # major.minor.patch.dev
-        '0.3.0',
-        h4('License'),
-        'GPL-3',
-        h4('Authors'),
-        'Lauren R. Samuels and Robert A. Greevy, Jr.',
-        h4('Contact'),
-        HTML(paste0(
-            a("http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
-                href="http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
-                target="_blank")
-        )),
-        tags$br(),
-        'We welcome bug reports, suggestions, and requests.',
-        tags$hr(),
-        h4('Acknowledgements'),
-        HTML(paste0(
-            'Visual Pruner is built using the ', 
-            a("R Shiny", 
-                href="http://shiny.rstudio.com", 
-                target="_blank"),
-                ' framework',
-            ', with CSS from ',
-            a("Bootswatch", 
-                href="http://bootswatch.com", 
-                target="_blank"),
-            '.'
-        )),
-        tags$br(),
-        'Many thanks to Qi Liu for helpful suggestions.'
+        fluidRow(
+            column(12,
+                #h2("About Visual Pruner"),
+                'Visual Pruner is a study-design tool for use with observational studies.', 
+                tags$br(),
+                tags$br(),
+                HTML(paste0(
+                    'Some documentation can be found at ',
+                    a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
+                        href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
+                        target="_blank"),
+                    '. We hope to provide further documentation soon.' 
+                )),
+                tags$hr(),
+                h4('Version'),
+                # see http://r-pkgs.had.co.nz/release.html
+                # major.minor.patch.dev
+                '0.3.1',
+                h4('License'),
+                'GPL-3',
+                h4('Authors'),
+                'Lauren R. Samuels and Robert A. Greevy, Jr.',
+                h4('Contact'),
+                HTML(paste0(
+                    a("http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
+                        href="http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
+                        target="_blank")
+                )),
+                tags$br(),
+                'We welcome bug reports, suggestions, and requests.',
+                tags$hr(),
+                h4('Acknowledgements'),
+                HTML(paste0(
+                    'Visual Pruner is built using the ', 
+                    a("R Shiny", 
+                        href="http://shiny.rstudio.com", 
+                        target="_blank"),
+                        ' framework',
+                    ', with CSS from ',
+                    a("Bootswatch", 
+                        href="http://bootswatch.com", 
+                        target="_blank"),
+                    '.'
+                )),
+                tags$br(),
+                'Many thanks to Qi Liu for helpful suggestions.'
+            ) # end column
+        ) # end fluidRow
     ), # end About panel
 
     tabPanel("R",
         fluidRow(
-            h4('You can ignore this tab if you are not interested in the R packages or source code used in making this app.'),
-            tags$hr()
+            column(12,
+                h4('You can ignore this tab if you are not interested in the R packages or source code used in making this app.'),
+                tags$hr()
+            ) # end column
         ), # end fluidRow 
         fluidRow(
-            h4('R session information:'),
-            verbatimTextOutput("sessionInf"),
-            tags$hr()
+            column(12,
+                h4('R session information:'),
+                verbatimTextOutput("sessionInf"),
+                tags$hr()
+            ) # end column
         ), # end fluidRow 
         fluidRow(
             column(6,

@@ -485,6 +485,7 @@ shinyServer(function(input, output, session) {
         if (is.null(dsetGroupvar())) return(NULL)
         if (is.null(logitPS())) return(NULL) 
         if (is.null(smallestGroup())) return(NULL) 
+        if (is.null(idsToKeepAfterPruning())) return(NULL) 
         
         # todo: do this all using data.table
         dat1 <- data.frame(
@@ -525,7 +526,13 @@ shinyServer(function(input, output, session) {
             (1 - get(treatedVarName())) * (1 - get(psVarName())))
         ] 
         
-        dat
+        # PSIDs() might be different from idsToKeepAfterPruning,
+        #     because sometimes we prune but keep old PS.
+        #     Then have to do na.omit because some people might
+        #     be in idsToKeep but not in PSIDs...
+        dat2 <- na.omit(dat[idsToKeepAfterPruning()])
+        setkeyv(dat2, idVarName())
+        dat2
     })    
 
     output$getFormula <- renderUI({
@@ -743,10 +750,9 @@ shinyServer(function(input, output, session) {
     output$psFitProblemTextPrePruning <- renderUI({
         # -- contains an isolate -- (waiting for the "done typing" button)
         # dependencies
-        if (datInfo$newData == TRUE) return(NULL)
         useCompleteCasesOnly()
         
-        if (psNotChecked() | is.null(varnamesFromRHSOK())) {
+        if (datInfo$newData == TRUE | psNotChecked() | is.null(varnamesFromRHSOK())) {
             HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!varnamesFromRHSOK()) { # couldn't combine this with above
             HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
@@ -1171,11 +1177,12 @@ shinyServer(function(input, output, session) {
     
     output$pruneTable <- renderTable({
         if (is.null(idsToKeepAfterPruning())) return(NULL)
-        if (is.null(dsetGroupvar())) return(NULL)
+        if (is.null(groupVarName())) return(NULL)
     
-        dat <- dsetGroupvar()[idsToKeepAfterPruning(), .N, by= eval(groupVarFactorName())]
-        setnames(dat, old = groupVarFactorName(), new = groupVarName())
-        rbind(dat, list("Total", dsetOrig()[idsToKeepAfterPruning(), .N]))
+        dat <- dsetOrig()[idsToKeepAfterPruning(), .N, 
+            by= eval(groupVarName())]
+        rbind(dat, list("Total", 
+            dsetOrig()[idsToKeepAfterPruning(), .N]))
     }, include.rownames = FALSE)
     
     output$logitpsPlotForBrushing <- renderPlot({
@@ -1286,11 +1293,16 @@ shinyServer(function(input, output, session) {
                     # For plot alignment
                     testing <- FALSE
 
-                    # core dataset for plots and naTable: ID, group, x
-                    #    Making within each because of dependency problems
-                    datx <- dsetOrig()[idsToKeepAfterPruning()][, 
-                        c(idVarName(), varname), 
-                        with= FALSE][dsetGroupvar()[idsToKeepAfterPruning()]]
+                    # core dataset for plots: ID, group, x
+                    datx <- merge(
+                        dsetOrig()[idsToKeepAfterPruning()][, 
+                            c(idVarName(), varname), with= FALSE],
+                        dsetGroupvar()[idsToKeepAfterPruning()],
+                        all.x = TRUE,
+                        suffixes = c("", ".y")
+                    )
+                    setkeyv(datx, idVarName())
+                    
                     # convert character & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
                             (is.numeric(datx[[varname]]) & 
@@ -1305,8 +1317,11 @@ shinyServer(function(input, output, session) {
                     # for the right-hand top plot
                     datx.xna <- datx[is.na(get(varname)), ]
                     
-                    # subset of datx that has a PS
-                    datxps <- datx[dsetPSGraphs()]
+                    # dset w/ x and PS. Either could be missing.
+                    datxps <- merge(datx, 
+                        dsetPSGraphs(),
+                        all= TRUE, suffixes= c("", ".y"))
+                    setkeyv(datxps, idVarName())
                     
                     # use datxps.nona for central scatterplot/stripchart
                     datxps.nona <- na.omit(datxps)
@@ -1448,9 +1463,10 @@ shinyServer(function(input, output, session) {
                             col     = "#DFD7CA"
                         )
                     }
-                    if (datxps.xna[, .N] >= 1) {
+                    if (nrow(datxps.xna) >= 1) {
                         for (lev in groupVarFactorLevelsSorted()) {
-                            y <- datxps.xna[get(groupVarFactorName()) == lev, 
+                            y <- datxps.xna[
+                                get(groupVarFactorName()) == lev, 
                                 get(logitpsVarName())]
                             stripchart(y,
                                 vertical = TRUE,
@@ -1464,7 +1480,8 @@ shinyServer(function(input, output, session) {
                                             alpha.f= alphaVal())
                             )
                         }
-                        myMean <- mean(datxps.xna[[logitpsVarName()]])   
+                        myMean <- 
+                            mean(datxps.xna[[logitpsVarName()]])   
                         segments(
                             1 - myWidth / 2, myMean,
                             1 + myWidth / 2, myMean
@@ -1658,17 +1675,14 @@ shinyServer(function(input, output, session) {
                 # Create a missing-by-group table for each variable
                 output[[naTableName]] <- renderTable({
                     if (is.null(dsetOrig())) return(NULL)
-                    if (is.null(dsetGroupvar())) return(NULL)
+                    if (is.null(groupVarName())) return(NULL)
                     if (is.null(idsToKeepAfterPruning())) return(NULL)
 
-                    # core dataset for plots and naTable: ID, group, x
-                    #    Making within each because of dependency problems
                     datx <- dsetOrig()[idsToKeepAfterPruning()][, 
-                        c(idVarName(), varname), 
-                        with= FALSE][dsetGroupvar()[idsToKeepAfterPruning()]]
+                        c(idVarName(), varname, groupVarName()), 
+                        with= FALSE]
                     dat <- datx[, .(pct.missing = 100 * mean(is.na(get(varname)))), 
-                        by= eval(groupVarFactorName())]
-                    setnames(dat, old = groupVarFactorName(), new = groupVarName())
+                        by= eval(groupVarName())]
                     dat
                 }, digits= 1, include.rownames= FALSE
                 ) # end renderTable
@@ -1898,7 +1912,6 @@ shinyServer(function(input, output, session) {
     })    
     tabATE <- reactive({
         if (is.null(varsToView())) return(NULL)
-        if (is.null(exprToKeepAfterPruning())) return(NULL)
         if (is.null(idsToKeepAfterPruning())) return(NULL)
         if (is.null(dsetPSGraphs())) return(NULL)
         if (input$showATE == FALSE) return(NULL)
@@ -1927,7 +1940,6 @@ shinyServer(function(input, output, session) {
     })    
     tabATT <- reactive({
         if (is.null(varsToView())) return(NULL)
-        if (is.null(exprToKeepAfterPruning())) return(NULL)
         if (is.null(idsToKeepAfterPruning())) return(NULL)
         if (is.null(dsetPSGraphs())) return(NULL)
         if (input$showATT == FALSE) return(NULL)
@@ -1954,7 +1966,6 @@ shinyServer(function(input, output, session) {
     })    
     tabATM <- reactive({
         if (is.null(varsToView())) return(NULL)
-        if (is.null(exprToKeepAfterPruning())) return(NULL)
         if (is.null(idsToKeepAfterPruning())) return(NULL)
         if (is.null(dsetPSGraphs())) return(NULL)
         if (input$showATM == FALSE) return(NULL)
@@ -2020,17 +2031,26 @@ shinyServer(function(input, output, session) {
         if (is.null(dsetSMDs())) return(NULL)
 
         nvars <- nrow(dsetSMDs())
-        tabTypes <- intersect(
-            c("Original", "Pruned", "WeightedATE", "WeightedATT", "WeightedATM"),
-            names(dsetSMDs())
-        )  
-        nTabTypes <- length(tabTypes)      
-        myColors <- c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00')[1:nTabTypes]
-        myShapes <- (21:25)[1:nTabTypes]
-        myLinetypes <- c("solid", "dashed", "dotted", 
-            "dotdash", "longdash")[1:nTabTypes]
+        allTabTypes <- c("Original", "Pruned", "WeightedATE", 
+            "WeightedATT", "WeightedATM")
+        myTabTypes <- intersect(allTabTypes, names(dsetSMDs()))  
+        nTabTypes <- length(myTabTypes)      
+
+        allColors <- 
+            c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00')
+        names(allColors) <- allTabTypes
+        myColors <- allColors[myTabTypes]
+
+        allShapes <- (21:25)
+        names(allShapes) <- allTabTypes
+        myShapes <- allShapes[myTabTypes]
+
+        allLinetypes <- c("solid", "dashed", "dotted", 
+            "dotdash", "longdash")
+        names(allLinetypes) <- allTabTypes
+        myLinetypes <- allLinetypes[myTabTypes]
     
-        maxX <- max(dsetSMDs()[, tabTypes, with= FALSE], na.rm= TRUE)
+        maxX <- max(dsetSMDs()[, myTabTypes, with= FALSE], na.rm= TRUE)
         
         def.par <- par(no.readonly = TRUE)
         par(
@@ -2057,7 +2077,7 @@ shinyServer(function(input, output, session) {
 
         for (j in 1:nTabTypes) {
             lines(
-                x   = as.numeric(dsetSMDs()[[tabTypes[j]]]),
+                x   = as.numeric(dsetSMDs()[[myTabTypes[j]]]),
                 y   = 1:nvars,
                 lty = myLinetypes[j],
                 lwd = 1.2,
@@ -2067,7 +2087,7 @@ shinyServer(function(input, output, session) {
         for (i in 1:nvars) {
             abline(h= i, lty= 'dotted', col= 'gray')
             points(
-                x   = as.numeric(dsetSMDs()[i][, tabTypes, with = FALSE]),
+                x   = as.numeric(dsetSMDs()[i][, myTabTypes, with = FALSE]),
                 y   = rep(i, nTabTypes),
                 pch = myShapes,
                 col = myColors,
@@ -2076,7 +2096,7 @@ shinyServer(function(input, output, session) {
         }
         legend(
             "bottomright",
-            legend = tabTypes,
+            legend = myTabTypes,
             inset  = c(.1, .05), #x, y
             cex    = 1,
             title  = NULL,

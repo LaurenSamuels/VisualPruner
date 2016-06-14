@@ -9,12 +9,9 @@ output: html_document
 
 * Add button to reset all pruning, and/or provide the original sample limits
 
+* For SMD page: reset checkboxes to FALSE on new dataset upload
+
 * Add button to select all vars?
-
-* Check to see which datasets I'm using for 2 table types on prune page & 1 message on specify page
-
-
-* In Copy, find a way to wrap long PS formula
 
 * Think about the top central plots in cases where some people don't have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.
 
@@ -53,5 +50,3 @@ This might help with the "rollback" too.
 * Maybe: add KDE & % overlap (Tomarken)
 
 * Maybe: add weighted histograms
-
-* Maybe: Add standardized diff plot?
