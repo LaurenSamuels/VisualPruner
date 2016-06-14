@@ -208,7 +208,7 @@ shinyServer(function(input, output, session) {
         # Add an ID variable so we can match obsns w/ the PS dataset
         if (!is.null(idVarName())) { 
             if (!(idVarName() %in% varnamesOrig())) {
-                dsetOrig()[, idVarName() := 1:nrow(dsetOrig())]
+                dsetOrig()[, idVarName() := paste0("id", 1:nrow(dsetOrig()))]
                 setkeyv(dsetOrig(), idVarName())
             }
         }
@@ -844,7 +844,8 @@ shinyServer(function(input, output, session) {
             }
         }
         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-        plot(dsetPSGraphs()[[psVarName()]], runif(dsetPSGraphs()[, .N]), 
+        plot(0.5, 0, 
+            xlim= range(dsetPSGraphs()[get(groupVarFactorName()) == lev, get(psVarName())]),
             ylim= c(0, max(histcounts)), 
             xlab= "PS",
             ylab= "Count",
@@ -883,7 +884,8 @@ shinyServer(function(input, output, session) {
             }
         }
         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-        plot(dsetPSGraphs()[[logitpsVarName()]], runif(dsetPSGraphs()[, .N]), 
+        plot(0, 0, 
+            xlim= range(dsetPSGraphs()[get(groupVarFactorName()) == lev, get(logitpsVarName())]),
             ylim= c(0, max(histcounts)), 
             xlab= "Logit PS",
             ylab= "Count",
@@ -1200,7 +1202,8 @@ shinyServer(function(input, output, session) {
             }
         }
         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-        plot(dsetPSGraphs()[[logitpsVarName()]], runif(dsetPSGraphs()[, .N]), 
+        plot(0, 0, 
+            xlim= range(dsetPSGraphs()[get(groupVarFactorName()) == lev, get(logitpsVarName())]),
             ylim= c(0, max(histcounts)), 
             xlab= "Logit PS",
             ylab= "Count",
@@ -1500,7 +1503,8 @@ shinyServer(function(input, output, session) {
                         xaxt ="n"
                     )
                     if (varIsContinuous()[varname]) {    
-                        plot(datx.nona[[varname]], runif(datx.nona[, .N]), 
+                        plot(min(datx.nona[[varname]]), 0, 
+                            xlim = range(datx.nona[[varname]]),
                             ylim = c(0, myYlimCounts), 
                             bty  = if (testing) "o" else "n",
                             type = "n"
@@ -1910,21 +1914,33 @@ shinyServer(function(input, output, session) {
             smd        = TRUE
         )
     })    
-    tabATE <- reactive({
+    dsetForSMDs <- reactive({
         if (is.null(varsToView())) return(NULL)
         if (is.null(idsToKeepAfterPruning())) return(NULL)
         if (is.null(dsetPSGraphs())) return(NULL)
-        if (input$showATE == FALSE) return(NULL)
+        if (input$showATE == FALSE & 
+            input$showATT == FALSE &
+            input$showATM == FALSE) return(NULL)
 
         # merge covariate data w/ weight data
         # TODO: consider making this a free-standing dataset 
         #    (outside of these functions)
-        dat <- dsetOrig()[idsToKeepAfterPruning()][, 
-            c(idVarName(), varsToView(), groupVarName()), 
-            with= FALSE][dsetPSGraphs()]
+        dat <- merge(
+            dsetOrig()[idsToKeepAfterPruning()][,c(idVarName(), 
+                varsToView(), groupVarName()), with= FALSE],
+            dsetPSGraphs(),
+            suffixes= c("", ".y")
+        )
+        setkeyv(dat, idVarName())
+
+        dat
+    })
+    tabATE <- reactive({
+        if (is.null(dsetForSMDs())) return(NULL)
+        if (input$showATE == FALSE) return(NULL)
 
         # Create a survey object
-        svydat <- svydesign(ids = ~ 0, data = dat, 
+        svydat <- svydesign(ids = ~ 0, data = dsetForSMDs(), 
             weights = ~ get(ateWtVarName()))
 
         ## Create a TableOne object
@@ -1939,18 +1955,11 @@ shinyServer(function(input, output, session) {
         )
     })    
     tabATT <- reactive({
-        if (is.null(varsToView())) return(NULL)
-        if (is.null(idsToKeepAfterPruning())) return(NULL)
-        if (is.null(dsetPSGraphs())) return(NULL)
+        if (is.null(dsetForSMDs())) return(NULL)
         if (input$showATT == FALSE) return(NULL)
 
-        # merge covariate data w/ weight data
-        dat <- dsetOrig()[idsToKeepAfterPruning()][, 
-            c(idVarName(), varsToView(), groupVarName()), 
-            with= FALSE][dsetPSGraphs()]
-
         # Create a survey object
-        svydat <- svydesign(ids = ~ 0, data = dat, 
+        svydat <- svydesign(ids = ~ 0, data = dsetForSMDs(), 
             weights = ~ get(attWtVarName()))
 
         ## Create a TableOne object
@@ -1965,18 +1974,11 @@ shinyServer(function(input, output, session) {
         )
     })    
     tabATM <- reactive({
-        if (is.null(varsToView())) return(NULL)
-        if (is.null(idsToKeepAfterPruning())) return(NULL)
-        if (is.null(dsetPSGraphs())) return(NULL)
+        if (is.null(dsetForSMDs())) return(NULL)
         if (input$showATM == FALSE) return(NULL)
 
-        # merge covariate data w/ weight data
-        dat <- dsetOrig()[idsToKeepAfterPruning()][, 
-            c(idVarName(), varsToView(), groupVarName()), 
-            with= FALSE][dsetPSGraphs()]
-
         # Create a survey object
-        svydat <- svydesign(ids = ~ 0, data = dat, 
+        svydat <- svydesign(ids = ~ 0, data = dsetForSMDs(), 
             weights = ~ get(atmWtVarName()))
 
         ## Create a TableOne object
