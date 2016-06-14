@@ -158,18 +158,27 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     ), # end variable-selection panel
     tabPanel("Compare",
         fluidRow(
-            checkboxInput('showATE',
-                label= 'Show SMDs for ATE weighting in pruned sample (may take several minutes)',
-                value = FALSE),
-            checkboxInput('showATT',
-                label= 'Show SMDs for ATT weighting in pruned sample (may take several minutes)',
-                value = FALSE),
-            checkboxInput('showATM',
-                label= 'Show SMDs for ATM weighting in pruned sample (may take several minutes)',
-                value = FALSE),
-            #verbatimTextOutput("tabonetest"),
-            plotOutput('SMDPlot'),
-            h4('SMD plots coming soon')
+            column(4, 
+                h4('Show the following weightings in the SMD plot:'),
+                checkboxInput('showATE',
+                    label= 'ATE',
+                    value = FALSE),
+                checkboxInput('showATT',
+                    label= 'ATT',
+                    value = FALSE),
+                checkboxInput('showATM',
+                    label= 'ATM',
+                    value = FALSE),
+                HTML(paste0(tags$span(class="text-info", 
+                    "Note that each one may take several minutes.")))
+                #verbatimTextOutput("tabonetest"),
+            ), # end column
+            column(8, 
+                plotOutput('SMDPlot',
+                    height= 800,
+                    width= 'auto'
+                )
+            ) # end column
         ) # end fluidRow
     ), # end SMD panel
     tabPanel("Copy",

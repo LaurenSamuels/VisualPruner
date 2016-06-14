@@ -1,7 +1,4 @@
-######################################################
-#TODO:
-# Remember: when updating on server, use library(Cairo)
-#######################################################
+# Visual Pruner
 
 library(shiny)
 library(rms)
@@ -837,14 +834,14 @@ shinyServer(function(input, output, session) {
         }
         legend(
             "topleft",
-            inset= .05,
-            cex = .8,
-            title= NULL,
+            inset  = .05,
+            cex    = .8,
+            title  = NULL,
             groupVarFactorLevelsSorted(),
-            horiz = FALSE,
-            bty= "n",
-            border= NA,
-            fill = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
+            horiz  = FALSE,
+            bty    = "n",
+            border = NA,
+            fill   = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
                 adjustcolor(colorScale.mod()[x], alpha.f= alphaVal())))
         )
     }, res= 100)    
@@ -1811,7 +1808,7 @@ shinyServer(function(input, output, session) {
             strata     = groupVarName(),
             data       = dsetOrig(),
             factorVars = catVars(),
-            includeNA  = TRUE,
+            includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
         )
@@ -1827,7 +1824,7 @@ shinyServer(function(input, output, session) {
             strata     = groupVarName(),
             data       = dsetOrig()[idsToKeepAfterPruning()],
             factorVars = catVars(),
-            includeNA  = TRUE,
+            includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
         )
@@ -1836,7 +1833,7 @@ shinyServer(function(input, output, session) {
     #output$tabonetest <- renderPrint({
     #    if (is.null(tabOrig())) return(NULL)
 
-    #    print(tabPruned())
+    #    print(tabPruned(), smd= TRUE)
     #})
 
     ## Construct a data frame containing variable name and SMD from all methods
@@ -1872,50 +1869,65 @@ shinyServer(function(input, output, session) {
         nTabTypes <- length(tabTypes)      
         myColors <- c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00')[1:nTabTypes]
         myShapes <- (21:25)[1:nTabTypes]
+        myLinetypes <- c("solid", "dashed", "dotted", 
+            "dotdash", "longdash")[1:nTabTypes]
     
         maxX <- max(dsetSMDs()[, tabTypes, with= FALSE], na.rm= TRUE)
         
         def.par <- par(no.readonly = TRUE)
         par(
-            ann      = FALSE,
+            #ann      = FALSE,
+            mar      = c(5, 10, 4, 2) + 0.1, #bltr
             oma      = c(0,0,0,0),
             cex.axis = 1.1
         ) 
         plot(0, 1,
-            type= "n",
-            bty = "n",
+            type = "n",
+            bty  = "n",
             xlim = c(0, maxX),
-            ylim = c(0.5, nvars),
-            axes= FALSE
+            ylim = c(1, nvars),
+            axes = FALSE,
+            xlab = 'Absolute standardized mean difference',
+            ylab = ''
         )
         axis(1)
-        axis(2, at= 1:nvars, labels= dsetSMDs()[, variable])
-        # TODO next:
-        # increase L margin
-        # rotate L margin text
-        # add linetypes
-        # add legend
-        # change shape (put into a column in ui, w/ width & height)
-        # then move on to weighted tableone's!
+        axis(2, at= 1:nvars, labels= dsetSMDs()[, variable],
+            las= 1)
+
+        abline(v = 0.1, lty= 'dashed', col= 'gray')
+
         for (j in 1:nTabTypes) {
             lines(
-                x= as.numeric(dsetSMDs()[[tabTypes[j]]]),
-                y= 1:nvars,
-                #lty= TODO,
-                col= myColors[j]
+                x   = as.numeric(dsetSMDs()[[tabTypes[j]]]),
+                y   = 1:nvars,
+                lty = myLinetypes[j],
+                col = myColors[j]
             )
         }
         for (i in 1:nvars) {
             abline(h= i, lty= 'dotted', col= 'gray')
             points(
-                x= as.numeric(dsetSMDs()[i][, tabTypes, with= FALSE]), 
-                y= rep(i, nTabTypes), 
-                pch= myShapes,
-                col= myColors,
-                bg= myColors
+                x   = as.numeric(dsetSMDs()[i][, tabTypes, with = FALSE]),
+                y   = rep(i, nTabTypes),
+                pch = myShapes,
+                col = myColors,
+                bg  = myColors
             )
         }
-
+        legend(
+            "bottomright",
+            legend = tabTypes,
+            inset  = c(.1, .05), #x, y
+            cex    = 1,
+            title  = NULL,
+            horiz  = FALSE,
+            bty    = "n",
+            border = NA,
+            col    = myColors,
+            pt.bg  = myColors,
+            lty    = myLinetypes,
+            pch    = myShapes
+        )
         # reset the graphics
         par(def.par)
     })
