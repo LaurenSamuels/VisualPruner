@@ -431,11 +431,60 @@ shinyServer(function(input, output, session) {
         }    
         proposedPrefix
     })    
+    treatedVarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the 0/1 tx indicator var in dsetPSGraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dsetOrig())) return (NULL)
+        
+        proposedName <- "MY__TX01"
+        while(proposedName %in% varnamesOrig()) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    ateWtVarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the ATE wt var in dsetPSGraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dsetOrig())) return (NULL)
+        
+        proposedName <- "MY__ATE"
+        while(proposedName %in% varnamesOrig()) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    attWtVarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the ATT wt var in dsetPSGraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dsetOrig())) return (NULL)
+        
+        proposedName <- "MY__ATT"
+        while(proposedName %in% varnamesOrig()) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
+    atmWtVarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the ATM wt var in dsetPSGraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        if(is.null(dsetOrig())) return (NULL)
+        
+        proposedName <- "MY__ATM"
+        while(proposedName %in% varnamesOrig()) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
 
     dsetPSGraphs <- reactive({
         # This dataset is used for making the PS plots.
         if (is.null(dsetGroupvar())) return(NULL)
         if (is.null(logitPS())) return(NULL) 
+        if (is.null(smallestGroup())) return(NULL) 
         
         # todo: do this all using data.table
         dat1 <- data.frame(
@@ -458,6 +507,24 @@ shinyServer(function(input, output, session) {
         
         dat <- as.data.table(dat)  
         setkeyv(dat, idVarName())
+
+        # now add the weights
+        dat[, eval(treatedVarName()):= 
+            get(groupVarFactorName()) %in% smallestGroup()] 
+        dat[, eval(ateWtVarName()):= 
+            get(treatedVarName()) / get(psVarName()) +
+            (1 - get(treatedVarName())) / (1 - get(psVarName()))
+        ] 
+        dat[, eval(attWtVarName()):= 
+            get(treatedVarName())  +
+            (1 - get(treatedVarName())) * get(psVarName()) / (1 - get(psVarName()))
+        ] 
+        dat[, eval(atmWtVarName()):= 
+            pmin(get(psVarName()), (1 - get(psVarName()))) /
+            (get(treatedVarName()) * get(psVarName()) +
+            (1 - get(treatedVarName())) * (1 - get(psVarName())))
+        ] 
+        
         dat
     })    
 
@@ -1803,7 +1870,7 @@ shinyServer(function(input, output, session) {
         if (is.null(varsToView())) return(NULL)
 
         ## Create a TableOne object
-        tab2 <- CreateTableOne(
+        CreateTableOne(
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = dsetOrig(),
@@ -1819,10 +1886,93 @@ shinyServer(function(input, output, session) {
         if (is.null(idsToKeepAfterPruning())) return(NULL)
 
         ## Create a TableOne object
-        tab2 <- CreateTableOne(
+        CreateTableOne(
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = dsetOrig()[idsToKeepAfterPruning()],
+            factorVars = catVars(),
+            includeNA  = FALSE,
+            test       = FALSE,
+            smd        = TRUE
+        )
+    })    
+    tabATE <- reactive({
+        if (is.null(varsToView())) return(NULL)
+        if (is.null(exprToKeepAfterPruning())) return(NULL)
+        if (is.null(idsToKeepAfterPruning())) return(NULL)
+        if (is.null(dsetPSGraphs())) return(NULL)
+        if (input$showATE == FALSE) return(NULL)
+
+        # merge covariate data w/ weight data
+        # TODO: consider making this a free-standing dataset 
+        #    (outside of these functions)
+        dat <- dsetOrig()[idsToKeepAfterPruning()][, 
+            c(idVarName(), varsToView(), groupVarName()), 
+            with= FALSE][dsetPSGraphs()]
+
+        # Create a survey object
+        svydat <- svydesign(ids = ~ 0, data = dat, 
+            weights = ~ get(ateWtVarName()))
+
+        ## Create a TableOne object
+        svyCreateTableOne(
+            vars       = varsToView(),
+            strata     = groupVarName(),
+            data       = svydat,
+            factorVars = catVars(),
+            includeNA  = FALSE,
+            test       = FALSE,
+            smd        = TRUE
+        )
+    })    
+    tabATT <- reactive({
+        if (is.null(varsToView())) return(NULL)
+        if (is.null(exprToKeepAfterPruning())) return(NULL)
+        if (is.null(idsToKeepAfterPruning())) return(NULL)
+        if (is.null(dsetPSGraphs())) return(NULL)
+        if (input$showATT == FALSE) return(NULL)
+
+        # merge covariate data w/ weight data
+        dat <- dsetOrig()[idsToKeepAfterPruning()][, 
+            c(idVarName(), varsToView(), groupVarName()), 
+            with= FALSE][dsetPSGraphs()]
+
+        # Create a survey object
+        svydat <- svydesign(ids = ~ 0, data = dat, 
+            weights = ~ get(attWtVarName()))
+
+        ## Create a TableOne object
+        svyCreateTableOne(
+            vars       = varsToView(),
+            strata     = groupVarName(),
+            data       = svydat,
+            factorVars = catVars(),
+            includeNA  = FALSE,
+            test       = FALSE,
+            smd        = TRUE
+        )
+    })    
+    tabATM <- reactive({
+        if (is.null(varsToView())) return(NULL)
+        if (is.null(exprToKeepAfterPruning())) return(NULL)
+        if (is.null(idsToKeepAfterPruning())) return(NULL)
+        if (is.null(dsetPSGraphs())) return(NULL)
+        if (input$showATM == FALSE) return(NULL)
+
+        # merge covariate data w/ weight data
+        dat <- dsetOrig()[idsToKeepAfterPruning()][, 
+            c(idVarName(), varsToView(), groupVarName()), 
+            with= FALSE][dsetPSGraphs()]
+
+        # Create a survey object
+        svydat <- svydesign(ids = ~ 0, data = dat, 
+            weights = ~ get(atmWtVarName()))
+
+        ## Create a TableOne object
+        svyCreateTableOne(
+            vars       = varsToView(),
+            strata     = groupVarName(),
+            data       = svydat,
             factorVars = catVars(),
             includeNA  = FALSE,
             test       = FALSE,
@@ -1833,7 +1983,7 @@ shinyServer(function(input, output, session) {
     #output$tabonetest <- renderPrint({
     #    if (is.null(tabOrig())) return(NULL)
 
-    #    print(tabPruned(), smd= TRUE)
+    #    print(tabATE(), smd= TRUE)
     #})
 
     ## Construct a data frame containing variable name and SMD from all methods
@@ -1847,7 +1997,15 @@ shinyServer(function(input, output, session) {
         if (!is.null(tabPruned())) {
             dat[, Pruned := ExtractSmd(tabPruned())]
         }
-        # todo: add for 3 other options here
+        if (!is.null(tabATE())) {
+            dat[, WeightedATE := ExtractSmd(tabATE())]
+        }
+        if (!is.null(tabATT())) {
+            dat[, WeightedATT := ExtractSmd(tabATT())]
+        }
+        if (!is.null(tabATM())) {
+            dat[, WeightedATM := ExtractSmd(tabATM())]
+        }
         setkey(dat, variable)
         
         varNames <- as.character(dat[, variable])[order(
@@ -1863,7 +2021,7 @@ shinyServer(function(input, output, session) {
 
         nvars <- nrow(dsetSMDs())
         tabTypes <- intersect(
-            c("Original", "Pruned", "ATE", "ATT", "ATM"),
+            c("Original", "Pruned", "WeightedATE", "WeightedATT", "WeightedATM"),
             names(dsetSMDs())
         )  
         nTabTypes <- length(tabTypes)      
@@ -1879,7 +2037,8 @@ shinyServer(function(input, output, session) {
             #ann      = FALSE,
             mar      = c(5, 10, 4, 2) + 0.1, #bltr
             oma      = c(0,0,0,0),
-            cex.axis = 1.1
+            cex.axis = 1.1,
+            cex.lab  = 1.2
         ) 
         plot(0, 1,
             type = "n",
@@ -1901,6 +2060,7 @@ shinyServer(function(input, output, session) {
                 x   = as.numeric(dsetSMDs()[[tabTypes[j]]]),
                 y   = 1:nvars,
                 lty = myLinetypes[j],
+                lwd = 1.2,
                 col = myColors[j]
             )
         }

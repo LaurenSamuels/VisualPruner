@@ -171,7 +171,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     value = FALSE),
                 HTML(paste0(tags$span(class="text-info", 
                     "Note that each one may take several minutes.")))
-                #verbatimTextOutput("tabonetest"),
+                #verbatimTextOutput("tabonetest")
             ), # end column
             column(8, 
                 plotOutput('SMDPlot',
@@ -209,7 +209,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         h4('Version'),
         # see http://r-pkgs.had.co.nz/release.html
         # major.minor.patch.dev
-        '0.2.1',
+        '0.3.0',
         h4('License'),
         'GPL-3',
         h4('Authors'),
