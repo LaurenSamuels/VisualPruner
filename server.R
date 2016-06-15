@@ -2038,6 +2038,7 @@ shinyServer(function(input, output, session) {
         myTabTypes <- intersect(allTabTypes, names(dsetSMDs()))  
         nTabTypes <- length(myTabTypes)      
 
+        # colors from http://colorbrewer2.org
         allColors <- 
             c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00')
         names(allColors) <- allTabTypes

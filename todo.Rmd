@@ -11,6 +11,14 @@ output: html_document
 
 * For SMD page: reset checkboxes to FALSE on new dataset upload
 
+* Have SMD plots include missingness indicators & squared terms. When incorporating into a package, consider adding functions to add these things to the original dset.
+
+* SMD page: spell out SMD; also add help text about tableone and dotted line
+
+* For example dset: change 'exposed' to something more concrete (compression socks)?
+
+* Show limits for hyperrectangle pruning, and/or add option for hyperrectangle pruning
+
 * Add button to select all vars?
 
 * Think about the top central plots in cases where some people don't have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.
@@ -49,4 +57,4 @@ This might help with the "rollback" too.
 
 * Maybe: add KDE & % overlap (Tomarken)
 
-* Maybe: add weighted histograms
+* Maybe: allow choice of PS or logitPS on Prune page
