@@ -1993,6 +1993,12 @@ shinyServer(function(input, output, session) {
         )
     })    
 
+    output$noSMDText <- renderUI({
+        if ((!is.null(dsetOrig()) & datInfo$newDataNoVarsChosen )) {
+            HTML(paste0(tags$span(class="text-warning", 
+                "To view SMD plot, first generate graphs on the 'Prune' page.")))
+        } else return(NULL)
+    })
     #output$tabonetest <- renderPrint({
     #    if (is.null(tabOrig())) return(NULL)
 

@@ -13,7 +13,7 @@ output: html_document
 
 * Have SMD plots include missingness indicators & squared terms. When incorporating into a package, consider adding functions to add these things to the original dset.
 
-* SMD page: spell out SMD; also add help text about tableone and dotted line
+* Keep cleaning up text in Notes
 
 * For example dset: change 'exposed' to something more concrete (compression socks)?
 

@@ -37,6 +37,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             ) # end column
         ) # end fluidRow 
     ), # end data-import panel
+    ##################################################
+    ##################################################
+    ##################################################
     tabPanel("Specify",
         fluidRow(
             column(5,
@@ -74,8 +77,10 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         ), # end fluidRow 
         tags$hr(),
         fluidRow(
-            h3("Estimated propensity score distributions"),
-            uiOutput('psGraphsNotReady'),
+            column(12,
+                h3("Estimated propensity score distributions"),
+                uiOutput('psGraphsNotReady')
+            ), # end column
             column(6,
                 plotOutput("psPlot",
                     height= 300,
@@ -86,8 +91,21 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     height= 300,
                     width= 'auto')
             ) # end column
+        ), # end fluidRow 
+        tags$hr(),
+        fluidRow(
+            column(12,
+                h3("Notes"),
+                tags$div(
+                    tags$p("The plots on the next pages depend on the estimated propensity scores. If you want to view the plots without developing a propensity score model, just type a '1' (numeral one, no quotes) in the formula box above, and a model will be fit using just an intercept.")#, 
+                    #tags$p("At this point the missing-value indicator variables are available only within the propensity-score estimation function") 
+                )
+            ) # end column
         ) # end fluidRow 
     ), # end Specify panel
+    ##################################################
+    ##################################################
+    ##################################################
     tabPanel("Prune",
         fluidRow(
             column(5,
@@ -154,8 +172,21 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 uiOutput('psFitProblemTextPostPruning')
             ) # end column
         ), # end fluidRow 
-        uiOutput("covariatePlotsAndInputs")
+        uiOutput("covariatePlotsAndInputs"),
+        tags$hr(),
+        fluidRow(
+            column(12,
+                h3("Notes"),
+                tags$div(
+                    tags$p("The subplots in the top row for each covariate include all points in the (pruned) dataset, even if those points are missing from the subplots immediately below because the propensity score is missing. This can happen if only complete cases are used to estimate the propensity score."), 
+                    tags$p("After pruning, the pruning limits you specified for continuous variables will be moved inward to the nearest sample value.")
+                )
+            ) # end column
+        ) # end fluidRow 
     ), # end variable-selection panel
+    ##################################################
+    ##################################################
+    ##################################################
     tabPanel("Compare",
         fluidRow(
             column(4, 
@@ -174,13 +205,34 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 #verbatimTextOutput("tabonetest")
             ), # end column
             column(8, 
+                uiOutput('noSMDText'),
                 plotOutput('SMDPlot',
                     height= 800,
                     width= 'auto'
                 )
             ) # end column
-        ) # end fluidRow
+        ), # end fluidRow
+        tags$hr(),
+        fluidRow(
+            column(12,
+                h3("Notes"),
+                tags$div(
+                    tags$p(HTML(paste0(
+                        "For information about how the absolute standardized mean differences shown in the plot above are calculated, see the documentation for ",
+                            a("the tableone package", 
+                                href="https://cran.r-project.org/web/packages/tableone/index.html", 
+                                target="_blank"),
+                        "."
+                    ))), 
+                    tags$p("The dotted vertical line at 0.1 marks a degree of imbalance that many researchers consider to be unacceptable."), 
+                    tags$p("Visual Pruner currently displays in the SMD plot only those variables selected for viewing on the 'Prune' page. In general it is important to consider standardized mean differences for squared terms and interactions, as well as for missingness indicators. We hope to add automatic generation of these variables in the future, but in the meantime we recommend adding them to your dataset before importing so that you can select them for viewing.")
+                )
+            ) # end column
+        ) # end fluidRow 
     ), # end SMD panel
+    ##################################################
+    ##################################################
+    ##################################################
     tabPanel("Copy",
         fluidRow(
             column(12,
@@ -194,7 +246,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             ) # end column
         ) # end fluidRow 
     ), # end Copy panel
-
+    ##################################################
+    ##################################################
+    ##################################################
     tabPanel("About",
         fluidRow(
             column(12,
@@ -213,7 +267,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev
-                '0.3.2',
+                '0.4.0',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
@@ -245,7 +299,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             ) # end column
         ) # end fluidRow
     ), # end About panel
-
+    ##################################################
+    ##################################################
+    ##################################################
     tabPanel("R",
         fluidRow(
             column(12,
