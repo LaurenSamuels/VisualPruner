@@ -226,7 +226,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     ))), 
                     tags$p("The dotted vertical line at 0.1 marks a degree of imbalance that many researchers consider to be unacceptable."), 
                     tags$p("Visual Pruner currently displays in the SMD plot only those variables selected for viewing on the 'Prune' page. In general it is important to consider standardized mean differences for squared terms and interactions, as well as for missingness indicators. We hope to add automatic generation of these variables in the future, but in the meantime we recommend adding them to your dataset before importing so that you can select them for viewing.")
-                )
+                ),
+                uiOutput("explainWtsText")
             ) # end column
         ) # end fluidRow 
     ), # end SMD panel
@@ -257,17 +258,17 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$br(),
                 tags$br(),
                 HTML(paste0(
-                    'Some documentation can be found at ',
+                    'Additional information can be found at ',
                     a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
                         href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
                         target="_blank"),
-                    '. We hope to provide further documentation soon.' 
+                    '.' 
                 )),
                 tags$hr(),
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev
-                '0.4.0',
+                '0.4.1',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),

@@ -1993,6 +1993,30 @@ shinyServer(function(input, output, session) {
         )
     })    
 
+    output$explainWtsText <- renderUI({
+        HTML(paste0(tags$div(
+            tags$p("ATE weighting is used to estimate the Average Treatment Effect on the whole (pruned) sample."),
+            tags$p(HTML(paste0(
+                "ATT weighting is used to estimate the Average Treatment effect on the Treated units", 
+            if (!(is.null(smallestGroup()))) {
+                paste0(
+                    ", in this case those people with ",
+                    tags$code(groupVarName()),
+                    " equal to ",
+                    tags$code(smallestGroup())
+                )
+            } else NULL,
+            "."
+            ))),
+            tags$p(HTML(paste0(
+                "ATM weighting is used to estimate the Average Treatment effect on the richly Matchable units, using 'matching weights' as introduced in ",
+                    a("Li, L., & Greene, T. (2013)", 
+                        href="http://doi.org/10.1515/ijb-2012-0030", 
+                        target="_blank"),
+                "."
+            ))) 
+        )))
+    })
     output$noSMDText <- renderUI({
         if ((!is.null(dsetOrig()) & datInfo$newDataNoVarsChosen )) {
             HTML(paste0(tags$span(class="text-warning", 
