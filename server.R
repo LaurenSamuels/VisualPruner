@@ -845,7 +845,7 @@ shinyServer(function(input, output, session) {
         }
         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
         plot(0.5, 0, 
-            xlim= range(dsetPSGraphs()[get(groupVarFactorName()) == lev, get(psVarName())]),
+            xlim= range(dsetPSGraphs()[, get(psVarName())]),
             ylim= c(0, max(histcounts)), 
             xlab= "PS",
             ylab= "Count",
@@ -862,7 +862,6 @@ shinyServer(function(input, output, session) {
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaVal()),
                     border = NA,
-                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
             }
@@ -885,7 +884,7 @@ shinyServer(function(input, output, session) {
         }
         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
         plot(0, 0, 
-            xlim= range(dsetPSGraphs()[get(groupVarFactorName()) == lev, get(logitpsVarName())]),
+            xlim= range(dsetPSGraphs()[, get(logitpsVarName())]),
             ylim= c(0, max(histcounts)), 
             xlab= "Logit PS",
             ylab= "Count",
@@ -902,7 +901,6 @@ shinyServer(function(input, output, session) {
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaVal()),
                     border = NA,
-                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
             }
@@ -1203,7 +1201,7 @@ shinyServer(function(input, output, session) {
         }
         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
         plot(0, 0, 
-            xlim= range(dsetPSGraphs()[get(groupVarFactorName()) == lev, get(logitpsVarName())]),
+            xlim= range(dsetPSGraphs()[, get(logitpsVarName())]),
             ylim= c(0, max(histcounts)), 
             xlab= "Logit PS",
             ylab= "Count",
@@ -1220,7 +1218,6 @@ shinyServer(function(input, output, session) {
                     freq   = TRUE, 
                     col    = adjustcolor(myColor, alpha.f= alphaVal()),
                     border = NA,
-                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
                     add    = TRUE
                 )
             }

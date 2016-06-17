@@ -271,7 +271,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev
-                '0.4.2',
+                '0.4.3',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
