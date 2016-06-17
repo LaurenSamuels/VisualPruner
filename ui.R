@@ -94,7 +94,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         ), # end fluidRow 
         tags$hr(),
         fluidRow(
-            column(12,
+            column(6,
                 h3("Notes"),
                 tags$div(
                     tags$p("The plots on the next pages depend on the estimated propensity scores. If you want to view the plots without developing a propensity score model, just type a '1' (numeral one, no quotes) in the formula box above, and a model will be fit using just an intercept.")#, 
@@ -175,10 +175,13 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         uiOutput("covariatePlotsAndInputs"),
         tags$hr(),
         fluidRow(
-            column(12,
+            column(6,
                 h3("Notes"),
                 tags$div(
-                    tags$p("The subplots in the top row for each covariate include all points in the (pruned) dataset, even if those points are missing from the subplots immediately below because the propensity score is missing. This can happen if only complete cases are used to estimate the propensity score."), 
+                    tags$p(paste0("The subplots in the top row for each covariate include all points in the (pruned) dataset,",
+                        " even if those points are missing from the subplots immediately below because the propensity score is missing.",
+                        " This can happen if there is missing data and only complete cases are used to estimate the propensity score.")), 
+                    tags$p("The thin black lines in the stripcharts indicate the mean; in the scatterplots, the thin black lines are loess curves."), 
                     tags$p("After pruning, the pruning limits you specified for continuous variables will be moved inward to the nearest sample value.")
                 )
             ) # end column
@@ -214,8 +217,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         ), # end fluidRow
         tags$hr(),
         fluidRow(
-            column(12,
+            column(6,
                 h3("Notes"),
+                uiOutput("explainWtsText"),
                 tags$div(
                     tags$p(HTML(paste0(
                         "For information about how the absolute standardized mean differences shown in the plot above are calculated, see the documentation for ",
@@ -226,8 +230,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     ))), 
                     tags$p("The dotted vertical line at 0.1 marks a degree of imbalance that many researchers consider to be unacceptable."), 
                     tags$p("Visual Pruner currently displays in the SMD plot only those variables selected for viewing on the 'Prune' page. In general it is important to consider standardized mean differences for squared terms and interactions, as well as for missingness indicators. We hope to add automatic generation of these variables in the future, but in the meantime we recommend adding them to your dataset before importing so that you can select them for viewing.")
-                ),
-                uiOutput("explainWtsText")
+                )
             ) # end column
         ) # end fluidRow 
     ), # end SMD panel
@@ -268,7 +271,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev
-                '0.4.1',
+                '0.4.2',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
@@ -293,7 +296,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     a("Bootswatch", 
                         href="http://bootswatch.com", 
                         target="_blank"),
-                    '.'
+                    ' (slightly modified).'
                 )),
                 tags$br(),
                 'Many thanks to Qi Liu for helpful suggestions.'
