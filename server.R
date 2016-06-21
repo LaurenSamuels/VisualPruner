@@ -757,13 +757,48 @@ shinyServer(function(input, output, session) {
 
     output$psCopyText <- renderUI({
         # -- contains an isolate -- #
-        # dependencies
-        if(is.null(lrmFit())) return(NULL)
+        # dependency. TODO: I'm not totally sure I want this.
+        if (is.null(lrmFit())) return(NULL)
     
         HTML(paste0(
             tags$code(isolate(stringFormula())) 
         ))
     })
+    output$downloadPS <- downloadHandler(
+        filename = function() {
+            paste('VisualPruner_PSFormula_', Sys.Date(), '.txt', sep='')
+        },
+        content = function(myfile) {
+            # -- contains an isolate -- #
+            # dependency. TODO: I'm not totally sure I want this.
+            #   See psCopyText.
+            if (is.null(lrmFit())) { 
+                cat("NULL", file= myfile)
+            } else {
+                cat(isolate(stringFormula()), file= myfile)
+            }
+        }
+    )
+    output$downloadIncl <- downloadHandler(
+        filename = function() {
+            paste('VisualPruner_Inclusion_', Sys.Date(), '.txt', sep='')
+        },
+        content = function(myfile) {
+        if (is.null(pruneValTextList())) return(NULL)
+            if (is.null(pruneValTextList())) { 
+                cat("NULL", file= myfile)
+            } else {
+                cat(do.call("paste", list(pruneValTextList(), collapse= " &\n")), 
+                    file= myfile
+                )
+            }
+        }
+    )
+    # Actually, this does not seem to be the case
+    #output$downloadHelp <- renderUI({
+    #    HTML(paste0(tags$span(class="text-info", 
+    #        "If you are running Visual Pruner locally, you must have the app open in a browser (not RStudio) to use the dowload feature.")))
+    #})
 
     output$psFitProblemTextPrePruning <- renderUI({
         # -- contains an isolate -- (waiting for the "done typing" button)

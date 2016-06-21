@@ -250,12 +250,15 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         fluidRow(
             column(12,
                 h4('The following R expression can be copied to select rows to KEEP:'),
-                htmlOutput("keepAfterPruningCopyText")
+                htmlOutput("keepAfterPruningCopyText"),
+                downloadButton("downloadIncl", "Download inclusion criteria as .txt file")#,
+                #uiOutput("downloadHelp")
             ), # end column
             tags$hr(),
             column(6,
                 h4('Current propensity score formula:'),
-                uiOutput("psCopyText")
+                uiOutput("psCopyText"),
+                downloadButton("downloadPS", "Download PS formula as .txt file")
             ) # end column
         ) # end fluidRow 
     ), # end Copy panel
@@ -280,7 +283,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev
-                '0.4.3',
+                '0.6.0',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
