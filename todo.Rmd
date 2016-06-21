@@ -15,6 +15,8 @@ output: html_document
 
 * Keep cleaning up text in Notes
 
+* for downloads: keep playing w/ format(s) and what should/does get downloaded when item is null
+
 * For example dset: change 'exposed' to something more concrete (compression socks)?
 
 * Show limits for hyperrectangle pruning, and/or add option for hyperrectangle pruning
