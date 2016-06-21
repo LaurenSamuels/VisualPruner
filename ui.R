@@ -30,10 +30,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 uiOutput("dataDimText2"),
                 tags$br(),
                 uiOutput("groupLevelText1"),
-                tableOutput("groupLevelTable"),
-                tags$br(),
-                uiOutput("othervarsText1"),
-                tableOutput("othervarsTable")
+                tableOutput("groupLevelTable")
             ) # end column
         ) # end fluidRow 
     ), # end data-import panel
@@ -50,14 +47,31 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     "Use complete cases only" = 1
                     ),
                     0
-                ),
-                tags$br(),
+                )
+            ), # end column
+            column(6, offset = 1,
+                uiOutput("dataNonmissingDimText1"),
+                uiOutput("dataNonmissingDimText2"),
+                textOutput("dataNonmissingDimText3")
+            ) # end column
+        ), # end fluidRow 
+        fluidRow(
+            column(5,
                 h4('Propensity score model:'),
                 #helpText('Type RHS of R formula* for lrm(), e.g.'),
                 uiOutput('psHelpGeneral1'),
                 uiOutput('psHelpNA1'),
                 tags$br(),
-                uiOutput('getFormula'),
+                uiOutput('getFormula')
+            ), # end column
+            column(6, offset = 1,
+                h4('Variables in the dataset:'),
+                uiOutput('noDataChosenText2'),
+                tags$div(style = 'overflow-x: scroll', tableOutput('othervarsTable'))
+            ) # end column
+        ), # end fluidRow 
+        fluidRow(
+            column(5,
                 actionButton('psTypedButton', "I have finished typing"),
                 uiOutput('psNeedsCheckingText')
             ), # end column
@@ -67,12 +81,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4("Variable-name check:"),
                 uiOutput('psVarsProblemText'),
                 h4("Model-fitting check:"),
-                uiOutput('psFitProblemTextPrePruning'),
-                tags$br(),
-                tags$br(),
-                uiOutput("dataNonmissingDimText1"),
-                uiOutput("dataNonmissingDimText2"),
-                textOutput("dataNonmissingDimText3")
+                uiOutput('psFitProblemTextPrePruning')
             ) # end column
         ), # end fluidRow 
         tags$hr(),

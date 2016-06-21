@@ -1,0 +1,62 @@
+```{r setup1, include= FALSE}
+knitr::opts_chunk$set(
+    comment = NA,
+    echo    = TRUE,
+    error   = TRUE,
+    results = 'markup'
+)
+```
+
+```{r setup2, results= 'hide', message= FALSE, warning= FALSE}
+#rm(list= ls())
+
+library(rms)
+library(data.table)
+```
+
+```{r makedat}
+N <- 100
+dat <- data.table(
+    x1 = rnorm(N), 
+    x2 = rnorm(N),
+    exposed = rbinom(N, 1, 0.7)
+)
+
+dat[1:15, x1 := NA]
+dat[, x1 := impute(x1)]
+dat[, x1.is.imputed := is.imputed(x1)]
+
+dd <- datadist(dat)
+options(datadist = 'dd')
+
+describe(dat)
+```
+
+What I would like to do is this:
+```{r fit1glm}
+fit1glm <- glm(exposed ~ x1 + x2 + is.imputed(x1), 
+    family= 'binomial', data= dat)
+fit1glm
+```
+
+It works with glm (above), but not with lrm:
+```{r fit1lrm}
+fit1lrm <- lrm(exposed ~ x1 + x2 + is.imputed(x1), data= dat)
+```
+
+I think the problem has to do with the names the terms are given. In the glm() model fit above the terms get the following names:
+```{r glmnames}
+names(coef(fit1glm))
+```
+
+But if we use is.imputed() with lrm(), the is.imputed(x1) term gets called "x1", so we can't use x1 and is.imputed(x1) in the same model:
+```{r fit2lrm}
+fit2lrm <- lrm(exposed ~ x2 + is.imputed(x1), data= dat)
+fit2lrm
+```
+lrm() works fine if we give the is.imputed() term a different name in the dataset:
+```{r fit3lrm}
+fit3lrm <- lrm(exposed ~ x1 + x2 + x1.is.imputed, data= dat)
+fit3lrm
+```
+

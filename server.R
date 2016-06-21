@@ -356,21 +356,6 @@ shinyServer(function(input, output, session) {
         dat
     }, include.rownames = FALSE)
 
-    output$othervarsText1 <- renderUI({
-        if (is.null(groupVarFactorName())) return(NULL)
-
-        HTML(paste0(tags$h5("Other variables in the dataset:")))
-    })
-    output$othervarsTable <- renderTable({
-        if (is.null(groupVarFactorName())) return(NULL)
-
-        namesToExclude <- c(idVarName(), groupVarName())
-        if (groupVarName() != groupVarFactorName()) {
-            namesToExclude <- c(namesToExclude, groupVarFactorName())
-        }
-
-        data.frame(Variables= setdiff(varnamesOrig(), namesToExclude)) 
-    }, include.rownames = FALSE, include.colnames= FALSE)
 
     ############################################################
     ############################################################
@@ -622,6 +607,35 @@ shinyServer(function(input, output, session) {
         }
     })
 
+    #output$othervarsText1 <- renderUI({
+    #    if (is.null(groupVarFactorName())) return(NULL)
+#
+    #    HTML(paste0(tags$h5("Variables in the dataset:")))
+    #})
+    output$noDataChosenText2 <- renderUI({
+        if (is.null(dsetOrig()) | 
+            (input$useExampleData == 0 & is.null(datInfo$inFileInfo))) {
+            HTML(paste0(tags$span(class="text-warning", "No dataset selected.")))
+        } else return(NULL)
+    })
+    output$othervarsTable <- renderTable({
+        if (is.null(groupVarFactorName())) return(NULL)
+
+        namesToExclude <- c(idVarName(), groupVarName())
+        if (groupVarName() != groupVarFactorName()) {
+            namesToExclude <- c(namesToExclude, groupVarFactorName())
+        }
+
+        #data.frame(Variables= setdiff(varnamesOrig(), namesToExclude)) 
+        
+        myvars <- setdiff(varnamesOrig(), namesToExclude)
+        nvars <- length(myvars)
+        nrows <- min(ceil(nvars / 2), 5)
+        numExtras <- (nrows - (nvars %% nrows)) %% nrows
+        data.frame(matrix(c(myvars, rep(NA, numExtras)), 
+            nrow = nrows, byrow = TRUE)) 
+    }, include.rownames = FALSE, include.colnames= FALSE)
+    
     PSIDs <- reactive({
         # -- contains an isolate -- #
         # dependencies
@@ -731,9 +745,13 @@ shinyServer(function(input, output, session) {
                 data  = dsetOrig()[PSIDs()])},
                 error = function(e) return(NULL))
         } else { # use imputed data
-            tryCatch({lrm(psForm(), 
-                data  = dsetImputed())},
-                error = function(e) return(NULL))
+            tryCatch({
+                lrm(psForm(), data = dsetImputed())
+                # advantage of using glm: don't have to use
+                #   is.na_ prefix.
+                # disadvantage: need binary exposure indicator
+                #glm(psForm(), data = dsetImputed(), family= 'binomial')
+                }, error = function(e) return(NULL))
         }    
     })
 
