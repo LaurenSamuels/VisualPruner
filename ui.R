@@ -246,7 +246,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     ##################################################
     ##################################################
     ##################################################
-    tabPanel("Copy",
+    tabPanel("Download",
         fluidRow(
             column(12,
                 h4('The following R expression can be copied to select rows to KEEP:'),
@@ -273,7 +273,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$br(),
                 tags$br(),
                 HTML(paste0(
-                    'Additional information can be found at ',
+                    'Instructions for running locally and additional information can be found at ',
                     a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
                         href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
                         target="_blank"),
@@ -283,7 +283,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev
-                '0.6.0',
+                '0.6.1',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
@@ -311,7 +311,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     ' (slightly modified).'
                 )),
                 tags$br(),
-                'Many thanks to Qi Liu for helpful suggestions.'
+                'Many thanks to Qi Liu and Dale Plummer for helpful suggestions.'
             ) # end column
         ) # end fluidRow
     ), # end About panel
