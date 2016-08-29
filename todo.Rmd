@@ -15,6 +15,12 @@ output: html_document
 
 * Keep cleaning up text in Notes
 
+* Keep in mind: input$mainNavbarPage gives name of current tab.
+
+* Add error handling for file upload
+
+* Add error handling for while() statements used in naming
+
 * for downloads: keep playing w/ format(s) and what should/does get downloaded when item is null
 
 * For example dset: change 'exposed' to something more concrete (compression socks)?

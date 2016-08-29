@@ -40,11 +40,11 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     tabPanel("Specify",
         fluidRow(
             column(5,
-                h4('Handling missing values in PS model:'),
-                radioButtons('completeCasesOnly', NULL,
+                h4('If subjects have missing values for variables in PS model...'),
+                radioButtons('forPSCompleteCasesOnly', NULL,
                     c(
-                    "Impute missing values using mean or mode" = 0,
-                    "Use complete cases only" = 1
+                    "Impute their missing values using mean or mode" = 0,
+                    "Do not estimate a PS for them" = 1
                     ),
                     0
                 )
