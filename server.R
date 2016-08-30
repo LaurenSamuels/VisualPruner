@@ -488,7 +488,7 @@ shinyServer(function(input, output, session) {
             logit.ps = logitPS(), 
             ps       = PS()
         )
-        # keep only subjects with values in both dsets
+        # keep only units with values in both dsets
         dat <- merge(dat1, dat2, by= "id")  
         names(dat)[names(dat) == "id"] <- idVarName()
         names(dat)[names(dat) == "ps"] <- psVarName()
@@ -857,18 +857,10 @@ shinyServer(function(input, output, session) {
         if (psNotChecked() | 
             is.null(varnamesFromRHSOK())) return(NULL)
 
-        HTML(paste0(tags$hr()))
-    })
-    output$dataNonmissingDimText2  <- renderUI({
-        if (is.null(idsWithVarsOKForPS()) | 
-            !psUseCompleteCasesOnly()) return(NULL)
-        if (psNotChecked() | 
-            is.null(varnamesFromRHSOK())) return(NULL)
-
         HTML(paste0(tags$h4("Impact of not imputing missing values:")))
     })
-    output$dataNonmissingDimText3 <- renderText({
-        if (is.null(idsWithVarsOKForPS()) | 
+    output$dataNonmissingDimText2 <- renderText({
+        if (is.null(idsWithVarsOKForPS()) | is.null(PSIDs()) | 
             !psUseCompleteCasesOnly()) return(NULL)
         if (psNotChecked() | 
             is.null(varnamesFromRHSOK())) return(NULL)
@@ -876,7 +868,7 @@ shinyServer(function(input, output, session) {
         # TODO: could add "out of" but this would have to be out of
         #     original or pruned dataset
         paste0("Propensity scores can be estimated for ",
-            length(idsWithVarsOKForPS()), " subjects.")
+            length(PSIDs()), " units.")
     })
     output$psPlot <- renderPlot({
         if (is.null(dsetPSGraphs())) return(NULL)
@@ -1069,7 +1061,7 @@ shinyServer(function(input, output, session) {
         names(myvec) <- vnames
         myvec
     })    
-    catVars <- reactive({
+    catVarsToView <- reactive({
         if (is.null(varIsContinuous())) return(NULL)
         
         varsToView()[!varIsContinuous()[varsToView()]]
@@ -1082,6 +1074,8 @@ shinyServer(function(input, output, session) {
         input$pointsizeSlider
     })
     # number of decimal places to use w/ covariate graph inputs
+    # May have this changeable at some point, so I'm setting it up
+    #    as a reactive to begin with
     xdig <- reactive({
         2
     })
@@ -1308,6 +1302,40 @@ shinyServer(function(input, output, session) {
     })
     
     
+    dsetXGraphs <- reactive({
+        if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
+        if (is.null(varsToView())) return(NULL)
+        if (is.null(dsetPSGraphs())) return(NULL)
+        if (is.null(dsetGroupvar())) return(NULL)
+
+        # core dataset for plots: ID, group, x
+        dat <- merge(
+            dsetOrig()[idsToKeepAfterPruning()][, 
+                c(idVarName(), varsToView(), groupVarName()), with= FALSE],
+            dsetGroupvar()[idsToKeepAfterPruning()],
+            # just in case
+            suffixes = c("", ".y")
+        )
+        setkeyv(dat, idVarName())
+        dat
+    })
+    dsetXPS <- reactive({
+        if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
+        if (is.null(dsetXGraphs())) return(NULL)
+        if (is.null(dsetPSGraphs())) return(NULL)
+    
+        # dset w/ x and PS. Either could be missing.
+        dat <- merge(
+            dsetXGraphs(), 
+            dsetPSGraphs(),
+            all= TRUE, 
+            # just in case
+            suffixes= c("", ".y"))
+        setkeyv(dat, idVarName())
+        dat
+    })
+
+
     #############################################################
 
     # modified from https://gist.github.com/wch/5436415/, with
@@ -1335,21 +1363,15 @@ shinyServer(function(input, output, session) {
                 plotname <- paste0("plot_", varname)
      
                 output[[plotname]] <- renderPlot({
-                    if (is.null(dsetPSGraphs())) return(NULL)
-                    if (is.null(dsetGroupvar())) return(NULL)
+                    if (is.null(dsetXGraphs())) return(NULL)
+                    if (is.null(dsetXPS())) return(NULL)
 
                     # For plot alignment
                     testing <- FALSE
 
                     # core dataset for plots: ID, group, x
-                    datx <- merge(
-                        dsetOrig()[idsToKeepAfterPruning()][, 
-                            c(idVarName(), varname), with= FALSE],
-                        dsetGroupvar()[idsToKeepAfterPruning()],
-                        all.x = TRUE,
-                        suffixes = c("", ".y")
-                    )
-                    setkeyv(datx, idVarName())
+                    datxnames <- c(idVarName(), varname, groupVarFactorName())
+                    datx <- dsetXGraphs()[, datxnames, with= FALSE]
                     
                     # convert character & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
@@ -1366,10 +1388,7 @@ shinyServer(function(input, output, session) {
                     datx.xna <- datx[is.na(get(varname)), ]
                     
                     # dset w/ x and PS. Either could be missing.
-                    datxps <- merge(datx, 
-                        dsetPSGraphs(),
-                        all= TRUE, suffixes= c("", ".y"))
-                    setkeyv(datxps, idVarName())
+                    datxps <- dsetXPS()[, c(datxnames, logitpsVarName()), with= FALSE]
                     
                     # use datxps.nona for central scatterplot/stripchart
                     datxps.nona <- na.omit(datxps)
@@ -1719,6 +1738,35 @@ shinyServer(function(input, output, session) {
             local({
                 my_i <- i
                 varname     <- varsToView()[my_i]
+                underPlotTextName <- paste0("underPlot_", varname)
+
+                # Create the under-plot text for each variable, if applicable
+                output[[underPlotTextName]] <- renderUI({
+                    if (!psUseCompleteCasesOnly()) return(NULL)
+                    if (is.null(dsetXPS())) return(NULL)
+                    if (is.null(dsetXPS())) return(NULL)
+
+                    nWithXButNoPS <- length(
+                        dsetXPS()[is.na(get(logitpsVarName())) & !is.na(get(varname)), 
+                            ][[idVarName()]]
+                    )
+                    if (nWithXButNoPS == 0) return(NULL)
+                    
+                HTML(#paste0(tags$span(
+                    paste0("There are ", nWithXButNoPS, " units with values for this variable but with no propensity score.")
+                )#))
+
+                }) # end renderUI
+
+            }) # end local
+        } # end for
+    }) # end observe    
+
+    observe({
+        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
+            local({
+                my_i <- i
+                varname     <- varsToView()[my_i]
                 naTableName <- paste0("naTable_", varname)
 
                 # Create a missing-by-group table for each variable
@@ -1827,7 +1875,6 @@ shinyServer(function(input, output, session) {
     }) # end observe    
 
     
-    # Keeping the observe for the textcheck separate
     observe({
         if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             local({
@@ -1875,6 +1922,7 @@ shinyServer(function(input, output, session) {
         for (i in seq_along(varsToView())) {
             varname        <- varsToView()[i]
             plotname       <- paste0("plot_", varname)
+            underPlotname  <- paste0("underPlot_", varname)
             pruner1name    <- paste0("pruner1_", varname)
             pruner2name    <- paste0("pruner2_", varname)
             textcheck1name <- paste0("textcheck1_", varname)
@@ -1885,11 +1933,12 @@ shinyServer(function(input, output, session) {
                 tags$hr(),
                 h4(paste0("Variable: ", varname)),
                 column(width= 5, offset= 1, 
+                    uiOutput(underPlotname),
                     plotOutput(plotname, 
                         #inline= TRUE
                         height= 300,
                         width  = "auto"
-                    ) # end plotOutput   
+                    ) # end plotOutput  
                 ), # end column
                 column(6,
                     if (varIsContinuous()[varname]) {
@@ -1917,7 +1966,7 @@ shinyServer(function(input, output, session) {
  
     ############################################################
     ############################################################
-    ## SMDs
+    ## SMD plots
     wantATEWts <- reactive({
         input$showATE
     })
@@ -1937,7 +1986,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = dsetOrig(),
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -1953,7 +2002,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = dsetOrig()[idsToKeepAfterPruning()],
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -1993,7 +2042,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = svydat,
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -2012,7 +2061,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = svydat,
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -2031,7 +2080,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = svydat,
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE

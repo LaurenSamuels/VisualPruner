@@ -7,6 +7,8 @@ output: html_document
 
 * Make it a package
 
+* Refactor the code for the covariate graphs. At this point some of the datasets are getting made multiple times. Make a list instead.
+
 * Add button to reset all pruning, and/or provide the original sample limits
 
 * For SMD page: reset checkboxes to FALSE on new dataset upload
