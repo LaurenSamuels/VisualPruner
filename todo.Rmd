@@ -7,7 +7,9 @@ output: html_document
 
 * Make it a package
 
-* Refactor the code for the covariate graphs. At this point some of the datasets are getting made multiple times. Make a list instead.
+* On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.
+
+* Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?
 
 * Add button to reset all pruning, and/or provide the original sample limits
 
@@ -56,8 +58,6 @@ If I'm going to use it, how reference from w/in app?
 This might help with the "rollback" too.
 
 * Later: allow > 2 tx groups
-
-* Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
 
 * Put in note: user-specified pruning limits will be moved inwards to nearest sample point 
 
