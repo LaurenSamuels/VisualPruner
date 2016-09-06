@@ -7,6 +7,8 @@ output: html_document
 
 * Make it a package
 
+* Surely I can change that pct.missing to % missing?
+
 * On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.
 
 * Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?
