@@ -1780,6 +1780,7 @@ shinyServer(function(input, output, session) {
                         with= FALSE]
                     dat <- datx[, .(pct.missing = 100 * mean(is.na(get(varname)))), 
                         by= eval(groupVarName())]
+                    names(dat)[names(dat) == "pct.missing"] <- "% Missing"
                     dat
                 }, digits= 1, include.rownames= FALSE
                 ) # end renderTable
@@ -1956,8 +1957,8 @@ shinyServer(function(input, output, session) {
                         )
                     ),
                     tags$br(),
-                    uiOutput(naTableName),
-                    uiOutput(keepNAName)
+                    uiOutput(keepNAName),
+                    uiOutput(naTableName)
                 ) # end column
             )# end fluidRow
         } 
