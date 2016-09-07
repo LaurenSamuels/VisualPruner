@@ -9,6 +9,8 @@ output: html_document
 
 * On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.
 
+* Do they need to be 'imputation indicators' instead?
+
 * Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?
 
 * Add button to reset all pruning, and/or provide the original sample limits
