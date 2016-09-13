@@ -61,8 +61,6 @@ This might help with the "rollback" too.
 
 * Later: allow > 2 tx groups
 
-* Put in note: user-specified pruning limits will be moved inwards to nearest sample point 
-
 * Add option to use prognostic score instead?
 
 * Maybe: change # bins (put in binwidth controls)
