@@ -286,8 +286,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$hr(),
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
-                # major.minor.patch.dev
-                '0.6.2',
+                # major.minor.patch.dev; I'm doing major.minor.patch
+                '0.7',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
