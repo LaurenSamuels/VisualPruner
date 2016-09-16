@@ -14,7 +14,7 @@ options(shiny.usecairo= FALSE)
 # The first number is the number of MB
 options(shiny.maxRequestSize=30*1024^2)
 
-# text types for use w/ CSS
+# text types for use w/ CSS, just here as a reference
 #<"text-muted">
 #<"text-primary">
 #<"text-warning">
@@ -24,14 +24,15 @@ options(shiny.maxRequestSize=30*1024^2)
 
 shinyServer(function(input, output, session) {
     ############################################################
+    ## reactiveValues() and related observers
     ############################################################
-    ## Flags 
     
-    # I'm using reactiveValues() here so I can set the fileInfo
-    #   to NULL when the user decides to upload a new file.
-    # Also I need a flag for when user switches datasets
     datInfo <- reactiveValues()
+    # This workaround lets me set the fileInfo
+    #   to NULL when the user decides to upload a new file.
+    #   I think an easier way is coming w/ new versions of Shiny.
     datInfo$inFileInfo          <- NULL
+    # Flags 
     datInfo$newData             <- NULL
     datInfo$newDataNoVarsChosen <- NULL
     datInfo$newDataNotYetPruned <- NULL
@@ -41,13 +42,6 @@ shinyServer(function(input, output, session) {
             datInfo$inFileInfo <- input$datafileInfo 
         } 
     })
-    observeEvent(input$changeUpFileButton, {
-        datInfo$inFileInfo <- NULL
-
-        datInfo$newData             <- TRUE
-        datInfo$newDataNoVarsChosen <- TRUE
-        datInfo$newDataNotYetPruned <- TRUE
-    })    
     observe({
         input$useExampleData
 
@@ -55,6 +49,13 @@ shinyServer(function(input, output, session) {
         datInfo$newDataNoVarsChosen <- TRUE
         datInfo$newDataNotYetPruned <- TRUE
     })
+    observeEvent(input$changeUpFileButton, {
+        datInfo$inFileInfo <- NULL
+
+        datInfo$newData             <- TRUE
+        datInfo$newDataNoVarsChosen <- TRUE
+        datInfo$newDataNotYetPruned <- TRUE
+    })    
     observeEvent(input$psTypedButton, {
         if (!is.null(dsetOrig())) {
             datInfo$newData <- FALSE
@@ -71,7 +72,6 @@ shinyServer(function(input, output, session) {
             datInfo$newDataNotYetPruned <- FALSE
         }
     })
-    # TODO: keep in mind: input$mainNavbarPage gives name of current tab. could use this too
     
     ############################################################
     ############################################################
@@ -169,11 +169,6 @@ shinyServer(function(input, output, session) {
             
             mydat <- data.table(exposed, age, height_ft, systolicBP, 
                 gender, smoker, ABO)
-            #tmpfit <- lrm(exposed ~ rcs(age) + rcs(height_ft) + rcs(systolicBP) + gender, data= mydat)
-            #tmplogit <- tmpfit$linear.predictors
-            #tmpprob <- exp(tmplogit) / (1 + exp(tmplogit))
-            #tmpbinom <- rbinom(N, 1, tmpprob)
-            #mydat[, exposed := ifelse(tmpbinom == 1, "Yes", "No")]
         }  else if (!is.null(datInfo$inFileInfo)) {
             if (grepl("\\.csv\\>", datInfo$inFileInfo$name)) {
                 mydat <- fread(datInfo$inFileInfo$datapath,
@@ -182,7 +177,6 @@ shinyServer(function(input, output, session) {
                     data.table= TRUE
                 )
             } else if (grepl("\\.rds\\>", datInfo$inFileInfo$name)){
-                # todo: add error handling. 
                 mydat <- as.data.table(readRDS(datInfo$inFileInfo$datapath))
             }    
         }
@@ -192,12 +186,15 @@ shinyServer(function(input, output, session) {
         if(is.null(dsetOrig())) return (NULL)
         names(dsetOrig())  
     })
+    nOrig <- reactive({
+        if(is.null(dsetOrig())) return (NULL)
+        nrow(dsetOrig())  
+    })
     idVarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the id var
         if(is.null(varnamesOrig())) return (NULL)
         
-        # TODO: error handling here
         proposedName <- "MY__ID"
         while(proposedName %in% varnamesOrig()) {
             proposedName <- paste0(proposedName, "_NEW")    
@@ -214,12 +211,15 @@ shinyServer(function(input, output, session) {
         }
     })
     possGroupNamesOrig <- reactive({
+        # Returns a vector of names of variables with exactly two unique values
         if(is.null(dsetOrig())) return (NULL)
         varnamesOrig()[sapply(dsetOrig(), 
             function(vec) length(unique(vec)) == 2)]
     })
     output$chooseGroup <- renderUI({
         if (is.null(dsetOrig())) return(NULL)
+        
+        # TODO: is this next line still necessary?
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
 
         selectizeInput('treatmentVarName', 
@@ -231,6 +231,8 @@ shinyServer(function(input, output, session) {
     })
     groupVarName <- reactive({
         if (is.null(dsetOrig())) return(NULL)
+
+        # TODO: is this next line still necessary?
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
         input$treatmentVarName
@@ -251,61 +253,8 @@ shinyServer(function(input, output, session) {
         proposedName
     })    
 
-    dsetGroupvar <- reactive({
-        if (datInfo$newData == TRUE) return(NULL)
-        if (is.null(dsetOrig())) return(NULL)
-        if (is.null(groupVarFactorName())) return(NULL)
-        if (is.null(idVarName())) return(NULL)
 
-        dat <- data.table(dsetOrig()[[idVarName()]])
-        setnames(dat, old = names(dat), new = idVarName())
-
-        if (!is.factor(dsetOrig()[[groupVarName()]])) {
-            dat[, groupVarFactorName() := 
-                factor(dsetOrig()[[groupVarName()]])]
-        } else {
-            dat[, groupVarFactorName() := 
-                dsetOrig()[[groupVarName()]]]
-        }
-        setkeyv(dat, idVarName())
-        dat 
-    })
-
-    groupVarFactorLevelsSorted <- reactive({
-        # for use in graphs
-        if (is.null(dsetGroupvar())) return(NULL)
-
-        tmp <- table(dsetGroupvar()[[groupVarFactorName()]])
-        names(tmp)[order(tmp, decreasing= TRUE)]
-    })
-    smallestGroup <- reactive({
-        if (is.null(groupVarFactorLevelsSorted())) return(NULL)
-
-        groupVarFactorLevelsSorted()[length(
-            groupVarFactorLevelsSorted())]
-    })
-    colorScale.mod <- reactive({
-        if (is.null(dsetGroupvar())) return(NULL)
-
-        #colors from  bootswatch sandstone
-        primary <- "#325D88"
-        success <- "#93C54B"
-        info    <- "#29ABE0"
-        warning <- "#F47C3C"
-        danger  <- "#d9534f"
-        myColorScale <- c(
-            primary,
-            warning,
-            success,
-            info,
-            danger
-        )
-        
-        sc <- myColorScale[1:length(groupVarFactorLevelsSorted())]
-        names(sc) <- groupVarFactorLevelsSorted()
-        sc
-    })
-
+    # Text related to data import, etc.
     output$noDataChosenText <- renderUI({
         if (is.null(dsetOrig()) | 
             (input$useExampleData == 0 & is.null(datInfo$inFileInfo))) {
@@ -361,19 +310,19 @@ shinyServer(function(input, output, session) {
     ############################################################
     ## PS specification, etc.
     
-    useCompleteCasesOnly <- reactive({
-        input$completeCasesOnly == 1
+    psUseCompleteCasesOnly <- reactive({
+        input$forPSCompleteCasesOnly == 1
     })
     
-    nonMissingIDs <- reactive({
+    idsWithVarsOKForPS <- reactive({
         # These are the IDs of people who can be used for PS calculation
-        #   (will be used in intersection w/ keepAfterPruning IDs)
+        #    in terms of the non-missingness of the relevant variables
         if (datInfo$newData == TRUE) return(NULL)
         if (is.null(idVarName())) return (NULL)
 
         if (is.null(varnamesFromRHS())) return(dsetOrig()[[idVarName()]])
         
-        if (useCompleteCasesOnly()) {
+        if (psUseCompleteCasesOnly()) {
             na.omit(dsetOrig()[, c(varnamesFromRHS(), idVarName()), 
                 with= FALSE])[[idVarName()]]
         } else {
@@ -384,7 +333,7 @@ shinyServer(function(input, output, session) {
     psVarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the ps var in dsetPSGraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
+        #   (we have to make sure it does not overlap w/ varnames from original dset)
         if(is.null(dsetOrig())) return (NULL)
         
         proposedName <- "MY__PS"
@@ -396,7 +345,7 @@ shinyServer(function(input, output, session) {
     logitpsVarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the logit ps var in dsetPSGraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
+        #   (we have to make sure it does not overlap w/ varnames from original dset)
         if(is.null(dsetOrig())) return (NULL)
         
         proposedName <- "MY__LOGITPS"
@@ -419,7 +368,7 @@ shinyServer(function(input, output, session) {
     treatedVarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the 0/1 tx indicator var in dsetPSGraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
+        #   (we have to make sure it does not overlap w/ varnames from original dset)
         if(is.null(dsetOrig())) return (NULL)
         
         proposedName <- "MY__TX01"
@@ -431,7 +380,7 @@ shinyServer(function(input, output, session) {
     ateWtVarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the ATE wt var in dsetPSGraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
+        #   (we have to make sure it does not overlap w/ varnames from original dset)
         if(is.null(dsetOrig())) return (NULL)
         
         proposedName <- "MY__ATE"
@@ -443,7 +392,7 @@ shinyServer(function(input, output, session) {
     attWtVarName <- reactive({
         # The name produced by this function will be used as
         #   the name of the ATT wt var in dsetPSGraphs()
-        #   (we have to make sure it does not overlap w/ current var names)
+        #   (we have to make sure it does not overlap w/ varnames from original dset)
         if(is.null(dsetOrig())) return (NULL)
         
         proposedName <- "MY__ATT"
@@ -465,6 +414,62 @@ shinyServer(function(input, output, session) {
         proposedName
     })    
 
+    dsetGroupvar <- reactive({
+        # A dataset with two columns, id and group.
+        # Contains all rows from original dataset.
+        # Not created until after the PS formula is typed.
+        if (datInfo$newData == TRUE) return(NULL)
+        if (is.null(dsetOrig())) return(NULL)
+        if (is.null(groupVarFactorName())) return(NULL)
+        if (is.null(idVarName())) return(NULL)
+
+        dat <- data.table(dsetOrig()[[idVarName()]])
+        setnames(dat, old = names(dat), new = idVarName())
+
+        if (!is.factor(dsetOrig()[[groupVarName()]])) {
+            dat[, groupVarFactorName() := 
+                factor(dsetOrig()[[groupVarName()]])]
+        } else {
+            dat[, groupVarFactorName() := 
+                dsetOrig()[[groupVarName()]]]
+        }
+        setkeyv(dat, idVarName())
+        dat 
+    })
+    groupVarFactorLevelsSorted <- reactive({
+        # for use in graphs
+        if (is.null(dsetGroupvar())) return(NULL)
+
+        tmp <- table(dsetGroupvar()[[groupVarFactorName()]])
+        names(tmp)[order(tmp, decreasing= TRUE)]
+    })
+    smallestGroup <- reactive({
+        if (is.null(groupVarFactorLevelsSorted())) return(NULL)
+
+        groupVarFactorLevelsSorted()[length(
+            groupVarFactorLevelsSorted())]
+    })
+    colorScale <- reactive({
+        if (is.null(dsetGroupvar())) return(NULL)
+
+        #colors from  bootswatch sandstone
+        primary <- "#325D88"
+        success <- "#93C54B"
+        info    <- "#29ABE0"
+        warning <- "#F47C3C"
+        danger  <- "#d9534f"
+        myColorScale <- c(
+            primary,
+            warning,
+            success,
+            info,
+            danger
+        )
+        
+        sc <- myColorScale[1:length(groupVarFactorLevelsSorted())]
+        names(sc) <- groupVarFactorLevelsSorted()
+        sc
+    })
     dsetPSGraphs <- reactive({
         # This dataset is used for making the PS plots.
         if (is.null(dsetGroupvar())) return(NULL)
@@ -472,11 +477,10 @@ shinyServer(function(input, output, session) {
         if (is.null(smallestGroup())) return(NULL) 
         if (is.null(idsToKeepAfterPruning())) return(NULL) 
         
-        # todo: do this all using data.table
         dat1 <- data.frame(
-            id    = unlist(dsetOrig()[nonMissingIDs(), 
+            id    = unlist(dsetOrig()[idsWithVarsOKForPS(), 
                 idVarName(), with= FALSE]),
-            group = unlist(dsetGroupvar()[nonMissingIDs(), 
+            group = unlist(dsetGroupvar()[idsWithVarsOKForPS(), 
                 groupVarFactorName(), with= FALSE])
         )
         dat2 <- data.frame(
@@ -484,7 +488,7 @@ shinyServer(function(input, output, session) {
             logit.ps = logitPS(), 
             ps       = PS()
         )
-        # keep only subjects with values in both dsets
+        # keep only units with values in both dsets
         dat <- merge(dat1, dat2, by= "id")  
         names(dat)[names(dat) == "id"] <- idVarName()
         names(dat)[names(dat) == "ps"] <- psVarName()
@@ -533,11 +537,11 @@ shinyServer(function(input, output, session) {
     formRHS <- reactive({
         # -- contains an isolate -- #
         # Dependencies
+        if (input$psTypedButton == 0) return(NULL) 
         if (datInfo$newData == TRUE) return(NULL)
         if (is.null(dsetOrig())) return(NULL)
-        if (input$psTypedButton == 0) return(NULL) 
         groupVarName()
-        useCompleteCasesOnly()
+        psUseCompleteCasesOnly()
         
         isolate(input$formulaRHS)
     })
@@ -583,7 +587,7 @@ shinyServer(function(input, output, session) {
         ))
     })
     output$psHelpNA1 <- renderUI({
-        if (useCompleteCasesOnly()) {
+        if (psUseCompleteCasesOnly()) {
             return(NULL)
         } else {
             HTML(paste0(
@@ -607,11 +611,6 @@ shinyServer(function(input, output, session) {
         }
     })
 
-    #output$othervarsText1 <- renderUI({
-    #    if (is.null(groupVarFactorName())) return(NULL)
-#
-    #    HTML(paste0(tags$h5("Variables in the dataset:")))
-    #})
     output$noDataChosenText2 <- renderUI({
         if (is.null(dsetOrig()) | 
             (input$useExampleData == 0 & is.null(datInfo$inFileInfo))) {
@@ -625,8 +624,6 @@ shinyServer(function(input, output, session) {
         if (groupVarName() != groupVarFactorName()) {
             namesToExclude <- c(namesToExclude, groupVarFactorName())
         }
-
-        #data.frame(Variables= setdiff(varnamesOrig(), namesToExclude)) 
         
         myvars <- setdiff(varnamesOrig(), namesToExclude)
         nvars <- length(myvars)
@@ -640,9 +637,9 @@ shinyServer(function(input, output, session) {
         # -- contains an isolate -- #
         # dependencies
         if (datInfo$newData == TRUE) return(NULL)
-        if (input$PSCalcUpdateButton == 0) return(nonMissingIDs()) 
+        if (input$PSCalcUpdateButton == 0) return(idsWithVarsOKForPS()) 
         
-        intersect(nonMissingIDs(), isolate(idsToKeepAfterPruning()))
+        intersect(idsWithVarsOKForPS(), isolate(idsToKeepAfterPruning()))
     })
 
     varnamesFromRHS <- reactive({
@@ -650,7 +647,7 @@ shinyServer(function(input, output, session) {
         
         allvars <- setdiff(all.vars(psForm()), groupVarName())
         
-        if (useCompleteCasesOnly()) {
+        if (psUseCompleteCasesOnly()) {
             if (all(allvars %in% varnamesOrig())) allvars else NULL
         } else {
             allvars.noprefix <- 
@@ -683,7 +680,7 @@ shinyServer(function(input, output, session) {
         } else if (!psFormSyntaxOK()) {
             HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!varnamesFromRHSOK()) {
-            if (useCompleteCasesOnly() & 
+            if (psUseCompleteCasesOnly() & 
                 any(grepl(paste0("^", naPrefix()), all.vars(psForm())))) {
                 HTML(paste0(tags$span(class="text-danger", paste0(
                     "The formula uses missingness indicators, but you have ",
@@ -707,7 +704,7 @@ shinyServer(function(input, output, session) {
         if (datInfo$newData == TRUE) return(NULL)
         if (is.null(varnamesFromRHS())) return(NULL)
         if (is.null(PSIDs())) return(NULL)
-        if (useCompleteCasesOnly()) return(NULL)
+        if (psUseCompleteCasesOnly()) return(NULL)
         
         origvars <- unique(gsub(paste0("^", naPrefix()), "", varnamesFromRHS()))
         myvars <- c(origvars, groupVarName())
@@ -740,16 +737,17 @@ shinyServer(function(input, output, session) {
         if (is.null(psForm()) | 
             is.null(varnamesFromRHS())) return(NULL)
         
-        if (useCompleteCasesOnly()) {
+        if (psUseCompleteCasesOnly()) {
             tryCatch({lrm(psForm(), 
                 data  = dsetOrig()[PSIDs()])},
                 error = function(e) return(NULL))
         } else { # use imputed data
             tryCatch({
                 lrm(psForm(), data = dsetImputed())
-                # advantage of using glm: don't have to use
-                #   is.na_ prefix.
-                # disadvantage: need binary exposure indicator
+                # todo: keep in mind:
+                #   advantage of using glm instead: don't have to use
+                #       is.na_ prefix.
+                #   disadvantage: need binary exposure indicator
                 #glm(psForm(), data = dsetImputed(), family= 'binomial')
                 }, error = function(e) return(NULL))
         }    
@@ -794,16 +792,11 @@ shinyServer(function(input, output, session) {
             }
         }
     )
-    # Actually, this does not seem to be the case
-    #output$downloadHelp <- renderUI({
-    #    HTML(paste0(tags$span(class="text-info", 
-    #        "If you are running Visual Pruner locally, you must have the app open in a browser (not RStudio) to use the dowload feature.")))
-    #})
 
     output$psFitProblemTextPrePruning <- renderUI({
         # -- contains an isolate -- (waiting for the "done typing" button)
         # dependencies
-        useCompleteCasesOnly()
+        psUseCompleteCasesOnly()
         
         if (datInfo$newData == TRUE | psNotChecked() | is.null(varnamesFromRHSOK())) {
             HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
@@ -817,7 +810,7 @@ shinyServer(function(input, output, session) {
     })
     output$psGraphsNotReady <- renderUI({
         # dependencies
-        useCompleteCasesOnly()
+        psUseCompleteCasesOnly()
         
         if (is.null(dsetPSGraphs())) {
             HTML(paste0(tags$span(class="text-warning", "Scores not yet estimated.")))
@@ -859,29 +852,23 @@ shinyServer(function(input, output, session) {
     })
     
     output$dataNonmissingDimText1  <- renderUI({
-        if (is.null(nonMissingIDs()) | 
-            !useCompleteCasesOnly()) return(NULL)
+        if (is.null(idsWithVarsOKForPS()) | 
+            !psUseCompleteCasesOnly()) return(NULL)
         if (psNotChecked() | 
             is.null(varnamesFromRHSOK())) return(NULL)
 
-        HTML(paste0(tags$hr()))
+        HTML(paste0(tags$h4("Impact of not imputing missing values:")))
     })
-    output$dataNonmissingDimText2  <- renderUI({
-        if (is.null(nonMissingIDs()) | 
-            !useCompleteCasesOnly()) return(NULL)
+    output$dataNonmissingDimText2 <- renderText({
+        if (is.null(idsWithVarsOKForPS()) | is.null(PSIDs()) | 
+            !psUseCompleteCasesOnly()) return(NULL)
         if (psNotChecked() | 
             is.null(varnamesFromRHSOK())) return(NULL)
 
-        HTML(paste0(tags$h4("N after excluding rows:")))
-    })
-    output$dataNonmissingDimText3 <- renderText({
-        if (is.null(nonMissingIDs()) | 
-            !useCompleteCasesOnly()) return(NULL)
-        if (psNotChecked() | 
-            is.null(varnamesFromRHSOK())) return(NULL)
-
-        paste0("After removal of rows with missing values for the variables selected for the PS model, ",
-            "the dataset has ", length(nonMissingIDs()), " rows.")
+        # TODO: could add "out of" but this would have to be out of
+        #     original or pruned dataset
+        paste0("Propensity scores can be estimated for ",
+            length(PSIDs()), " units.")
     })
     output$psPlot <- renderPlot({
         if (is.null(dsetPSGraphs())) return(NULL)
@@ -909,7 +896,7 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupVarFactorLevelsSorted()) {
-            myColor <- colorScale.mod()[lev] 
+            myColor <- colorScale()[lev] 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
@@ -948,7 +935,7 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupVarFactorLevelsSorted()) {
-            myColor <- colorScale.mod()[lev] 
+            myColor <- colorScale()[lev] 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
@@ -968,7 +955,7 @@ shinyServer(function(input, output, session) {
             bty    = "n",
             border = NA,
             fill   = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
-                adjustcolor(colorScale.mod()[x], alpha.f= alphaVal())))
+                adjustcolor(colorScale()[x], alpha.f= alphaVal())))
         )
     }, res= 100)    
     
@@ -1074,7 +1061,7 @@ shinyServer(function(input, output, session) {
         names(myvec) <- vnames
         myvec
     })    
-    catVars <- reactive({
+    catVarsToView <- reactive({
         if (is.null(varIsContinuous())) return(NULL)
         
         varsToView()[!varIsContinuous()[varsToView()]]
@@ -1087,6 +1074,8 @@ shinyServer(function(input, output, session) {
         input$pointsizeSlider
     })
     # number of decimal places to use w/ covariate graph inputs
+    # May have this changeable at some point, so I'm setting it up
+    #    as a reactive to begin with
     xdig <- reactive({
         2
     })
@@ -1265,7 +1254,7 @@ shinyServer(function(input, output, session) {
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupVarFactorLevelsSorted()) {
-            myColor <- colorScale.mod()[lev] 
+            myColor <- colorScale()[lev] 
             if (!is.null(histlist[[lev]])) {
                 plot(histlist[[lev]], 
                     freq   = TRUE, 
@@ -1285,7 +1274,7 @@ shinyServer(function(input, output, session) {
             bty= "n",
             border= NA,
             fill = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
-                adjustcolor(colorScale.mod()[x], alpha.f= alphaVal())))
+                adjustcolor(colorScale()[x], alpha.f= alphaVal())))
         )
     }, res= 100)    
 
@@ -1313,6 +1302,40 @@ shinyServer(function(input, output, session) {
     })
     
     
+    dsetXGraphs <- reactive({
+        if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
+        if (is.null(varsToView())) return(NULL)
+        if (is.null(dsetPSGraphs())) return(NULL)
+        if (is.null(dsetGroupvar())) return(NULL)
+
+        # core dataset for plots: ID, group, x
+        dat <- merge(
+            dsetOrig()[idsToKeepAfterPruning()][, 
+                c(idVarName(), varsToView(), groupVarName()), with= FALSE],
+            dsetGroupvar()[idsToKeepAfterPruning()],
+            # just in case
+            suffixes = c("", ".y")
+        )
+        setkeyv(dat, idVarName())
+        dat
+    })
+    dsetXPS <- reactive({
+        if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
+        if (is.null(dsetXGraphs())) return(NULL)
+        if (is.null(dsetPSGraphs())) return(NULL)
+    
+        # dset w/ x and PS. Either could be missing.
+        dat <- merge(
+            dsetXGraphs(), 
+            dsetPSGraphs(),
+            all= TRUE, 
+            # just in case
+            suffixes= c("", ".y"))
+        setkeyv(dat, idVarName())
+        dat
+    })
+
+
     #############################################################
 
     # modified from https://gist.github.com/wch/5436415/, with
@@ -1340,21 +1363,15 @@ shinyServer(function(input, output, session) {
                 plotname <- paste0("plot_", varname)
      
                 output[[plotname]] <- renderPlot({
-                    if (is.null(dsetPSGraphs())) return(NULL)
-                    if (is.null(dsetGroupvar())) return(NULL)
+                    if (is.null(dsetXGraphs())) return(NULL)
+                    if (is.null(dsetXPS())) return(NULL)
 
                     # For plot alignment
                     testing <- FALSE
 
                     # core dataset for plots: ID, group, x
-                    datx <- merge(
-                        dsetOrig()[idsToKeepAfterPruning()][, 
-                            c(idVarName(), varname), with= FALSE],
-                        dsetGroupvar()[idsToKeepAfterPruning()],
-                        all.x = TRUE,
-                        suffixes = c("", ".y")
-                    )
-                    setkeyv(datx, idVarName())
+                    datxnames <- c(idVarName(), varname, groupVarFactorName())
+                    datx <- dsetXGraphs()[, datxnames, with= FALSE]
                     
                     # convert character & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
@@ -1371,10 +1388,7 @@ shinyServer(function(input, output, session) {
                     datx.xna <- datx[is.na(get(varname)), ]
                     
                     # dset w/ x and PS. Either could be missing.
-                    datxps <- merge(datx, 
-                        dsetPSGraphs(),
-                        all= TRUE, suffixes= c("", ".y"))
-                    setkeyv(datxps, idVarName())
+                    datxps <- dsetXPS()[, c(datxnames, logitpsVarName()), with= FALSE]
                     
                     # use datxps.nona for central scatterplot/stripchart
                     datxps.nona <- na.omit(datxps)
@@ -1529,7 +1543,7 @@ shinyServer(function(input, output, session) {
                                 pch      = 20,
                                 at       = 1 + myAtAdds[lev],
                                 cex      = pointSizeVal(),
-                                col      = adjustcolor(colorScale.mod()[lev], 
+                                col      = adjustcolor(colorScale()[lev], 
                                             alpha.f= alphaVal())
                             )
                         }
@@ -1561,7 +1575,7 @@ shinyServer(function(input, output, session) {
                         )
                         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
                         for (lev in groupVarFactorLevelsSorted()) {
-                            myColor <- colorScale.mod()[lev] 
+                            myColor <- colorScale()[lev] 
                             if (!is.null(histlist[[lev]])) {
                                 plot(histlist[[lev]], 
                                     freq   = TRUE, 
@@ -1589,7 +1603,7 @@ shinyServer(function(input, output, session) {
                                     ytop    = xtbl[grouplev, varlev],
                                     density = NA,
                                     border  = NA,
-                                    col     = colorScale.mod()[grouplev] 
+                                    col     = colorScale()[grouplev] 
                                 )
                             }
                         }
@@ -1643,7 +1657,7 @@ shinyServer(function(input, output, session) {
                             points(x, y,
                                 pch = 20,
                                 cex = pointSizeVal(),
-                                col = adjustcolor(colorScale.mod()[lev], 
+                                col = adjustcolor(colorScale()[lev], 
                                     alpha.f= alphaVal()))
                         }
                         lines(loess.smooth(datxps.nona[[varname]], datxps.nona[[logitpsVarName()]]))
@@ -1660,7 +1674,7 @@ shinyServer(function(input, output, session) {
                                 pch      = 20,
                                 at       = myAtOrig + myAtAdds[lev],
                                 cex      = pointSizeVal(),
-                                col      = adjustcolor(colorScale.mod()[lev], 
+                                col      = adjustcolor(colorScale()[lev], 
                                             alpha.f= alphaVal())
                             )
                         }
@@ -1704,7 +1718,7 @@ shinyServer(function(input, output, session) {
                             ytop    = datx.xna.counts[grouplev],
                             density = NA,
                             border  = NA,
-                            col     = colorScale.mod()[grouplev] 
+                            col     = colorScale()[grouplev] 
                         )
                     }
                     if (testing) box("figure", col= "green")
@@ -1724,6 +1738,35 @@ shinyServer(function(input, output, session) {
             local({
                 my_i <- i
                 varname     <- varsToView()[my_i]
+                underPlotTextName <- paste0("underPlot_", varname)
+
+                # Create the under-plot text for each variable, if applicable
+                output[[underPlotTextName]] <- renderUI({
+                    if (!psUseCompleteCasesOnly()) return(NULL)
+                    if (is.null(dsetXPS())) return(NULL)
+                    if (is.null(dsetXPS())) return(NULL)
+
+                    nWithXButNoPS <- length(
+                        dsetXPS()[is.na(get(logitpsVarName())) & !is.na(get(varname)), 
+                            ][[idVarName()]]
+                    )
+                    if (nWithXButNoPS == 0) return(NULL)
+                    
+                HTML(#paste0(tags$span(
+                    paste0("There are ", nWithXButNoPS, " units with values for this variable but with no propensity score.")
+                )#))
+
+                }) # end renderUI
+
+            }) # end local
+        } # end for
+    }) # end observe    
+
+    observe({
+        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
+            local({
+                my_i <- i
+                varname     <- varsToView()[my_i]
                 naTableName <- paste0("naTable_", varname)
 
                 # Create a missing-by-group table for each variable
@@ -1737,6 +1780,7 @@ shinyServer(function(input, output, session) {
                         with= FALSE]
                     dat <- datx[, .(pct.missing = 100 * mean(is.na(get(varname)))), 
                         by= eval(groupVarName())]
+                    names(dat)[names(dat) == "pct.missing"] <- "% Missing"
                     dat
                 }, digits= 1, include.rownames= FALSE
                 ) # end renderTable
@@ -1832,7 +1876,6 @@ shinyServer(function(input, output, session) {
     }) # end observe    
 
     
-    # Keeping the observe for the textcheck separate
     observe({
         if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
             local({
@@ -1880,6 +1923,7 @@ shinyServer(function(input, output, session) {
         for (i in seq_along(varsToView())) {
             varname        <- varsToView()[i]
             plotname       <- paste0("plot_", varname)
+            underPlotname  <- paste0("underPlot_", varname)
             pruner1name    <- paste0("pruner1_", varname)
             pruner2name    <- paste0("pruner2_", varname)
             textcheck1name <- paste0("textcheck1_", varname)
@@ -1890,11 +1934,12 @@ shinyServer(function(input, output, session) {
                 tags$hr(),
                 h4(paste0("Variable: ", varname)),
                 column(width= 5, offset= 1, 
+                    uiOutput(underPlotname),
                     plotOutput(plotname, 
                         #inline= TRUE
                         height= 300,
                         width  = "auto"
-                    ) # end plotOutput   
+                    ) # end plotOutput  
                 ), # end column
                 column(6,
                     if (varIsContinuous()[varname]) {
@@ -1912,8 +1957,8 @@ shinyServer(function(input, output, session) {
                         )
                     ),
                     tags$br(),
-                    uiOutput(naTableName),
-                    uiOutput(keepNAName)
+                    uiOutput(keepNAName),
+                    uiOutput(naTableName)
                 ) # end column
             )# end fluidRow
         } 
@@ -1922,7 +1967,7 @@ shinyServer(function(input, output, session) {
  
     ############################################################
     ############################################################
-    ## SMDs
+    ## SMD plots
     wantATEWts <- reactive({
         input$showATE
     })
@@ -1942,7 +1987,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = dsetOrig(),
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -1958,7 +2003,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = dsetOrig()[idsToKeepAfterPruning()],
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -1998,7 +2043,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = svydat,
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -2017,7 +2062,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = svydat,
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE
@@ -2036,7 +2081,7 @@ shinyServer(function(input, output, session) {
             vars       = varsToView(),
             strata     = groupVarName(),
             data       = svydat,
-            factorVars = catVars(),
+            factorVars = catVarsToView(),
             includeNA  = FALSE,
             test       = FALSE,
             smd        = TRUE

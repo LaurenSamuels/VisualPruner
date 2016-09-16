@@ -7,6 +7,12 @@ output: html_document
 
 * Make it a package
 
+* On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.
+
+* Do they need to be 'imputation indicators' instead?
+
+* Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?
+
 * Add button to reset all pruning, and/or provide the original sample limits
 
 * For SMD page: reset checkboxes to FALSE on new dataset upload
@@ -14,6 +20,12 @@ output: html_document
 * Have SMD plots include missingness indicators & squared terms. When incorporating into a package, consider adding functions to add these things to the original dset.
 
 * Keep cleaning up text in Notes
+
+* Keep in mind: input$mainNavbarPage gives name of current tab.
+
+* Add error handling for file upload
+
+* Add error handling for while() statements used in naming
 
 * for downloads: keep playing w/ format(s) and what should/does get downloaded when item is null
 
@@ -48,10 +60,6 @@ If I'm going to use it, how reference from w/in app?
 This might help with the "rollback" too.
 
 * Later: allow > 2 tx groups
-
-* Add to formula help: use ~1 if you don't want to bother/ just want to see covariate distribution
-
-* Put in note: user-specified pruning limits will be moved inwards to nearest sample point 
 
 * Add option to use prognostic score instead?
 

@@ -40,19 +40,19 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     tabPanel("Specify",
         fluidRow(
             column(5,
-                h4('Handling missing values in PS model:'),
-                radioButtons('completeCasesOnly', NULL,
+                h4('Handling missing values:'),
+                h5('If units have missing values for variables in the propensity score model,'),
+                radioButtons('forPSCompleteCasesOnly', NULL,
                     c(
-                    "Impute missing values using mean or mode" = 0,
-                    "Use complete cases only" = 1
+                    "replace the missing values with the mean or mode" = 0,
+                    "exclude the units from PS calculation" = 1
                     ),
                     0
                 )
             ), # end column
             column(6, offset = 1,
                 uiOutput("dataNonmissingDimText1"),
-                uiOutput("dataNonmissingDimText2"),
-                textOutput("dataNonmissingDimText3")
+                textOutput("dataNonmissingDimText2")
             ) # end column
         ), # end fluidRow 
         fluidRow(
@@ -120,7 +120,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(5,
                 h4('Variables to view and restrict:'),
                 uiOutput("chooseVarsToRestrict"),
-                h5('View numeric variables as discrete if they have fewer than __ distinct values:'),
+                h5('View numeric variables as discrete if they have fewer than __ distinct values in the original dataset:'),
                 numericInput('numCont', 
                     NULL,
                     value= 10, 
@@ -187,11 +187,11 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6,
                 h3("Notes"),
                 tags$div(
-                    tags$p(paste0("The subplots in the top row for each covariate include all points in the (pruned) dataset,",
-                        " even if those points are missing from the subplots immediately below because the propensity score is missing.",
-                        " This can happen if there is missing data and only complete cases are used to estimate the propensity score.")), 
                     tags$p("The thin black lines in the stripcharts indicate the mean; in the scatterplots, the thin black lines are loess curves."), 
-                    tags$p("After pruning, the pruning limits you specified for continuous variables will be moved inward to the nearest sample value.")
+                    tags$p("After pruning, the pruning limits you specified for continuous variables will be moved inward to the nearest sample value."),
+                    tags$p(paste0("The upper subplots for each covariate include all points in the (pruned) dataset,",
+                        " even if those points are missing from the subplots immediately below because the propensity score is missing.",
+                        " This can happen if some variables have missing values and only complete cases are used to estimate the propensity score.")) 
                 )
             ) # end column
         ) # end fluidRow 
@@ -286,8 +286,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$hr(),
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
-                # major.minor.patch.dev
-                '0.6.2',
+                # major.minor.patch.dev; I'm doing major.minor.patch
+                '0.7',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
