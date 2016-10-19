@@ -315,7 +315,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     ' (slightly modified).'
                 )),
                 tags$br(),
-                'Many thanks to Qi Liu and Dale Plummer for helpful suggestions.'
+                'Many thanks to Meira Epplein, Qi Liu, Dale Plummer, Bryan Shepherd, and Matt Shotwell for their valuable suggestions.'
             ) # end column
         ) # end fluidRow
     ), # end About panel
