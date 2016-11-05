@@ -85,20 +85,24 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             ) # end column
         ), # end fluidRow 
         tags$hr(),
+        #fluidRow(
+        #    column(12,
+        #        h3("Estimated propensity score distributions"),
+        #        uiOutput('psGraphsNotReady')
+        #    ), # end column
+        #    column(6,
+        #        plotOutput("psPlot",
+        #            height= 300,
+        #            width= 'auto')
+        #    ) # end column
+        #), # end fluidRow 
         fluidRow(
             column(12,
-                h3("Estimated propensity score distributions"),
-                uiOutput('psGraphsNotReady')
-            ), # end column
-            column(6,
-                plotOutput("psPlot",
-                    height= 300,
-                    width= 'auto')
-            ), # end column
-            column(6,
                 plotOutput("logitpsPlot",
-                    height= 300,
-                    width= 'auto')
+                    #height= 300,
+                    height= 800,
+                    width= 1200
+                    )
             ) # end column
         ), # end fluidRow 
         tags$hr(),

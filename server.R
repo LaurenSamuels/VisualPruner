@@ -891,8 +891,10 @@ shinyServer(function(input, output, session) {
             ylab= "Count",
             bty= "n",
             type= "n",
-            cex.lab= 1,
-            cex.axis= 0.8
+            #cex.lab= 1,
+            cex.lab= 1.5,
+            #cex.axis= 0.8
+            cex.axis= 1
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupVarFactorLevelsSorted()) {
@@ -909,6 +911,7 @@ shinyServer(function(input, output, session) {
     }, res= 100)    
     
     
+    # this one is in paper
     output$logitpsPlot <- renderPlot({
         if (is.null(dsetPSGraphs())) return(NULL)
 
@@ -930,8 +933,10 @@ shinyServer(function(input, output, session) {
             ylab= "Count",
             bty= "n",
             type= "n",
-            cex.lab= 1,
-            cex.axis= 0.8
+            #cex.lab= 1,
+            cex.lab= 1.75,
+            #cex.axis= 0.8
+            cex.axis= 1.5
         )
         # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
         for (lev in groupVarFactorLevelsSorted()) {
@@ -948,7 +953,8 @@ shinyServer(function(input, output, session) {
         legend(
             "topleft",
             inset  = .05,
-            cex    = .8,
+            #cex    = .8,
+            cex    = 1.5,
             title  = NULL,
             groupVarFactorLevelsSorted(),
             horiz  = FALSE,
@@ -957,7 +963,9 @@ shinyServer(function(input, output, session) {
             fill   = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
                 adjustcolor(colorScale()[x], alpha.f= alphaVal())))
         )
-    }, res= 100)    
+    }, #res= 300, 
+        width= 1200, height= 800
+        )    
     
     ############################################################
     ############################################################
