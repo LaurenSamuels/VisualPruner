@@ -1978,6 +1978,10 @@ shinyServer(function(input, output, session) {
         input$showATM
     })
     
+    wantLinesSMD <- reactive({
+        input$drawLinesSMD
+    })
+    
     # adapted from https://github.com/kaz-yos/tableone/blob/master/vignettes/smd.Rmd
     tabOrig <- reactive({
         if (is.null(varsToView())) return(NULL)
@@ -2104,7 +2108,7 @@ shinyServer(function(input, output, session) {
             "."
             ))),
             tags$p(HTML(paste0(
-                "ATM weighting is used to estimate the Average Treatment effect on the richly Matchable units, using 'matching weights' as introduced in ",
+                "ATM weighting is used to estimate the Average Treatment effect on the evenly Matchable units, using 'matching weights' as introduced in ",
                     a("Li, L., & Greene, T. (2013)", 
                         href="http://doi.org/10.1515/ijb-2012-0030", 
                         target="_blank"),
@@ -2202,16 +2206,19 @@ shinyServer(function(input, output, session) {
             las= 1)
 
         abline(v = 0.1, lty= 'dashed', col= 'gray')
-
-        for (j in 1:nTabTypes) {
-            lines(
-                x   = as.numeric(dsetSMDs()[[myTabTypes[j]]]),
-                y   = 1:nvars,
-                lty = myLinetypes[j],
-                lwd = 1.2,
-                col = myColors[j]
-            )
+        
+        if (wantLinesSMD()) { 
+            for (j in 1:nTabTypes) {
+                lines(
+                    x   = as.numeric(dsetSMDs()[[myTabTypes[j]]]),
+                    y   = 1:nvars,
+                    lty = myLinetypes[j],
+                    lwd = 1.2,
+                    col = myColors[j]
+                )
+            }
         }
+        
         for (i in 1:nvars) {
             abline(h= i, lty= 'dotted', col= 'gray')
             points(

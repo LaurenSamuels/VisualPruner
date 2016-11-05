@@ -213,8 +213,13 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     label= 'ATM',
                     value = FALSE),
                 HTML(paste0(tags$span(class="text-info", 
-                    "Note that each one may take several minutes.")))
+                    "Note that each one may take several minutes."))),
                 #verbatimTextOutput("tabonetest")
+                tags$br(),
+                checkboxInput('drawLinesSMD',
+                    label= 'Connect points with line segments',
+                    value = TRUE
+                    )
             ), # end column
             column(8, 
                 uiOutput('noSMDText'),
@@ -264,6 +269,19 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$br(),
                 downloadButton("downloadPS", "Download PS formula as .txt file")
             ) # end column
+        ), # end fluidRow 
+        tags$hr(),
+        fluidRow(
+            column(6,
+                h3("Notes"),
+                tags$div(
+                    tags$p(paste0("Visual Pruner uses rms::lrm() to fit the propensity score model, ",
+                        "after first imputing missing values with Hmisc::impute() if imputation is selected ",
+                        "on the Specify tab. Missingness indicator variables are then created using ",
+                        "Hmisc::is.imputed(). See the R tab for more details. "))#, 
+                    #tags$p("At this point the missing-value indicator variables are available only within the propensity-score estimation function") 
+                )
+            ) # end column
         ) # end fluidRow 
     ), # end Copy panel
     ##################################################
@@ -287,7 +305,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev; I'm doing major.minor.patch
-                '0.7',
+                '0.8',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
@@ -315,7 +333,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     ' (slightly modified).'
                 )),
                 tags$br(),
-                'Many thanks to Qi Liu and Dale Plummer for helpful suggestions.'
+                'Many thanks to Meira Epplein, Qi Liu, Dale Plummer, Bryan Shepherd, and Matt Shotwell for their valuable suggestions.'
             ) # end column
         ) # end fluidRow
     ), # end About panel
