@@ -11,6 +11,10 @@ output: html_document
 
 * Do they need to be 'imputation indicators' instead?
 
+* Add exportable code for imputation and also for creation of imputation-indicator variables
+
+* Possibly make the actual call to lrm() exportable (MS)
+
 * Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?
 
 * Add button to reset all pruning, and/or provide the original sample limits
@@ -18,6 +22,10 @@ output: html_document
 * For SMD page: reset checkboxes to FALSE on new dataset upload
 
 * Have SMD plots include missingness indicators & squared terms. When incorporating into a package, consider adding functions to add these things to the original dset.
+
+* For Compare tab: consider ading K-S test statistics (MS) 
+
+* Consider showing eCDF plots somewhere (RG)
 
 * Keep cleaning up text in Notes
 
@@ -46,11 +54,6 @@ output: html_document
 * Add note about # of underscores if > 1
 
 * For the histograms & bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance) 
-
-* Think about the example dset included w/ pkg.  
-Should it be the same as the one in the documentation? 
-That one is slow.
-If I'm going to use it, how reference from w/in app?
 
 * Add note "This may take a minute for large dsets"
 
