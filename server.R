@@ -1510,20 +1510,27 @@ shinyServer(function(input, output, session) {
                     # fig 1: Y axis label for central plot. 
                     par(mar = c(row2Plots.mar.b - 1.7, 0.7, .3, 0) +.05) # b, l, t, r
                     plot(x= 1, y= 1, type= "n", ylim= c(-1, 1), xlim= c(-1, 1))
-                    text(0, 0, paste("Logit PS"), cex= 1.4, srt= 90)
+                    #text(0, 0, paste("Logit PS"), cex= 1.4, srt= 90)
+                    text(0, 0, paste("Logit PS"), cex= 2.8, srt= 90)
                     if (testing) box("outer", col= "blue")
                     if (testing) box("figure", col= "green")
                     
                     # fig 2:  X axis label for central plot. 
-                    par(mar = c(0, 2, .3, 0) +.05) # b, l, t, r
+                    #par(mar = c(0, 2, .3, 0) +.05) # b, l, t, r
+                    # This next one is specifically for the Smoker plot.
+                    # Change back for other plots if I need to remake them.
+                    par(mar = c(-0.05, 2, 3, 0) +.05) # b, l, t, r
                     plot(x= 1, y= 1, type="n", ylim= c(-1, 1), xlim= c(-1, 1))
-                    text(0, 0, paste(varname), cex=1.4)
+                    #text(0, 0, paste(varname), cex=1.4)
+                    text(0, 0, paste(varname), cex=2.8)
                     if (testing) box("figure", col= "green")
 
                     #################################################
                     # fig 3, right-side central (row2) plot
                     par(mar  = c(row2Plots.mar.b, col3Plots.mar.l, 
                             row2Plots.mar.t, col3Plots.mar.r), # bltr
+                        cex.axis = 2.2,
+                        lwd= 3,
                         xaxt ="s"
                     )
                     
@@ -1557,7 +1564,7 @@ shinyServer(function(input, output, session) {
                                 jitter   = myJitter,
                                 pch      = 20,
                                 at       = 1 + myAtAdds[lev],
-                                cex      = pointSizeVal(),
+                                cex      = 2 * pointSizeVal(),
                                 col      = adjustcolor(colorScale()[lev], 
                                             alpha.f= alphaVal())
                             )
@@ -1634,6 +1641,8 @@ shinyServer(function(input, output, session) {
                             row2Plots.mar.t, col2Plots.mar.r), #bltr
                         xaxt = "s", 
                         yaxt = "s", 
+                        cex.axis = 2.2,
+                        lwd= 3,
                         bty= if (testing) "o" else "n"
                     )
                     if (varIsContinuous()[varname]) {    
@@ -1671,11 +1680,13 @@ shinyServer(function(input, output, session) {
                                 get(logitpsVarName())]
                             points(x, y,
                                 pch = 20,
-                                cex = pointSizeVal(),
+                                #cex = pointSizeVal(),
+                                cex = 2 * pointSizeVal(),
                                 col = adjustcolor(colorScale()[lev], 
                                     alpha.f= alphaVal()))
                         }
-                        lines(loess.smooth(datxps.nona[[varname]], datxps.nona[[logitpsVarName()]]))
+                        lines(loess.smooth(datxps.nona[[varname]], 
+                            datxps.nona[[logitpsVarName()]]))
                     } else {
                         for (lev in groupVarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupVarFactorName()) == lev, get(varname)]
@@ -1688,7 +1699,8 @@ shinyServer(function(input, output, session) {
                                 jitter   = myJitter,
                                 pch      = 20,
                                 at       = myAtOrig + myAtAdds[lev],
-                                cex      = pointSizeVal(),
+                                #cex      = pointSizeVal(),
+                                cex      = 2 * pointSizeVal(),
                                 col      = adjustcolor(colorScale()[lev], 
                                             alpha.f= alphaVal())
                             )
@@ -1704,8 +1716,10 @@ shinyServer(function(input, output, session) {
                                 myAtOrig[i] + myWidth / 2, myMean
                             )
                         }
-                        axis(1, at = myAtOrig, labels = names(myAtOrig))
-                        axis(2)
+                        axis(1, at = myAtOrig, labels = names(myAtOrig)#, cex.axis= 2.5
+                            )
+                        axis(2#, cex.axis= 2.5
+                            )
                     }
                     if (testing) box("figure", col= "green")
                     if (testing) box("plot", col= "black")
@@ -1741,7 +1755,8 @@ shinyServer(function(input, output, session) {
 
                     # reset the graphics
                     par(def.par)
-                }, res= 100
+                }, #res= 100
+                    width= 1500, height= 900, pointsize= 24
                 ) # end renderPlot
             }) # end local
         } # end for
@@ -1948,11 +1963,11 @@ shinyServer(function(input, output, session) {
             plot_and_input_list[[i]] <- fluidRow(
                 tags$hr(),
                 h4(paste0("Variable: ", varname)),
-                column(width= 5, offset= 1, 
+                column(width= 12, offset= 1, 
                     uiOutput(underPlotname),
                     plotOutput(plotname, 
                         #inline= TRUE
-                        height= 300,
+                        height= 900,
                         width  = "auto"
                     ) # end plotOutput  
                 ), # end column
