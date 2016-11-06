@@ -228,7 +228,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(8, 
                 uiOutput('noSMDText'),
                 plotOutput('SMDPlot',
-                    height= 800,
+                    height= 1500,
                     width= 'auto'
                 )
             ) # end column

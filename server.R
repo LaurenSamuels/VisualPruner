@@ -2219,8 +2219,10 @@ shinyServer(function(input, output, session) {
             #ann      = FALSE,
             mar      = c(5, 10, 4, 2) + 0.1, #bltr
             oma      = c(0,0,0,0),
-            cex.axis = 1.1,
-            cex.lab  = 1.2
+            #cex.axis = 1.1,
+            cex.axis = 1.8,
+            #cex.lab  = 1.2
+            cex.lab  = 2.4
         ) 
         plot(0, 1,
             type = "n",
@@ -2235,7 +2237,7 @@ shinyServer(function(input, output, session) {
         axis(2, at= 1:nvars, labels= dsetSMDs()[, variable],
             las= 1)
 
-        abline(v = 0.1, lty= 'dashed', col= 'gray')
+        abline(v = 0.1, lty= 'dashed', col= 'gray', lwd= 2)
         
         if (wantLinesSMD()) { 
             for (j in 1:nTabTypes) {
@@ -2243,7 +2245,8 @@ shinyServer(function(input, output, session) {
                     x   = as.numeric(dsetSMDs()[[myTabTypes[j]]]),
                     y   = 1:nvars,
                     lty = myLinetypes[j],
-                    lwd = 1.2,
+                    #lwd = 1.2,
+                    lwd = 2,
                     col = myColors[j]
                 )
             }
@@ -2256,6 +2259,7 @@ shinyServer(function(input, output, session) {
                 y   = rep(i, nTabTypes),
                 pch = myShapes,
                 col = myColors,
+                cex= 1.5,
                 bg  = myColors
             )
         }
@@ -2263,7 +2267,7 @@ shinyServer(function(input, output, session) {
             "bottomright",
             legend = myTabTypes,
             inset  = c(.1, .05), #x, y
-            cex    = 1,
+            cex    = 1.8,
             title  = NULL,
             horiz  = FALSE,
             bty    = "n",
@@ -2275,7 +2279,7 @@ shinyServer(function(input, output, session) {
         )
         # reset the graphics
         par(def.par)
-    })
+    }, width= 1500, height= 1500, pointsize= 24)
 
     ############################################################
     ############################################################
