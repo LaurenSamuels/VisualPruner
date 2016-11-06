@@ -100,8 +100,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(12,
                 plotOutput("logitpsPlot",
                     #height= 300,
-                    height= 800,
-                    width= 1200
+                    height= 900,
+                    width= 'auto'
                     )
             ) # end column
         ), # end fluidRow 

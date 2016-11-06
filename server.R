@@ -926,6 +926,10 @@ shinyServer(function(input, output, session) {
             }
         }
         histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
+        # save the old graphics settings
+        def.par <- par(no.readonly = TRUE)
+        par(mar = c(5, 7, 2, 2) +0.1) # b, l, t, r
+        
         plot(0, 0, 
             xlim= range(dsetPSGraphs()[, get(logitpsVarName())]),
             ylim= c(0, max(histcounts)), 
@@ -963,8 +967,11 @@ shinyServer(function(input, output, session) {
             fill   = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
                 adjustcolor(colorScale()[x], alpha.f= alphaVal())))
         )
+        # reset the graphics
+        par(def.par)
     }, #res= 300, 
-        width= 1200, height= 800
+        # want 5w X 3h X 300
+        width= 1500, height= 900, pointsize= 24
         )    
     
     ############################################################
