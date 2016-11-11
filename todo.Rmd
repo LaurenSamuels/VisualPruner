@@ -4,12 +4,15 @@ author: ""
 date: ""
 output: html_document
 ---
+* 11 Nov 2016: I think I have done some of these and forgotten to take them off the list... clean up the list!
 
 * Make it a package
 
 * On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.
 
 * Do they need to be 'imputation indicators' instead?
+
+* The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Is this the behavior we want?
 
 * Add exportable code for imputation and also for creation of imputation-indicator variables
 
