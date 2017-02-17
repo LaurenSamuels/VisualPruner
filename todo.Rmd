@@ -9,6 +9,12 @@ output: html_document
 
 * On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.
 
+* 17 Feb 2017: Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
+
+* This may or may not be related: sometimes people will model s.t. the propensity scores give the probability of being in the larger group (depends on how factor is set up). Can I do something with the factor levels?
+
+* For list of vars to choose from on Prune tab, can I have the ones in the PS model show up first? I vaguely remember there's a problem with that
+
 * Do they need to be 'imputation indicators' instead?
 
 * Add exportable code for imputation and also for creation of imputation-indicator variables
