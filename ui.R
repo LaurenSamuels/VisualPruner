@@ -67,7 +67,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6, offset = 1,
                 h4('Variables in the dataset:'),
                 uiOutput('noDataChosenText2'),
-                tags$div(style = 'overflow-x: scroll', tableOutput('othervarsTable'))
+                tags$div(style = 'overflow-x: scroll', 
+                    tableOutput('othervarsTable')
+                )
             ) # end column
         ), # end fluidRow 
         fluidRow(
@@ -257,7 +259,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('The following R expression can be copied to select rows to KEEP:'),
                 htmlOutput("keepAfterPruningCopyText"),
                 tags$br(),
-                downloadButton("downloadIncl", "Download inclusion criteria as .txt file")#,
+                downloadButton("downloadIncl", 
+                    "Download inclusion criteria as .txt file"
+                )#,
                 #uiOutput("downloadHelp")
             ) # end column
         ), # end fluidRow 
