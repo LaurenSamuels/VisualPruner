@@ -5,75 +5,68 @@ date: ""
 output: html_document
 ---
 
-* Make it a package
+# Sooner
 
-* On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.
+* Have SMD plots include missingness indicators & squared terms
 
-* 17 Feb 2017: Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
+* 17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
 
 * This may or may not be related: sometimes people will model s.t. the propensity scores give the probability of being in the larger group (depends on how factor is set up). Can I do something with the factor levels?
 
-* For list of vars to choose from on Prune tab, can I have the ones in the PS model show up first? I vaguely remember there's a problem with that
-
-* Do they need to be 'imputation indicators' instead?
-
-* Add exportable code for imputation and also for creation of imputation-indicator variables
-
-* Possibly make the actual call to lrm() exportable (MS)
-
-* Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?
+* For list of vars to choose from on Prune tab, can I sort the list so that the ones in the PS model show up first? 
 
 * Add button to reset all pruning, and/or provide the original sample limits
-
-* For SMD page: reset checkboxes to FALSE on new dataset upload
-
-* Have SMD plots include missingness indicators & squared terms. When incorporating into a package, consider adding functions to add these things to the original dset.
-
-* For Compare tab: consider ading K-S test statistics (MS) 
-
-* Consider showing eCDF plots somewhere (RG)
-
-* Keep cleaning up text in Notes
-
-* Keep in mind: input$mainNavbarPage gives name of current tab.
 
 * Add error handling for file upload
 
 * Add error handling for while() statements used in naming
 
+
+# Later
+* Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app; in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables
+
+* Allow > 2 tx groups
+
+* Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?
+
+* For SMD page: reset checkboxes to FALSE on new dataset upload
+
 * for downloads: keep playing w/ format(s) and what should/does get downloaded when item is null
 
-* For example dset: change 'exposed' to something more concrete (compression socks)?
-
-* Show limits for hyperrectangle pruning, and/or add option for hyperrectangle pruning
-
-* Add button to select all vars?
-
-* Think about the top central plots in cases where some people don't have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.
-
-* keep cleaning up the naming!
-
-* Come up w/ a plot alternative for v large datasets (too many points).
+* Incorporate a plot alternative for v large datasets (too many points).
 
 * For discrete vars, try angling axis labels
 
-* Add note about # of underscores if > 1
+* Add note about # of underscores in naPrefix if > 1
 
-* For the histograms & bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance) 
-
-* Add note "This may take a minute for large dsets"
+* Add note(s) "This may take a minute for large dsets"
 
 * Incorporate some sort of "rollback" button or a temporary "test PS" button so that graphs aren't totally lost when PS model can't be fit on new sample
 
 * Add option to save a file of all the steps (written every time PS is recalculated).  
 This might help with the "rollback" too.
 
-* Later: allow > 2 tx groups
+# Maybe
+* Maybe: Add option to use prognostic score instead?
 
-* Add option to use prognostic score instead?
+* Maybe: put in binwidth controls for histograms
 
-* Maybe: change # bins (put in binwidth controls)
-
-* Maybe: add KDE & % overlap (Tomarken)
+* Maybe: add KDE & % overlap (see Tomarken)
 
 * Maybe: allow choice of PS or logitPS on Prune page
+
+* Possibly make the actual call to lrm() exportable (rather than just the formula RHS) (MS)
+
+* Add button to select all vars?
+
+* For Compare tab: consider ading K-S test statistics (MS) 
+
+* Consider showing eCDF plots somewhere (RG)
+
+* Show limits for hyperrectangle pruning, and/or add option for hyperrectangle pruning
+
+* For the histograms & bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance). I think this might not be a good idea though because of the zooming you get when you prune. 
+
+* Have PS formula automatically get revised if user prunes a categorical variable (that was originally in the formula) down to one category
+
+* The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Think about changing this.
