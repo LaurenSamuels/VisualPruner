@@ -120,47 +120,52 @@ $(document).ready(function () {
 </div>
 
 
+<div id="sooner" class="section level1">
+<h1>Sooner</h1>
 <ul>
-<li><p>11 Nov 2016: I think I have done some of these and forgotten to take them off the list… clean up the list!</p></li>
-<li><p>Make it a package</p></li>
-<li><p>On Specify tab, have the sentence about missingness indicators appear only if first option is chosen.</p></li>
-<li><p>17 Feb 2017: Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match…</p></li>
+<li><p>Have SMD plots include missingness indicators &amp; squared terms</p></li>
+<li><p>17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match…</p></li>
 <li><p>This may or may not be related: sometimes people will model s.t. the propensity scores give the probability of being in the larger group (depends on how factor is set up). Can I do something with the factor levels?</p></li>
-<li><p>For list of vars to choose from on Prune tab, can I have the ones in the PS model show up first? I vaguely remember there’s a problem with that</p></li>
-<li><p>Do they need to be ‘imputation indicators’ instead?</p></li>
-<li><p>The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Is this the behavior we want?</p></li>
-<li><p>Add exportable code for imputation and also for creation of imputation-indicator variables</p></li>
-<li><p>Possibly make the actual call to lrm() exportable (MS)</p></li>
-<li><p>Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?</p></li>
+<li><p>For list of vars to choose from on Prune tab, can I sort the list so that the ones in the PS model show up first?</p></li>
 <li><p>Add button to reset all pruning, and/or provide the original sample limits</p></li>
-<li><p>For SMD page: reset checkboxes to FALSE on new dataset upload</p></li>
-<li><p>Have SMD plots include missingness indicators &amp; squared terms. When incorporating into a package, consider adding functions to add these things to the original dset.</p></li>
-<li><p>For Compare tab: consider ading K-S test statistics (MS)</p></li>
-<li><p>Consider showing eCDF plots somewhere (RG)</p></li>
-<li><p>Keep cleaning up text in Notes</p></li>
-<li><p>Keep in mind: input$mainNavbarPage gives name of current tab.</p></li>
 <li><p>Add error handling for file upload</p></li>
 <li><p>Add error handling for while() statements used in naming</p></li>
+</ul>
+</div>
+<div id="later" class="section level1">
+<h1>Later</h1>
+<ul>
+<li><p>Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app; in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables</p></li>
+<li><p>Allow &gt; 2 tx groups</p></li>
+<li><p>Think about displaying # of missing values in variable-name table. Which dataset would we use as the base though?</p></li>
+<li><p>For SMD page: reset checkboxes to FALSE on new dataset upload</p></li>
 <li><p>for downloads: keep playing w/ format(s) and what should/does get downloaded when item is null</p></li>
-<li><p>For example dset: change ‘exposed’ to something more concrete (compression socks)?</p></li>
-<li><p>Show limits for hyperrectangle pruning, and/or add option for hyperrectangle pruning</p></li>
-<li><p>Add button to select all vars?</p></li>
-<li><p>Think about the top central plots in cases where some people don’t have a PS. Should people w/o PS be included in those? I think they currently are but check code. Maybe put a note in. This applies only when useCompleteCasesOnly== 1.</p></li>
-<li><p>keep cleaning up the naming!</p></li>
-<li><p>Come up w/ a plot alternative for v large datasets (too many points).</p></li>
+<li><p>Incorporate a plot alternative for v large datasets (too many points).</p></li>
 <li><p>For discrete vars, try angling axis labels</p></li>
-<li><p>Add note about # of underscores if &gt; 1</p></li>
-<li><p>For the histograms &amp; bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance)</p></li>
-<li><p>Add note “This may take a minute for large dsets”</p></li>
+<li><p>Add note about # of underscores in naPrefix if &gt; 1</p></li>
+<li><p>Add note(s) “This may take a minute for large dsets”</p></li>
 <li><p>Incorporate some sort of “rollback” button or a temporary “test PS” button so that graphs aren’t totally lost when PS model can’t be fit on new sample</p></li>
 <li><p>Add option to save a file of all the steps (written every time PS is recalculated).<br />
 This might help with the “rollback” too.</p></li>
-<li><p>Later: allow &gt; 2 tx groups</p></li>
-<li><p>Add option to use prognostic score instead?</p></li>
-<li><p>Maybe: change # bins (put in binwidth controls)</p></li>
-<li><p>Maybe: add KDE &amp; % overlap (Tomarken)</p></li>
-<li><p>Maybe: allow choice of PS or logitPS on Prune page</p></li>
 </ul>
+</div>
+<div id="maybe" class="section level1">
+<h1>Maybe</h1>
+<ul>
+<li><p>Maybe: Add option to use prognostic score instead?</p></li>
+<li><p>Maybe: put in binwidth controls for histograms</p></li>
+<li><p>Maybe: add KDE &amp; % overlap (see Tomarken)</p></li>
+<li><p>Maybe: allow choice of PS or logitPS on Prune page</p></li>
+<li><p>Possibly make the actual call to lrm() exportable (rather than just the formula RHS) (MS)</p></li>
+<li><p>Add button to select all vars?</p></li>
+<li><p>For Compare tab: consider ading K-S test statistics (MS)</p></li>
+<li><p>Consider showing eCDF plots somewhere (RG)</p></li>
+<li><p>Show limits for hyperrectangle pruning, and/or add option for hyperrectangle pruning</p></li>
+<li><p>For the histograms &amp; bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance). I think this might not be a good idea though because of the zooming you get when you prune.</p></li>
+<li><p>Have PS formula automatically get revised if user prunes a categorical variable (that was originally in the formula) down to one category</p></li>
+<li><p>The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Think about changing this.</p></li>
+</ul>
+</div>
 
 
 
