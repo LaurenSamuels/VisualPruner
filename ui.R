@@ -132,6 +132,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 actionButton('generalGraphUpdateButton', 
                     HTML("(re-)Make graphs using updated variable list<br/>and/or discreteness preferences")),
                 tags$br(),
+                HTML(paste0(tags$span(class="text-info", 
+                    "Note that this may take a few minutes for larger datasets."))),
+                tags$br(),
                 tags$br(),
                 h4('Preferences for graphs:'),
                 h5("Point/histogram opacity ('alpha')"),
@@ -181,6 +184,12 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     class="btn btn-primary"
                 ),
                 uiOutput('psFitProblemTextPostPruning')
+            ) # end column
+        ), # end fluidRow 
+        fluidRow(
+            column(width= 12, offset= 3,
+                HTML(paste0(tags$span(class="text-info", 
+                    "(If making the plots was slow the first time, expect a delay after clicking either button.)")))
             ) # end column
         ), # end fluidRow 
         uiOutput("covariatePlotsAndInputs"),

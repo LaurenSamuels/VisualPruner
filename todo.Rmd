@@ -7,8 +7,6 @@ output: html_document
 
 # Sooner
 
-* Add note(s) "This may take a minute for large dsets" on Prune page
-
 * Have SMD plots include missingness indicators & squared terms
 
 * 17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
@@ -41,7 +39,6 @@ output: html_document
 * For discrete vars, try angling axis labels
 
 * Add note about # of underscores in naPrefix if > 1
-
 
 * Incorporate some sort of "rollback" button or a temporary "test PS" button so that graphs aren't totally lost when PS model can't be fit on new sample
 
