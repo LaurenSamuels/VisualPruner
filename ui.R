@@ -237,7 +237,10 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 plotOutput('SMDPlot',
                     height= 800,
                     width= 'auto'
-                )
+                ),
+                tags$br(),
+                HTML(paste0(tags$span(class="text-info", 
+                    "Note that for larger datasets, the plot may take a few minutes to refresh.")))
             ) # end column
         ), # end fluidRow
         tags$hr(),
@@ -318,7 +321,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev; I'm doing major.minor.patch
-                '0.8',
+                '0.9',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),

@@ -23,6 +23,8 @@ output: html_document
 
 * For boolean variables uploaded in rds datasets: need to convert to factor
 
+* On compare tab, add orange text if no PS model specified (currently we do have orange text when PS model specified but no variables selected)
+
 # Later
 * Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app; in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables
 
