@@ -23,6 +23,8 @@ options(shiny.maxRequestSize=30*1024^2)
 #<"text-info">
 
 shinyServer(function(input, output, session) {
+    source("plottingFunctions.R")
+    
     ############################################################
     ## reactiveValues() and related observers
     ############################################################
@@ -934,50 +936,13 @@ shinyServer(function(input, output, session) {
     output$logitpsPlot <- renderPlot({
         req(dsetPSGraphs())
 
-        histlist <- vector("list", length(groupVarFactorLevelsSorted()))
-        names(histlist) <- groupVarFactorLevelsSorted() 
-        for (lev in groupVarFactorLevelsSorted()) {
-            x <- dsetPSGraphs()[get(groupVarFactorName()) == lev, get(logitpsVarName())]
-            if (length(x) > 0) {
-                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
-            } else {
-                histlist[[lev]] <- NULL
-            }
-        }
-        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-        plot(0, 0, 
-            xlim= range(dsetPSGraphs()[, get(logitpsVarName())]),
-            ylim= c(0, max(histcounts)), 
-            xlab= "Logit PS",
-            ylab= "Count",
-            bty= "n",
-            type= "n",
-            cex.lab= 1,
-            cex.axis= 0.8
-        )
-        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
-        for (lev in groupVarFactorLevelsSorted()) {
-            myColor <- colorScale()[lev] 
-            if (!is.null(histlist[[lev]])) {
-                plot(histlist[[lev]], 
-                    freq   = TRUE, 
-                    col    = adjustcolor(myColor, alpha.f= alphaVal()),
-                    border = NA,
-                    add    = TRUE
-                )
-            }
-        }
-        legend(
-            "topleft",
-            inset  = .05,
-            cex    = .8,
-            title  = NULL,
-            groupVarFactorLevelsSorted(),
-            horiz  = FALSE,
-            bty    = "n",
-            border = NA,
-            fill   = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
-                adjustcolor(colorScale()[x], alpha.f= alphaVal())))
+        makeLogitPSPlot(
+            dat= dsetPSGraphs(),
+            sortedFactorLevels= groupVarFactorLevelsSorted(),
+            grpVarFactorName= groupVarFactorName(),
+            xvarName= logitpsVarName(),
+            colorscale= colorScale(),
+            alphaval = alphaVal()
         )
     }, res= 100)    
     
@@ -1232,54 +1197,15 @@ shinyServer(function(input, output, session) {
     output$logitpsPlotForBrushing <- renderPlot({
         # exact duplicate of the other one; 
         #    can't call the same plot twice in the UI 
-        # TODO: turn into function
         req(dsetPSGraphs())
 
-        histlist <- vector("list", length(groupVarFactorLevelsSorted()))
-        names(histlist) <- groupVarFactorLevelsSorted() 
-        for (lev in groupVarFactorLevelsSorted()) {
-            x <- dsetPSGraphs()[get(groupVarFactorName()) == lev, 
-                get(logitpsVarName())]
-            if (length(x) > 0) {
-                histlist[[lev]] <- hist(x, plot= FALSE, breaks= 30)
-            } else {
-                histlist[[lev]] <- NULL
-            }
-        }
-        histcounts <- do.call(c, lapply(histlist, function(hl) hl$counts))
-        plot(0, 0, 
-            xlim= range(dsetPSGraphs()[, get(logitpsVarName())]),
-            ylim= c(0, max(histcounts)), 
-            xlab= "Logit PS",
-            ylab= "Count",
-            bty= "n",
-            type= "n",
-            cex.lab= 1,
-            cex.axis= 0.8
-        )
-        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
-        for (lev in groupVarFactorLevelsSorted()) {
-            myColor <- colorScale()[lev] 
-            if (!is.null(histlist[[lev]])) {
-                plot(histlist[[lev]], 
-                    freq   = TRUE, 
-                    col    = adjustcolor(myColor, alpha.f= alphaVal()),
-                    border = NA,
-                    add    = TRUE
-                )
-            }
-        }
-        legend(
-            "topleft",
-            inset= .05,
-            cex = .8,
-            title= NULL,
-            groupVarFactorLevelsSorted(),
-            horiz = FALSE,
-            bty= "n",
-            border= NA,
-            fill = do.call(c, lapply(groupVarFactorLevelsSorted(), function(x)
-                adjustcolor(colorScale()[x], alpha.f= alphaVal())))
+        makeLogitPSPlot(
+            dat= dsetPSGraphs(),
+            sortedFactorLevels= groupVarFactorLevelsSorted(),
+            grpVarFactorName= groupVarFactorName(),
+            xvarName= logitpsVarName(),
+            colorscale= colorScale(),
+            alphaval = alphaVal()
         )
     }, res= 100)    
 
