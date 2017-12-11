@@ -1113,7 +1113,7 @@ shinyServer(function(input, output, session) {
     })
     keepNARawList <- reactive({
         if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
-        if (is.null(varsToView())) return(NULL)
+        req(varsToView())
 
         mylist <- vector("list", numvarsToView())
         names(mylist) <- varsToView()
@@ -1134,7 +1134,7 @@ shinyServer(function(input, output, session) {
         # TODO: do I want the isolate in the RawLists instead?
         # dependencies
         if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
-        if (is.null(varsToView())) return(NULL)
+        req(varsToView())
         if (input$xgraphsUpdateButton == 0 & 
             input$PSCalcUpdateButton == 0) {
             return(NULL)
@@ -1191,12 +1191,12 @@ shinyServer(function(input, output, session) {
     })    
 
     exprToKeepAfterPruning <- reactive({
-        if (is.null(pruneValTextList())) return(NULL)
+        req(pruneValTextList())
         
         do.call("paste", list(pruneValTextList(), collapse= " & " ))
     })    
     output$keepAfterPruningCopyText <- renderUI({
-        if (is.null(pruneValTextList())) return(NULL)
+        req(pruneValTextList())
 
         mytext <- do.call("paste", list(pruneValTextList(), collapse= " & <br/>" ))
         HTML(paste0(
@@ -1206,8 +1206,8 @@ shinyServer(function(input, output, session) {
 
     idsToKeepAfterPruning <- reactive({
         if (datInfo$newData == TRUE) return(NULL)
-        if (is.null(dsetOrig())) return(NULL)
-        if (is.null(idVarName())) return(NULL)
+        req(dsetOrig())
+        req(idVarName())
 
         if (is.null(exprToKeepAfterPruning())) return(dsetOrig()[[idVarName()]])
         
@@ -1216,8 +1216,8 @@ shinyServer(function(input, output, session) {
     })    
     
     output$pruneTable <- renderTable({
-        if (is.null(idsToKeepAfterPruning())) return(NULL)
-        if (is.null(groupVarName())) return(NULL)
+        req(idsToKeepAfterPruning())
+        req(groupVarName())
     
         dat <- dsetOrig()[idsToKeepAfterPruning(), .N, 
             by= eval(groupVarName())]
@@ -1228,8 +1228,8 @@ shinyServer(function(input, output, session) {
     output$logitpsPlotForBrushing <- renderPlot({
         # exact duplicate of the other one; 
         #    can't call the same plot twice in the UI 
-        # TODO: can I use a module to avoid the code duplication?
-        if (is.null(dsetPSGraphs())) return(NULL)
+        # TODO: turn into function
+        req(dsetPSGraphs())
 
         histlist <- vector("list", length(groupVarFactorLevelsSorted()))
         names(histlist) <- groupVarFactorLevelsSorted() 
@@ -1280,7 +1280,7 @@ shinyServer(function(input, output, session) {
     }, res= 100)    
 
     output$logitpsPlotBrushable <- renderUI({
-        if (is.null(dsetPSGraphs())) return(NULL)
+        req(dsetPSGraphs())
 
         # from sandstone.css variables:
         #gray:                   #98978B;
@@ -1305,9 +1305,9 @@ shinyServer(function(input, output, session) {
     
     dsetXGraphs <- reactive({
         if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
-        if (is.null(varsToView())) return(NULL)
-        if (is.null(dsetPSGraphs())) return(NULL)
-        if (is.null(dsetGroupvar())) return(NULL)
+        req(varsToView())
+        req(dsetPSGraphs())
+        req(dsetGroupvar())
 
         # core dataset for plots: ID, group, x
         dat <- merge(
@@ -1322,8 +1322,8 @@ shinyServer(function(input, output, session) {
     })
     dsetXPS <- reactive({
         if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
-        if (is.null(dsetXGraphs())) return(NULL)
-        if (is.null(dsetPSGraphs())) return(NULL)
+        req(dsetXGraphs())
+        req(dsetPSGraphs())
     
         # dset w/ x and PS. Either could be missing.
         dat <- merge(
@@ -1750,8 +1750,7 @@ shinyServer(function(input, output, session) {
                 # Create the under-plot text for each variable, if applicable
                 output[[underPlotTextName]] <- renderUI({
                     if (!psUseCompleteCasesOnly()) return(NULL)
-                    if (is.null(dsetXPS())) return(NULL)
-                    if (is.null(dsetXPS())) return(NULL)
+                    req(dsetXPS())
 
                     nWithXButNoPS <- length(
                         dsetXPS()[is.na(get(logitpsVarName())) & !is.na(get(varname)), 
@@ -1809,9 +1808,9 @@ shinyServer(function(input, output, session) {
 
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
-                    if (is.null(varIsContinuous())) return(NULL)
-                    if (is.null(varIsContinuous()[varname])) return(NULL)
-                    if (is.null(idsToKeepAfterPruning())) return(NULL)
+                    req(varIsContinuous())
+                    req(varIsContinuous()[varname])
+                    req(idsToKeepAfterPruning())
 
                     if (varIsContinuous()[varname]) {
                         #textInputRow(
@@ -1840,9 +1839,9 @@ shinyServer(function(input, output, session) {
                 }) # end renderUI
 
                 output[[pruner2name]] <- renderUI({
-                    if (is.null(varIsContinuous())) return(NULL)
-                    if (is.null(varIsContinuous()[varname])) return(NULL)
-                    if (is.null(idsToKeepAfterPruning())) return(NULL)
+                    req(varIsContinuous())
+                    req(varIsContinuous()[varname])
+                    req(idsToKeepAfterPruning())
 
                     if (varIsContinuous()[varname]) {
                         textInput(
@@ -1900,10 +1899,10 @@ shinyServer(function(input, output, session) {
                 # TODO: break this up for the two input boxes
                 output[[textCheck1Name]] <- renderUI({
                     # give the dependencies time to catch up
-                    if (is.null(varIsContinuous())) return(NULL)
-                    if (is.null(varIsContinuous()[varname])) return(NULL)
-                    if (is.null(input[[input1name]])) return(NULL)
-                    if (is.null(input[[input2name]])) return(NULL)
+                    req(varIsContinuous())
+                    req(varIsContinuous()[varname])
+                    req(input[[input1name]])
+                    req(input[[input2name]])
                     
                     if (varIsContinuous()[varname]) {
                         if (is.na(as.numeric(input[[input1name]])) | 
@@ -1926,7 +1925,7 @@ shinyServer(function(input, output, session) {
     output$covariatePlotsAndInputs <- renderUI({
         if (datInfo$newDataNoVarsChosen == TRUE) return(NULL)
         if (input$generalGraphUpdateButton == 0) return(NULL)
-        if (is.null(varsToView())) return(NULL)
+        req(varsToView())
         
         plot_and_input_list <- vector("list", numvarsToView())
         for (i in seq_along(varsToView())) {
@@ -1993,7 +1992,7 @@ shinyServer(function(input, output, session) {
     
     # adapted from https://github.com/kaz-yos/tableone/blob/master/vignettes/smd.Rmd
     tabOrig <- reactive({
-        if (is.null(varsToView())) return(NULL)
+        req(varsToView())
 
         ## Create a TableOne object
         CreateTableOne(
@@ -2007,9 +2006,9 @@ shinyServer(function(input, output, session) {
         )
     })    
     tabPruned <- reactive({
-        if (is.null(varsToView())) return(NULL)
-        if (is.null(exprToKeepAfterPruning())) return(NULL)
-        if (is.null(idsToKeepAfterPruning())) return(NULL)
+        req(varsToView())
+        req(exprToKeepAfterPruning())
+        req(idsToKeepAfterPruning())
 
         ## Create a TableOne object
         CreateTableOne(
@@ -2023,9 +2022,9 @@ shinyServer(function(input, output, session) {
         )
     })    
     dsetForSMDs <- reactive({
-        if (is.null(varsToView())) return(NULL)
-        if (is.null(idsToKeepAfterPruning())) return(NULL)
-        if (is.null(dsetPSGraphs())) return(NULL)
+        req(varsToView())
+        req(idsToKeepAfterPruning())
+        req(dsetPSGraphs())
         if (input$showATE == FALSE & 
             input$showATT == FALSE &
             input$showATM == FALSE) return(NULL)
@@ -2044,7 +2043,7 @@ shinyServer(function(input, output, session) {
         dat
     })
     tabATE <- reactive({
-        if (is.null(dsetForSMDs())) return(NULL)
+        req(dsetForSMDs())
         if (input$showATE == FALSE) return(NULL)
 
         # Create a survey object
@@ -2063,7 +2062,7 @@ shinyServer(function(input, output, session) {
         )
     })    
     tabATT <- reactive({
-        if (is.null(dsetForSMDs())) return(NULL)
+        req(dsetForSMDs())
         if (input$showATT == FALSE) return(NULL)
 
         # Create a survey object
@@ -2082,7 +2081,7 @@ shinyServer(function(input, output, session) {
         )
     })    
     tabATM <- reactive({
-        if (is.null(dsetForSMDs())) return(NULL)
+        req(dsetForSMDs())
         if (input$showATM == FALSE) return(NULL)
 
         # Create a survey object
@@ -2126,7 +2125,8 @@ shinyServer(function(input, output, session) {
         )))
     })
     output$noSMDText <- renderUI({
-        if ((!is.null(dsetOrig()) & datInfo$newDataNoVarsChosen )) {
+        req(dsetOrig())
+        if (datInfo$newDataNoVarsChosen) {
             HTML(paste0(tags$span(class="text-warning", 
                 "To view SMD plot, first generate graphs on the 'Prune' page.")))
         } else return(NULL)
@@ -2139,7 +2139,7 @@ shinyServer(function(input, output, session) {
 
     ## Construct a data frame containing variable name and SMD from all methods
     dsetSMDs <- reactive({
-        if (is.null(tabOrig())) return(NULL)
+        req(tabOrig())
 
         dat <- data.table(
             variable  = names(ExtractSmd(tabOrig())),
@@ -2168,7 +2168,7 @@ shinyServer(function(input, output, session) {
         setkey(datSorted, varnum)
     })
     output$SMDPlot <- renderPlot({
-        if (is.null(dsetSMDs())) return(NULL)
+        req(dsetSMDs())
 
         nvars <- nrow(dsetSMDs())
         allTabTypes <- c("Original", "Pruned", "WeightedATE", 
