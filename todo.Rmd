@@ -7,6 +7,8 @@ output: html_document
 
 # Sooner
 
+* add plotting code to About tab
+
 * Have SMD plots include missingness indicators & squared terms
 
 * 17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
