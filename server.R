@@ -1191,7 +1191,6 @@ shinyServer(function(input, output, session) {
     })    
 
     exprToKeepAfterPruning <- reactive({
-        cat(file=stderr(), "etkap1\n")
         # Note that we don't want req here, 
         #   because of the way idsToKeepAfterPruning uses the value
         if(is.null(pruneValTextList())) return(NULL)
@@ -2011,14 +2010,8 @@ shinyServer(function(input, output, session) {
         )
     })    
     tabPruned <- reactive({
-        cat(file=stderr(), "tp1\n")
         req(varsToView())
-        cat(file=stderr(), "tp2\n")
-        # TODO: I'm pretty sure we don't need this line anymore
-        #req(exprToKeepAfterPruning())
-        cat(file=stderr(), "tp3\n")
         req(idsToKeepAfterPruning())
-        cat(file=stderr(), "tp4\n")
 
         ## Create a TableOne object
         CreateTableOne(
@@ -2032,17 +2025,12 @@ shinyServer(function(input, output, session) {
         )
     })    
     dsetForSMDs <- reactive({
-        cat(file=stderr(), "dfs1\n")
         req(varsToView())
-        cat(file=stderr(), "dfs2\n")
         req(idsToKeepAfterPruning())
-        cat(file=stderr(), "dfs3\n")
         req(dsetPSGraphs())
-        cat(file=stderr(), "dfs4\n")
         if (input$showATE == FALSE & 
             input$showATT == FALSE &
             input$showATM == FALSE) return(NULL)
-        cat(file=stderr(), "dfs5\n")
 
         # merge covariate data w/ weight data
         # TODO: consider making this a free-standing dataset 
@@ -2058,10 +2046,8 @@ shinyServer(function(input, output, session) {
         dat
     })
     tabATE <- reactive({
-        cat(file=stderr(), "tATE1\n")
         # we don't want req in the line below
         if(is.null(dsetForSMDs())) return(NULL)
-        cat(file=stderr(), "tATE2\n")
         if (input$showATE == FALSE) return(NULL)
 
         # Create a survey object
@@ -2159,31 +2145,24 @@ shinyServer(function(input, output, session) {
 
     ## Construct a data frame containing variable name and SMD from all methods
     dsetOfSMDs <- reactive({
-        cat(file=stderr(), "ds1\n" )
         req(tabOrig())
-        cat(file=stderr(), "ds2\n" )
 
         dat <- data.table(
             variable  = names(ExtractSmd(tabOrig())),
             Original  = ExtractSmd(tabOrig())
         )
-        cat(file=stderr(), "ds3\n" )
         if (!is.null(tabPruned())) {
             dat[, Pruned := ExtractSmd(tabPruned())]
         }
-        cat(file=stderr(), "ds3a\n" )
         if (!is.null(tabATE())) {
             dat[, WeightedATE := ExtractSmd(tabATE())]
         }
-        cat(file=stderr(), "ds3b\n" )
         if (!is.null(tabATT())) {
             dat[, WeightedATT := ExtractSmd(tabATT())]
         }
-        cat(file=stderr(), "ds3c\n" )
         if (!is.null(tabATM())) {
             dat[, WeightedATM := ExtractSmd(tabATM())]
         }
-        cat(file=stderr(), "ds4\n" )
         setkey(dat, variable)
         
         varNames <- as.character(dat[, variable])[order(
@@ -2195,9 +2174,7 @@ shinyServer(function(input, output, session) {
         setkey(datSorted, varnum)
     })
     output$SMDPlot <- renderPlot({
-        cat(file=stderr(), "smdplot1\n" )
         req(dsetOfSMDs())
-        cat(file=stderr(), "smdplot2\n" )
 
         nvars <- nrow(dsetOfSMDs())
         allTabTypes <- c("Original", "Pruned", "WeightedATE", 
