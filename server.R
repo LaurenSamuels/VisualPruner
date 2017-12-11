@@ -420,10 +420,10 @@ shinyServer(function(input, output, session) {
         # A dataset with two columns, id and group.
         # Contains all rows from original dataset.
         # Not created until after the PS formula is typed.
+        if (datInfo$newData == TRUE) return(NULL)
         req(dsetOrig())
         req(groupVarFactorName())
         req(idVarName())
-        if (datInfo$newData == TRUE) return(NULL)
 
         dat <- data.table(dsetOrig()[[idVarName()]])
         setnames(dat, old = names(dat), new = idVarName())
@@ -883,8 +883,8 @@ shinyServer(function(input, output, session) {
     output$dataNonmissingDimText2 <- renderText({
         req(idsWithVarsOKForPS())
         req(PSIDs())
-        req(varnamesFromRHSOK())
         if (!psUseCompleteCasesOnly()) return(NULL)
+        req(varnamesFromRHSOK())
         if (psNotChecked()) return(NULL)
 
         # TODO: could add "out of" but would need to decide whether
@@ -1191,7 +1191,9 @@ shinyServer(function(input, output, session) {
     })    
 
     exprToKeepAfterPruning <- reactive({
-        req(pruneValTextList())
+        # Note that we don't want req here, 
+        #   because of the way idsToKeepAfterPruning uses the value
+        if(is.null(pruneValTextList())) return(NULL)
         
         do.call("paste", list(pruneValTextList(), collapse= " & " ))
     })    
@@ -1209,7 +1211,9 @@ shinyServer(function(input, output, session) {
         req(dsetOrig())
         req(idVarName())
 
-        if (is.null(exprToKeepAfterPruning())) return(dsetOrig()[[idVarName()]])
+        if (is.null(exprToKeepAfterPruning())) {
+            return(dsetOrig()[[idVarName()]])
+        }
         
         dsetOrig()[eval(parse(text= 
             exprToKeepAfterPruning()))][[idVarName()]]
