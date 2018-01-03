@@ -164,7 +164,7 @@ makeFig2 <- function(Varname, Testing) {
 }
 
 
-makeFig3 <- function(dat, yLim, doShading, brushmin, brushmax, 
+makeFig3 <- function(dat, yLim, WantShading, brushmin, brushmax, 
     gVarFactorLevelsSorted, gVarFactorName, lpsVarName,
     pSizeVal, colScale, alphVal, 
     MyJitter, MyAtAdds, MyWidth, Testing) {
@@ -176,7 +176,7 @@ makeFig3 <- function(dat, yLim, doShading, brushmin, brushmax,
         axes = FALSE,
         type = "n"
     )
-    if (doShading) {
+    if (WantShading) {
         par.usr <- par("usr")
         rect(
             xleft   = par.usr[1], 
@@ -268,12 +268,17 @@ makeFig4 <- function(dat, VarIsCont, Varname, myYLimCounts,
 }
 
 
-makeFig5 <- function(dat, VarIsCont, Varname, Testing) {
+makeFig5 <- function(dat, VarIsCont, Varname, lpsVarName,
+    MyXlim, MyYlimPS, MyAtOrig, MyAtAdds, MyJitter, MyWidth,
+    WantShading, brushmin, brushmax, 
+    gVarFactorLevelsSorted, gVarFactorName, 
+    pSizeVal, colScale, alphVal, 
+    Testing) {
     # fig 5, the main plot
     if (VarIsCont) {    
-        plot(dat[[Varname]], dat[[logitpsVarName()]], 
-            xlim = myXlim, 
-            ylim = myYlimPS, 
+        plot(dat[[Varname]], dat[[lpsVarName]], 
+            xlim = MyXlim, 
+            ylim = MyYlimPS, 
             bty  = if (Testing) "o" else "n",
             type = "n"
         )
@@ -281,73 +286,96 @@ makeFig5 <- function(dat, VarIsCont, Varname, Testing) {
         par(las= 2) #TODO: try to angle instead
     
         plot(1, 0,
-            xlim = c(min(myAtOrig) - 1, max(myAtOrig) + 1), 
-            ylim = myYlimPS, 
+            xlim = c(min(MyAtOrig) - 1, max(MyAtOrig) + 1), 
+            ylim = MyYlimPS, 
             axes = FALSE,
             type = "n")
     }
-    if (input$shadeBrushedArea == TRUE & !is.null(psbrushmin())) {
+    if (WantShading) {
         par.usr <- par("usr")
         rect(
             xleft   = par.usr[1], 
-            ybottom = psbrushmin(), 
+            ybottom = brushmin, 
             xright  = par.usr[2], 
-            ytop    = psbrushmax(),
+            ytop    = brushmax,
             density = NA,
             border  = NA,
             col     = "#DFD7CA"
         )
     }
     if (VarIsCont) {    
-        for (lev in groupVarFactorLevelsSorted()) {
-            x <- dat[get(groupVarFactorName()) == lev, 
+        for (lev in gVarFactorLevelsSorted) {
+            x <- dat[get(gVarFactorName) == lev, 
                 get(Varname)]
-            y <- dat[get(groupVarFactorName()) == lev, 
-                get(logitpsVarName())]
+            y <- dat[get(gVarFactorName) == lev, 
+                get(lpsVarName)]
             points(x, y,
                 pch = 20,
-                cex = pointSizeVal(),
-                col = adjustcolor(colorScale()[lev], 
-                    alpha.f= alphaVal()))
+                cex = pSizeVal,
+                col = adjustcolor(colScale[lev], 
+                    alpha.f= alphVal))
         }
         lines(loess.smooth(dat[[Varname]], 
-            dat[[logitpsVarName()]]))
+            dat[[lpsVarName]]))
     } else {
-        for (lev in groupVarFactorLevelsSorted()) {
-            x <- dat[get(groupVarFactorName()) == lev, 
+        for (lev in gVarFactorLevelsSorted) {
+            x <- dat[get(gVarFactorName) == lev, 
                 get(Varname)]
-            y <- dat[get(groupVarFactorName()) == lev, 
-                get(logitpsVarName())]
+            y <- dat[get(gVarFactorName) == lev, 
+                get(lpsVarName)]
             stripchart(y ~ x,
                 vertical = TRUE,
                 add      = TRUE,
                 method   = "jitter",
-                jitter   = myJitter,
+                jitter   = MyJitter,
                 pch      = 20,
-                at       = myAtOrig + myAtAdds[lev],
-                cex      = pointSizeVal(),
-                col      = adjustcolor(colorScale()[lev], 
-                            alpha.f= alphaVal())
+                at       = MyAtOrig + MyAtAdds[lev],
+                cex      = pSizeVal,
+                col      = adjustcolor(colScale[lev], 
+                            alpha.f= alphVal)
             )
         }
-        means <- unlist(lapply(levels(datxps.nona[[varname]]), 
+        means <- unlist(lapply(levels(dat[[Varname]]), 
             function(levl) {
-                mean(datxps.nona[get(varname) == levl, 
-                    get(logitpsVarName())])
+                mean(dat[get(Varname) == levl, 
+                    get(lpsVarName)])
             }
         ))
-        for (i in seq_along(levels(datxps.nona[[varname]]))) {
-            levl <- levels(datxps.nona[[varname]])[i]
-            myMean <- mean(datxps.nona[get(varname) == levl, 
-                get(logitpsVarName())])   
+        for (i in seq_along(levels(dat[[Varname]]))) {
+            levl <- levels(dat[[Varname]])[i]
+            myMean <- mean(dat[get(Varname) == levl, 
+                get(lpsVarName)])   
             segments(
-                myAtOrig[i] - myWidth / 2, myMean,
-                myAtOrig[i] + myWidth / 2, myMean
+                MyAtOrig[i] - MyWidth / 2, myMean,
+                MyAtOrig[i] + MyWidth / 2, myMean
             )
         }
-        axis(1, at = myAtOrig, labels = names(myAtOrig))
+        axis(1, at = MyAtOrig, labels = names(MyAtOrig))
         axis(2)
     }
     if (Testing) box("figure", col= "green")
     if (Testing) box("plot", col= "black")
+}
+
+makeFig6 <- function(dat, MyYlimCounts, gVarFactorLevelsSorted,
+    MyAtAdds, MyJitter, colScale, Testing) {
+    # fig 6, top right plot. 
+    plot(1, 0,
+        xlim = c(0, 2), 
+        ylim = c(0, MyYlimCounts), 
+        bty  = if (Testing) "o" else "n",
+        type = "n")
+
+    for (grouplev in gVarFactorLevelsSorted) {
+        rect(
+            xleft   = 1 + MyAtAdds[grouplev] - MyJitter,
+            ybottom = 0,
+            xright  = 1 + MyAtAdds[grouplev] + MyJitter,
+            ytop    = dat[grouplev],
+            density = NA,
+            border  = NA,
+            col     = colScale[grouplev] 
+        )
+    }
+    if (Testing) box("figure", col= "green")    
 }

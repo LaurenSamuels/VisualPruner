@@ -1283,6 +1283,7 @@ shinyServer(function(input, output, session) {
                     datx <- dsetXGraphs()[, datxnames, with= FALSE]
                     
                     varIsCont <- varIsContinuous()[varname]
+                    wantShading <- input$shadeBrushedArea == TRUE & !is.null(psbrushmin())
                     
                     # convert character & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
@@ -1417,7 +1418,7 @@ shinyServer(function(input, output, session) {
                     )
                     makeFig3(dat= datxps.xna,
                         yLim= myYlimPS, 
-                        doShading= input$shadeBrushedArea == TRUE & !is.null(psbrushmin()),
+                        WantShading= wantShading,
                         brushmin= psbrushmin(),
                         brushmax= psbrushmax(),
                         gVarFactorLevelsSorted = groupVarFactorLevelsSorted(),
@@ -1462,88 +1463,22 @@ shinyServer(function(input, output, session) {
                     makeFig5(
                         dat= datxps.nona,
                         VarIsCont= varIsCont,
+                        Varname= varname,
+                        lpsVarName= logitpsVarName(),
+                        MyXlim= myXlim, 
+                        MyYlimPS= myYlimPS, 
+                        MyAtOrig= myAtOrig, MyAtAdds= myAtAdds, MyJitter= myJitter,
+                        WantShading= wantShading,
+                        brushmin= psbrushmin(),
+                        brushmax= psbrushmax(),
+                        gVarFactorLevelsSorted = groupVarFactorLevelsSorted(),
+                        gVarFactorName = groupVarFactorName(),
+                        MyWidth= myWidth,
+                        pSizeVal= pointSizeVal(),
+                        colScale= colorScale(),
+                        alphVal= alphaVal(),
                         Testing= testing
                     )
-                    if (varIsCont) {    
-                        plot(datxps.nona[[varname]], datxps.nona[[logitpsVarName()]], 
-                            xlim = myXlim, 
-                            ylim = myYlimPS, 
-                            bty  = if (testing) "o" else "n",
-                            type = "n"
-                        )
-                    } else {
-                        par(las= 2) #TODO: try to angle instead
-
-                        plot(1, 0,
-                            xlim = c(min(myAtOrig) - 1, max(myAtOrig) + 1), 
-                            ylim = myYlimPS, 
-                            axes = FALSE,
-                            type = "n")
-                    }
-                    if (input$shadeBrushedArea == TRUE & !is.null(psbrushmin())) {
-                        par.usr <- par("usr")
-                        rect(
-                            xleft   = par.usr[1], 
-                            ybottom = psbrushmin(), 
-                            xright  = par.usr[2], 
-                            ytop    = psbrushmax(),
-                            density = NA,
-                            border  = NA,
-                            col     = "#DFD7CA"
-                        )
-                    }
-                    if (varIsCont) {    
-                        for (lev in groupVarFactorLevelsSorted()) {
-                            x <- datxps.nona[get(groupVarFactorName()) == lev, 
-                                get(varname)]
-                            y <- datxps.nona[get(groupVarFactorName()) == lev, 
-                                get(logitpsVarName())]
-                            points(x, y,
-                                pch = 20,
-                                cex = pointSizeVal(),
-                                col = adjustcolor(colorScale()[lev], 
-                                    alpha.f= alphaVal()))
-                        }
-                        lines(loess.smooth(datxps.nona[[varname]], 
-                            datxps.nona[[logitpsVarName()]]))
-                    } else {
-                        for (lev in groupVarFactorLevelsSorted()) {
-                            x <- datxps.nona[get(groupVarFactorName()) == lev, 
-                                get(varname)]
-                            y <- datxps.nona[get(groupVarFactorName()) == lev, 
-                                get(logitpsVarName())]
-                            stripchart(y ~ x,
-                                vertical = TRUE,
-                                add      = TRUE,
-                                method   = "jitter",
-                                jitter   = myJitter,
-                                pch      = 20,
-                                at       = myAtOrig + myAtAdds[lev],
-                                cex      = pointSizeVal(),
-                                col      = adjustcolor(colorScale()[lev], 
-                                            alpha.f= alphaVal())
-                            )
-                        }
-                        means <- unlist(lapply(levels(datxps.nona[[varname]]), 
-                            function(levl) {
-                                mean(datxps.nona[get(varname) == levl, 
-                                    get(logitpsVarName())])
-                            }
-                        ))
-                        for (i in seq_along(levels(datxps.nona[[varname]]))) {
-                            levl <- levels(datxps.nona[[varname]])[i]
-                            myMean <- mean(datxps.nona[get(varname) == levl, 
-                                get(logitpsVarName())])   
-                            segments(
-                                myAtOrig[i] - myWidth / 2, myMean,
-                                myAtOrig[i] + myWidth / 2, myMean
-                            )
-                        }
-                        axis(1, at = myAtOrig, labels = names(myAtOrig))
-                        axis(2)
-                    }
-                    if (testing) box("figure", col= "green")
-                    if (testing) box("plot", col= "black")
                     #################################################
 
                     #################################################
@@ -1554,24 +1489,14 @@ shinyServer(function(input, output, session) {
                         xaxt = "n", 
                         yaxt = "n"
                     )
-                    plot(1, 0,
-                        xlim = c(0, 2), 
-                        ylim = c(0, myYlimCounts), 
-                        bty  = if (testing) "o" else "n",
-                        type = "n")
-
-                    for (grouplev in groupVarFactorLevelsSorted()) {
-                        rect(
-                            xleft   = 1 + myAtAdds[grouplev] - myJitter,
-                            ybottom = 0,
-                            xright  = 1 + myAtAdds[grouplev] + myJitter,
-                            ytop    = datx.xna.counts[grouplev],
-                            density = NA,
-                            border  = NA,
-                            col     = colorScale()[grouplev] 
-                        )
-                    }
-                    if (testing) box("figure", col= "green")
+                    makeFig6(
+                        dat= datx.xna.counts,
+                        MyYlimCounts= myYlimCounts,
+                        gVarFactorLevelsSorted = groupVarFactorLevelsSorted(),
+                        MyAtAdds= myAtAdds, MyJitter= myJitter,
+                        colScale= colorScale(),
+                        Testing= testing
+                    )
                     #################################################
 
                     # reset the graphics
