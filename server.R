@@ -1282,10 +1282,12 @@ shinyServer(function(input, output, session) {
                     datxnames <- c(idVarName(), varname, groupVarFactorName())
                     datx <- dsetXGraphs()[, datxnames, with= FALSE]
                     
+                    varIsCont <- varIsContinuous()[varname]
+                    
                     # convert character & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
                             (is.numeric(datx[[varname]]) & 
-                            !(varIsContinuous()[varname]))) {
+                            !(varIsCont))) {
                         datx[, eval(varname) := 
                             factor(datx[[varname]])]
                     }
@@ -1312,7 +1314,7 @@ shinyServer(function(input, output, session) {
                     datxps.xna <- datxps[is.na(get(varname)), ]
                     
                     # x-axis limits, etc. for col2 plots
-                    if(varIsContinuous()[varname]) {
+                    if(varIsCont) {
                         myXlim <- range(datx.nona[[varname]])
                     } else {
                         myAtOrig <- seq_along(levels(datx.nona[[varname]]))
@@ -1333,7 +1335,7 @@ shinyServer(function(input, output, session) {
 
                     # ylim for top plots: 
                     datx.xna.counts <- table(datx.xna[[groupVarFactorName()]])
-                    if(varIsContinuous()[varname]) {
+                    if(varIsCont) {
                         # first make all histograms but do not plot,
                         #    in order to get ylim
                         histlist <- vector("list", length(groupVarFactorLevelsSorted()))
@@ -1378,7 +1380,7 @@ shinyServer(function(input, output, session) {
                     
                     # "row2Plots" appear as the bottom (nothing but labels in row 3)
                     row2Plots.mar.b <- 
-                        if (varIsContinuous()[varname]) 2 else {
+                        if (varIsCont) 2 else {
                             max(min(max(nchar(levels(
                                 datx[[varname]])))[1] / 2, 8), 2)
                     }
@@ -1424,8 +1426,8 @@ shinyServer(function(input, output, session) {
                         pSizeVal= pointSizeVal(),
                         colScale= colorScale(),
                         alphVal= alphaVal(),
-                        Testing= testing,
-                        MyJitter= myJitter, MyAtAdds= myAtAdds, MyWidth= myWidth
+                        MyJitter= myJitter, MyAtAdds= myAtAdds, MyWidth= myWidth,
+                        Testing= testing
                     )
                     
                     #################################################
@@ -1434,51 +1436,19 @@ shinyServer(function(input, output, session) {
                                 topPlots.mar.t, col2Plots.mar.r), #bltr
                         xaxt ="n"
                     )
-                    if (varIsContinuous()[varname]) {    
-                        plot(min(datx.nona[[varname]]), 0, 
-                            xlim = range(datx.nona[[varname]]),
-                            ylim = c(0, myYlimCounts), 
-                            bty  = if (testing) "o" else "n",
-                            type = "n"
-                        )
-                        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
-                        for (lev in groupVarFactorLevelsSorted()) {
-                            myColor <- colorScale()[lev] 
-                            if (!is.null(histlist[[lev]])) {
-                                plot(histlist[[lev]], 
-                                    freq   = TRUE, 
-                                    col    = adjustcolor(myColor, alpha.f= alphaVal()),
-                                    border = NA,
-                                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
-                                    add    = TRUE
-                                )
-                            }
-                        }
-                    } else { # discrete
-                        # https://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/
-                        plot(1, 0,
-                            xlim = c(min(myAtOrig) - 1, max(myAtOrig) + 1), 
-                            ylim = c(0, myYlimCounts), 
-                            bty  = if (testing) "o" else "n",
-                            type = "n")
-
-                        for (grouplev in groupVarFactorLevelsSorted()) {
-                            for (varlev in levels(datx.nona[[varname]])) {
-                                rect(
-                                    xleft   = myAtOrig[varlev] + myAtAdds[grouplev] - myJitter,
-                                    ybottom = 0,
-                                    xright  = myAtOrig[varlev] + myAtAdds[grouplev] + myJitter,
-                                    ytop    = xtbl[grouplev, varlev],
-                                    density = NA,
-                                    border  = NA,
-                                    col     = colorScale()[grouplev] 
-                                )
-                            }
-                        }
-                    }
-                    if (testing) box("figure", col= "green")
-                    ################################################
-
+                    makeFig4(
+                        dat= datx.nona,
+                        VarIsCont= varIsCont,
+                        Varname= varname,
+                        myYLimCounts = myYlimCounts,
+                        gVarFactorLevelsSorted = groupVarFactorLevelsSorted(),
+                        colScale= colorScale(),
+                        alphVal= alphaVal(),
+                        Histlist= histlist,
+                        MyAtOrig= myAtOrig, MyAtAdds= myAtAdds, MyJitter= myJitter,  
+                        Xtbl= xtbl,
+                        Testing= testing
+                    )
 
                     ################################################
                     # fig 5, the main plot
@@ -1489,7 +1459,12 @@ shinyServer(function(input, output, session) {
                         yaxt = "s", 
                         bty= if (testing) "o" else "n"
                     )
-                    if (varIsContinuous()[varname]) {    
+                    makeFig5(
+                        dat= datxps.nona,
+                        VarIsCont= varIsCont,
+                        Testing= testing
+                    )
+                    if (varIsCont) {    
                         plot(datxps.nona[[varname]], datxps.nona[[logitpsVarName()]], 
                             xlim = myXlim, 
                             ylim = myYlimPS, 
@@ -1517,7 +1492,7 @@ shinyServer(function(input, output, session) {
                             col     = "#DFD7CA"
                         )
                     }
-                    if (varIsContinuous()[varname]) {    
+                    if (varIsCont) {    
                         for (lev in groupVarFactorLevelsSorted()) {
                             x <- datxps.nona[get(groupVarFactorName()) == lev, 
                                 get(varname)]

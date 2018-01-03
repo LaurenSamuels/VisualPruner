@@ -165,9 +165,9 @@ makeFig2 <- function(Varname, Testing) {
 
 
 makeFig3 <- function(dat, yLim, doShading, brushmin, brushmax, 
-    gVarFactorLevelsSorted, gVarFactorName, lpsVarName, Testing, 
+    gVarFactorLevelsSorted, gVarFactorName, lpsVarName,
     pSizeVal, colScale, alphVal, 
-    MyJitter, MyAtAdds, MyWidth) {
+    MyJitter, MyAtAdds, MyWidth, Testing) {
     # fig 3, right-side central (row2) plot
     
     plot(1, 0,
@@ -213,4 +213,141 @@ makeFig3 <- function(dat, yLim, doShading, brushmin, brushmax,
     axis(1, at = 1, labels= "Missing")
     if (Testing) box("figure", col= "green")
     if (Testing) box("plot", col= "black")    
+}
+
+
+makeFig4 <- function(dat, VarIsCont, Varname, myYLimCounts,
+    gVarFactorLevelsSorted, colScale, alphVal, Histlist,
+    MyAtOrig, MyAtAdds, MyJitter, Xtbl,
+    Testing) {
+    # fig 4, top central plot. 
+    
+    if (VarIsCont) {    
+        plot(min(dat[[Varname]]), 0, 
+            xlim = range(dat[[Varname]]),
+            ylim = c(0, myYLimCounts), 
+            bty  = if (Testing) "o" else "n",
+            type = "n"
+        )
+        # modified from http://www.r-bloggers.com/overlapping-histogram-in-r/
+        for (lev in gVarFactorLevelsSorted) {
+            myColor <- colScale[lev] 
+            if (!is.null(Histlist[[lev]])) {
+                plot(Histlist[[lev]], 
+                    freq   = TRUE, 
+                    col    = adjustcolor(myColor, alpha.f= alphVal),
+                    border = NA,
+                    lty    = 0, # this is to help with rendering on server. Not sure it does though.
+                    add    = TRUE
+                )
+            }
+        }
+    } else { # discrete
+        # https://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/
+        plot(1, 0,
+            xlim = c(min(MyAtOrig) - 1, max(MyAtOrig) + 1), 
+            ylim = c(0, myYLimCounts), 
+            bty  = if (Testing) "o" else "n",
+            type = "n")
+    
+        for (grouplev in gVarFactorLevelsSorted) {
+            for (varlev in levels(dat[[Varname]])) {
+                rect(
+                    xleft   = MyAtOrig[varlev] + MyAtAdds[grouplev] - MyJitter,
+                    ybottom = 0,
+                    xright  = MyAtOrig[varlev] + MyAtAdds[grouplev] + MyJitter,
+                    ytop    = Xtbl[grouplev, varlev],
+                    density = NA,
+                    border  = NA,
+                    col     = colScale[grouplev] 
+                )
+            }
+        }
+    }
+    if (Testing) box("figure", col= "green")   
+}
+
+
+makeFig5 <- function(dat, VarIsCont, Varname, Testing) {
+    # fig 5, the main plot
+    if (VarIsCont) {    
+        plot(dat[[Varname]], dat[[logitpsVarName()]], 
+            xlim = myXlim, 
+            ylim = myYlimPS, 
+            bty  = if (Testing) "o" else "n",
+            type = "n"
+        )
+    } else {
+        par(las= 2) #TODO: try to angle instead
+    
+        plot(1, 0,
+            xlim = c(min(myAtOrig) - 1, max(myAtOrig) + 1), 
+            ylim = myYlimPS, 
+            axes = FALSE,
+            type = "n")
+    }
+    if (input$shadeBrushedArea == TRUE & !is.null(psbrushmin())) {
+        par.usr <- par("usr")
+        rect(
+            xleft   = par.usr[1], 
+            ybottom = psbrushmin(), 
+            xright  = par.usr[2], 
+            ytop    = psbrushmax(),
+            density = NA,
+            border  = NA,
+            col     = "#DFD7CA"
+        )
+    }
+    if (VarIsCont) {    
+        for (lev in groupVarFactorLevelsSorted()) {
+            x <- dat[get(groupVarFactorName()) == lev, 
+                get(Varname)]
+            y <- dat[get(groupVarFactorName()) == lev, 
+                get(logitpsVarName())]
+            points(x, y,
+                pch = 20,
+                cex = pointSizeVal(),
+                col = adjustcolor(colorScale()[lev], 
+                    alpha.f= alphaVal()))
+        }
+        lines(loess.smooth(dat[[Varname]], 
+            dat[[logitpsVarName()]]))
+    } else {
+        for (lev in groupVarFactorLevelsSorted()) {
+            x <- dat[get(groupVarFactorName()) == lev, 
+                get(Varname)]
+            y <- dat[get(groupVarFactorName()) == lev, 
+                get(logitpsVarName())]
+            stripchart(y ~ x,
+                vertical = TRUE,
+                add      = TRUE,
+                method   = "jitter",
+                jitter   = myJitter,
+                pch      = 20,
+                at       = myAtOrig + myAtAdds[lev],
+                cex      = pointSizeVal(),
+                col      = adjustcolor(colorScale()[lev], 
+                            alpha.f= alphaVal())
+            )
+        }
+        means <- unlist(lapply(levels(datxps.nona[[varname]]), 
+            function(levl) {
+                mean(datxps.nona[get(varname) == levl, 
+                    get(logitpsVarName())])
+            }
+        ))
+        for (i in seq_along(levels(datxps.nona[[varname]]))) {
+            levl <- levels(datxps.nona[[varname]])[i]
+            myMean <- mean(datxps.nona[get(varname) == levl, 
+                get(logitpsVarName())])   
+            segments(
+                myAtOrig[i] - myWidth / 2, myMean,
+                myAtOrig[i] + myWidth / 2, myMean
+            )
+        }
+        axis(1, at = myAtOrig, labels = names(myAtOrig))
+        axis(2)
+    }
+    if (Testing) box("figure", col= "green")
+    if (Testing) box("plot", col= "black")
 }
