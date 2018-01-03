@@ -24,6 +24,7 @@ options(shiny.maxRequestSize=30*1024^2)
 
 shinyServer(function(input, output, session) {
     source("plottingFunctions.R")
+    source("smdFunctions.R")
     
     ############################################################
     ## reactiveValues() and related observers
@@ -1170,20 +1171,21 @@ shinyServer(function(input, output, session) {
             dsetOrig()[idsToKeepAfterPruning(), .N]))
     }, include.rownames = FALSE)
     
-    output$logitpsPlotForBrushing <- renderPlot({
-        # exact duplicate of the other one; 
-        #    can't call the same plot twice in the UI 
-        req(dsetPSGraphs())
-
-        makePSPlot(
-            dat= dsetPSGraphs(),
-            sortedFactorLevels= groupVarFactorLevelsSorted(),
-            grpVarFactorName= groupVarFactorName(),
-            xvarName= logitpsVarName(),
-            colorscale= colorScale(),
-            alphaval = alphaVal()
-        )
-    }, res= 100)    
+    output$logitpsPlotForBrushing <- renderPlot(
+        {
+            req(dsetPSGraphs())
+    
+            makePSPlot(
+                dat= dsetPSGraphs(),
+                sortedFactorLevels= groupVarFactorLevelsSorted(),
+                grpVarFactorName= groupVarFactorName(),
+                xvarName= logitpsVarName(),
+                colorscale= colorScale(),
+                alphaval = alphaVal()
+            )
+        }, 
+        res= 100
+    )    
 
     output$logitpsPlotBrushable <- renderUI({
         req(dsetPSGraphs())
@@ -1900,30 +1902,20 @@ shinyServer(function(input, output, session) {
     tabOrig <- reactive({
         req(varsToView())
 
-        ## Create a TableOne object
-        CreateTableOne(
+        makeTableOne(dsetOrig(), 
             vars       = varsToView(),
             strata     = groupVarName(),
-            data       = dsetOrig(),
-            factorVars = catVarsToView(),
-            includeNA  = FALSE,
-            test       = FALSE,
-            smd        = TRUE
+            factorVars = catVarsToView()
         )
     })    
     tabPruned <- reactive({
         req(varsToView())
         req(idsToKeepAfterPruning())
 
-        ## Create a TableOne object
-        CreateTableOne(
+        makeTableOne(dsetOrig()[idsToKeepAfterPruning()], 
             vars       = varsToView(),
             strata     = groupVarName(),
-            data       = dsetOrig()[idsToKeepAfterPruning()],
-            factorVars = catVarsToView(),
-            includeNA  = FALSE,
-            test       = FALSE,
-            smd        = TRUE
+            factorVars = catVarsToView()
         )
     })    
     dsetForSMDs <- reactive({
@@ -1952,19 +1944,11 @@ shinyServer(function(input, output, session) {
         if(is.null(dsetForSMDs())) return(NULL)
         if (input$showATE == FALSE) return(NULL)
 
-        # Create a survey object
-        svydat <- svydesign(ids = ~ 0, data = dsetForSMDs(), 
-            weights = ~ get(ateWtVarName()))
-
-        ## Create a TableOne object
-        svyCreateTableOne(
+        makeWeightedTableOne(dsetForSMDs(), 
+            wtvarname  = ateWtVarName(),
             vars       = varsToView(),
             strata     = groupVarName(),
-            data       = svydat,
-            factorVars = catVarsToView(),
-            includeNA  = FALSE,
-            test       = FALSE,
-            smd        = TRUE
+            factorVars = catVarsToView()
         )
     })    
     tabATT <- reactive({
@@ -1972,19 +1956,11 @@ shinyServer(function(input, output, session) {
         if(is.null(dsetForSMDs())) return(NULL)
         if (input$showATT == FALSE) return(NULL)
 
-        # Create a survey object
-        svydat <- svydesign(ids = ~ 0, data = dsetForSMDs(), 
-            weights = ~ get(attWtVarName()))
-
-        ## Create a TableOne object
-        svyCreateTableOne(
+        makeWeightedTableOne(dsetForSMDs(), 
+            wtvarname  = attWtVarName(),
             vars       = varsToView(),
             strata     = groupVarName(),
-            data       = svydat,
-            factorVars = catVarsToView(),
-            includeNA  = FALSE,
-            test       = FALSE,
-            smd        = TRUE
+            factorVars = catVarsToView()
         )
     })    
     tabATM <- reactive({
@@ -1992,19 +1968,11 @@ shinyServer(function(input, output, session) {
         if(is.null(dsetForSMDs())) return(NULL)
         if (input$showATM == FALSE) return(NULL)
 
-        # Create a survey object
-        svydat <- svydesign(ids = ~ 0, data = dsetForSMDs(), 
-            weights = ~ get(atmWtVarName()))
-
-        ## Create a TableOne object
-        svyCreateTableOne(
+        makeWeightedTableOne(dsetForSMDs(), 
+            wtvarname  = atmWtVarName(),
             vars       = varsToView(),
             strata     = groupVarName(),
-            data       = svydat,
-            factorVars = catVarsToView(),
-            includeNA  = FALSE,
-            test       = FALSE,
-            smd        = TRUE
+            factorVars = catVarsToView()
         )
     })    
 
