@@ -147,3 +147,70 @@ makeSMDPlot <- function(dat, wantLines) {
     par(def.par)
 }
 
+# For covariate plots:
+makeFig1 <- function(Testing) {
+    # fig 1: Y axis label for central plot. 
+    plot(x= 1, y= 1, type= "n", ylim= c(-1, 1), xlim= c(-1, 1))
+    text(0, 0, paste("Logit PS"), cex= 1.4, srt= 90)
+    if (Testing) box("outer", col= "blue")
+    if (Testing) box("figure", col= "green") 
+}
+
+makeFig2 <- function(Varname, Testing) {
+    # fig 2:  X axis label for central plot. 
+    plot(x= 1, y= 1, type="n", ylim= c(-1, 1), xlim= c(-1, 1))
+    text(0, 0, paste(Varname), cex=1.4)
+    if (Testing) box("figure", col= "green")    
+}
+
+
+makeFig3 <- function(dat, yLim, doShading, brushmin, brushmax, 
+    gVarFactorLevelsSorted, gVarFactorName, lpsVarName, Testing, 
+    pSizeVal, colScale, alphVal, 
+    MyJitter, MyAtAdds, MyWidth) {
+    # fig 3, right-side central (row2) plot
+    
+    plot(1, 0,
+        xlim = c(0, 2), 
+        ylim = yLim, 
+        axes = FALSE,
+        type = "n"
+    )
+    if (doShading) {
+        par.usr <- par("usr")
+        rect(
+            xleft   = par.usr[1], 
+            ybottom = brushmin, 
+            xright  = par.usr[2], 
+            ytop    = brushmax,
+            density = NA,
+            border  = NA,
+            col     = "#DFD7CA"
+        )
+    }
+    if (nrow(dat) >= 1) {
+        for (lev in gVarFactorLevelsSorted) {
+            y <- dat[get(gVarFactorName) == lev, get(lpsVarName)]
+            stripchart(y,
+                vertical = TRUE,
+                add      = TRUE,
+                method   = "jitter",
+                jitter   = MyJitter,
+                pch      = 20,
+                at       = 1 + MyAtAdds[lev],
+                cex      = pSizeVal,
+                col      = adjustcolor(colScale[lev], 
+                            alpha.f= alphVal)
+            )
+        }
+        myMean <- 
+            mean(dat[[lpsVarName]])   
+        segments(
+            1 - MyWidth / 2, myMean,
+            1 + MyWidth / 2, myMean
+        )
+    }
+    axis(1, at = 1, labels= "Missing")
+    if (Testing) box("figure", col= "green")
+    if (Testing) box("plot", col= "black")    
+}

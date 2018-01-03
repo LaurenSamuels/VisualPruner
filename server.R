@@ -1402,72 +1402,32 @@ shinyServer(function(input, output, session) {
 
                     # fig 1: Y axis label for central plot. 
                     par(mar = c(row2Plots.mar.b - 1.7, 0.7, .3, 0) +.05) # b, l, t, r
-                    plot(x= 1, y= 1, type= "n", ylim= c(-1, 1), xlim= c(-1, 1))
-                    text(0, 0, paste("Logit PS"), cex= 1.4, srt= 90)
-                    if (testing) box("outer", col= "blue")
-                    if (testing) box("figure", col= "green")
+                    makeFig1(testing)
                     
                     # fig 2:  X axis label for central plot. 
                     par(mar = c(0, 2, .3, 0) +.05) # b, l, t, r
-                    plot(x= 1, y= 1, type="n", ylim= c(-1, 1), xlim= c(-1, 1))
-                    text(0, 0, paste(varname), cex=1.4)
-                    if (testing) box("figure", col= "green")
-
-                    #################################################
+                    makeFig2(varname, testing)
+                    
                     # fig 3, right-side central (row2) plot
                     par(mar  = c(row2Plots.mar.b, col3Plots.mar.l, 
                             row2Plots.mar.t, col3Plots.mar.r), # bltr
                         xaxt ="s"
                     )
-                    
-                    plot(1, 0,
-                        xlim = c(0, 2), 
-                        ylim = myYlimPS, 
-                        axes = FALSE,
-                        type = "n"
+                    makeFig3(dat= datxps.xna,
+                        yLim= myYlimPS, 
+                        doShading= input$shadeBrushedArea == TRUE & !is.null(psbrushmin()),
+                        brushmin= psbrushmin(),
+                        brushmax= psbrushmax(),
+                        gVarFactorLevelsSorted = groupVarFactorLevelsSorted(),
+                        gVarFactorName = groupVarFactorName(),
+                        lpsVarName= logitpsVarName(),
+                        pSizeVal= pointSizeVal(),
+                        colScale= colorScale(),
+                        alphVal= alphaVal(),
+                        Testing= testing,
+                        MyJitter= myJitter, MyAtAdds= myAtAdds, MyWidth= myWidth
                     )
-                    if (input$shadeBrushedArea == TRUE & !is.null(psbrushmin())) {
-                        par.usr <- par("usr")
-                        rect(
-                            xleft   = par.usr[1], 
-                            ybottom = psbrushmin(), 
-                            xright  = par.usr[2], 
-                            ytop    = psbrushmax(),
-                            density = NA,
-                            border  = NA,
-                            col     = "#DFD7CA"
-                        )
-                    }
-                    if (nrow(datxps.xna) >= 1) {
-                        for (lev in groupVarFactorLevelsSorted()) {
-                            y <- datxps.xna[
-                                get(groupVarFactorName()) == lev, 
-                                get(logitpsVarName())]
-                            stripchart(y,
-                                vertical = TRUE,
-                                add      = TRUE,
-                                method   = "jitter",
-                                jitter   = myJitter,
-                                pch      = 20,
-                                at       = 1 + myAtAdds[lev],
-                                cex      = pointSizeVal(),
-                                col      = adjustcolor(colorScale()[lev], 
-                                            alpha.f= alphaVal())
-                            )
-                        }
-                        myMean <- 
-                            mean(datxps.xna[[logitpsVarName()]])   
-                        segments(
-                            1 - myWidth / 2, myMean,
-                            1 + myWidth / 2, myMean
-                        )
-                    }
-                    axis(1, at = 1, labels= "Missing")
-                    if (testing) box("figure", col= "green")
-                    if (testing) box("plot", col= "black")
-                    ################################################
-
-
+                    
                     #################################################
                     # fig 4, top central plot. 
                     par(mar  = c(topPlots.mar.b, col2Plots.mar.l, 
@@ -1930,7 +1890,7 @@ shinyServer(function(input, output, session) {
         # TODO: consider making this a free-standing dataset 
         #    (outside of these functions)
         dat <- merge(
-            dsetOrig()[idsToKeepAfterPruning()][,c(idVarName(), 
+            dsetOrig()[idsToKeepAfterPruning()][, c(idVarName(), 
                 varsToView(), groupVarName()), with= FALSE],
             dsetPSGraphs(),
             suffixes= c("", ".y")
