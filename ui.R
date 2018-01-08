@@ -57,6 +57,18 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         ), # end fluidRow 
         fluidRow(
             column(5,
+                h4('Propensity-score estimation method:'),
+                radioButtons('psMethod', NULL,
+                    c(
+                        "Logistic regression" = 0,
+                        "Probit regression" = 1
+                    ),
+                    0
+                )
+            ) # end column
+        ), # end fluidRow 
+        fluidRow(
+            column(5,
                 h4('Propensity score model:'),
                 #helpText('Type RHS of R formula* for lrm(), e.g.'),
                 uiOutput('psHelpGeneral1'),

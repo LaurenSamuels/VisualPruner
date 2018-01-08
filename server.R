@@ -5,6 +5,7 @@ library(rms)
 library(data.table)
 library(survey)
 library(tableone)
+library(dplyr)
 
 # On the department server, Cairo plots look worse
 options(shiny.usecairo= FALSE)
@@ -25,6 +26,7 @@ options(shiny.maxRequestSize=30*1024^2)
 shinyServer(function(input, output, session) {
     source("plottingFunctions.R")
     source("smdFunctions.R")
+    source("psFunctions.R")
     
     ############################################################
     ## reactiveValues() and related observers
@@ -488,13 +490,15 @@ shinyServer(function(input, output, session) {
             group = unlist(dsetGroupvar()[idsWithVarsOKForPS(), 
                 groupVarFactorName(), with= FALSE])
         )
+        dat1$id <- as.character(dat1$id)
         dat2 <- data.frame(
             id       = PSIDs(),
             logit.ps = logitPS(), 
-            ps       = PS()
+            ps       = PS(),
+            stringsAsFactors= FALSE
         )
         # keep only units with values in both dsets
-        dat <- merge(dat1, dat2, by= "id")  
+        dat <- dplyr::inner_join(dat1, dat2, by= "id")  
         names(dat)[names(dat) == "id"] <- idVarName()
         names(dat)[names(dat) == "ps"] <- psVarName()
         names(dat)[names(dat) == "logit.ps"] <- logitpsVarName()
@@ -545,15 +549,15 @@ shinyServer(function(input, output, session) {
         if (input$psTypedButton == 0) return(NULL) 
         if (datInfo$newData == TRUE) return(NULL)
         # Other dependencies
-        groupVarName()
+        groupVarFactorName()
         psUseCompleteCasesOnly()
         
         isolate(input$formulaRHS)
     })
     stringFormula <- reactive({
-        req(groupVarName())
+        req(groupVarFactorName())
 
-        paste0(groupVarName(), ' ~ ', formRHS())
+        paste0(groupVarFactorName(), ' ~ ', formRHS())
     })    
     psForm <- reactive({
         req(stringFormula())
@@ -565,7 +569,7 @@ shinyServer(function(input, output, session) {
         if (is.null(stringFormula())) return(TRUE)
 
         if (input$psTypedButton == 0 | 
-            paste0(groupVarName(), ' ~ ', input$formulaRHS) != 
+            paste0(groupVarFactorName(), ' ~ ', input$formulaRHS) != 
                 stringFormula()) TRUE else FALSE
     })
     psFormSyntaxOK <- reactive({
@@ -653,7 +657,7 @@ shinyServer(function(input, output, session) {
     varnamesFromRHS <- reactive({
         req(psForm())
         
-        allvars <- setdiff(all.vars(psForm()), groupVarName())
+        allvars <- setdiff(all.vars(psForm()), groupVarFactorName())
         
         if (psUseCompleteCasesOnly()) {
             if (all(allvars %in% varnamesOrig())) allvars else NULL
@@ -720,7 +724,7 @@ shinyServer(function(input, output, session) {
         if (psUseCompleteCasesOnly()) return(NULL)
         
         origvars <- unique(gsub(paste0("^", naPrefix()), "", varnamesFromRHS()))
-        myvars <- c(origvars, groupVarName())
+        myvars <- c(idVarName(), origvars, groupVarName())
         dat <- copy(dsetOrig()[PSIDs(), myvars, with= FALSE])
         # have to convert character vars to factors before imputing
         for (varname in origvars) {
@@ -744,35 +748,40 @@ shinyServer(function(input, output, session) {
         dat
     })
     
-    lrmFit <- reactive({
-        # fit the PS model
+    psFitMethod <- reactive({
+        if (input$psMethod == 0) {
+            "logistic"
+        } else if (input$psMethod == 1) {
+            "probit"    
+        } else {
+            NA    
+        }
+    })
+    psFit <- reactive({
+        # fit the PS model using the chosen method
         
         if (datInfo$newData == TRUE) return(NULL)
-
+    
         req(psForm())
         req(varnamesFromRHS())
         
         if (psUseCompleteCasesOnly()) {
-            tryCatch({lrm(psForm(), 
-                data  = dsetOrig()[PSIDs()])},
-                error = function(e) return(NULL))
+            dat <- dsetOrig()[PSIDs()]
         } else { # use imputed data
-            tryCatch({
-                lrm(psForm(), data = dsetImputed())
-                # todo: keep in mind:
-                #   advantage of using glm instead: don't have to use
-                #       is.na_ prefix.
-                #   disadvantage: need binary exposure indicator
-                #glm(psForm(), data = dsetImputed(), family= 'binomial')
-                }, error = function(e) return(NULL))
+            dat <- dsetImputed()
         }    
-    })
+        # now merge in the factor groupvar variable
+        dat <- dplyr::left_join(dat, dsetGroupvar(), by= idVarName())
 
+        tryCatch(getPSFit(dat, psFitMethod(), psForm()),
+            error = function(e) return(NULL)
+        )
+    })
     output$psCopyText <- renderUI({
         # -- contains an isolate -- #
         # dependency. 
         # TODO: I'm not totally sure I want this behavior; see downloadPS.
-        if (is.null(lrmFit())) return(NULL)
+        if (is.null(psFit())) return(NULL)
     
         HTML(paste0(
             tags$code(isolate(stringFormula())) 
@@ -788,7 +797,7 @@ shinyServer(function(input, output, session) {
             # -- contains an isolate -- #
             # dependency. 
             # TODO: I'm not totally sure I want this behavior; see psCopyText.
-            if (is.null(lrmFit())) { 
+            if (is.null(psFit())) { 
                 cat("NULL", file= myfile)
             } else {
                 cat(isolate(stringFormula()), file= myfile)
@@ -817,12 +826,13 @@ shinyServer(function(input, output, session) {
         # -- contains an isolate -- (waiting for the "done typing" button)
         # dependencies
         psUseCompleteCasesOnly()
+        psFitMethod()
         
         if (datInfo$newData == TRUE | psNotChecked() | is.null(varnamesFromRHSOK())) {
             HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
         } else if (!varnamesFromRHSOK()) { # couldn't combine this with above
             HTML(paste0(tags$span(class="text-warning", "Not checked yet.")))
-        } else if (is.null(isolate(lrmFit()))) {
+        } else if (is.null(isolate(psFit()))) {
             HTML(paste0(tags$span(class="text-danger", 
                 "The propensity score formula can't be fit using the current dataset. Please modify the model and/or the variables selected for viewing.")))
         } else {
@@ -848,7 +858,7 @@ shinyServer(function(input, output, session) {
         if (psNotChecked() |  
             input$PSCalcUpdateButton  == 0) return (FALSE)
 
-        if (is.null(isolate(lrmFit()))) {
+        if (is.null(isolate(psFit()))) {
             TRUE
         } else {
             FALSE
@@ -863,15 +873,15 @@ shinyServer(function(input, output, session) {
         }    
     })
 
-    logitPS <- reactive({
-        req(lrmFit())
-        
-        lrmFit()$linear.predictors
-    })
     PS <- reactive({
-        req(logitPS())
+        req(psFit())
         
-        exp(logitPS()) / (1 + exp(logitPS()))
+        getPS(psFit(), psFitMethod())
+    })
+    logitPS <- reactive({
+        req(PS())
+        
+        qlogis(PS())
     })
     
     output$dataNonmissingDimText1  <- renderUI({
@@ -902,13 +912,12 @@ shinyServer(function(input, output, session) {
             dat= dsetPSGraphs(),
             sortedFactorLevels= groupVarFactorLevelsSorted(),
             grpVarFactorName= groupVarFactorName(),
-            xvarName= logitpsVarName(),
+            xvarName= psVarName(),
             colorscale= colorScale(),
             alphaval = alphaVal(),
             logit= FALSE
         )
     }, res= 100)    
-    
     
     output$logitpsPlot <- renderPlot({
         req(dsetPSGraphs())
@@ -921,7 +930,15 @@ shinyServer(function(input, output, session) {
             colorscale= colorScale(),
             alphaval = alphaVal()
         )
-    }, res= 100)    
+    }, res= 100)   
+    
+    output$psSummary <- renderPrint({
+        req(psFit())   
+        
+        # TODO: continue here
+        # Also remember to update the ps model download to include fitter
+        
+    })
     
     ############################################################
     ############################################################
