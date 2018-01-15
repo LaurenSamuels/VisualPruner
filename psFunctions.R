@@ -27,3 +27,14 @@ getPS <- function(fit, Method) {
         NULL    
     }
 }
+
+showPSSummary <- function(fit, Method) {
+    if (Method == "logistic") {
+       print(fit) 
+    } else if (Method == "probit") {
+        print(fit)
+        #print(summary.glm(fit))
+    } else {
+        NULL    
+    }
+}

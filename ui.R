@@ -117,6 +117,13 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         ), # end fluidRow 
         tags$hr(),
         fluidRow(
+            column(12,
+                h3('Summary information from PS estimation procedure'),
+                verbatimTextOutput("psSummary")
+            ) # end column
+        ), # end fluidRow 
+        tags$hr(),
+        fluidRow(
             column(6,
                 h3("Notes"),
                 tags$div(
@@ -218,7 +225,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 )
             ) # end column
         ) # end fluidRow 
-    ), # end variable-selection panel
+    ), # end Prune panel
     ##################################################
     ##################################################
     ##################################################
@@ -303,10 +310,20 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6,
                 h3("Notes"),
                 tags$div(
-                    tags$p(paste0("Visual Pruner uses rms::lrm() to fit the propensity score model, ",
-                        "after first imputing missing values with Hmisc::impute() if imputation is selected ",
+                    tags$p(paste0(
+                        "Before fitting the propensity score model, Visual Pruner ",
+                        "first imputes missing covariate values with Hmisc::impute() if imputation is selected ",
                         "on the Specify tab. Missingness indicator variables are then created using ",
-                        "Hmisc::is.imputed(). See the R tab for more details. "))#, 
+                        "Hmisc::is.imputed(). ")),
+                    tags$p(paste0(
+                        "The treatment indicator is converted to a factor ",
+                        "before model fitting if it is not a factor already. ",
+                        "The treatment variable name has been changed above ",
+                        "as a reminder of this behavior, regardless of whether ",
+                        "the treatment variable was already a factor."
+                        )),
+                    tags$p(paste0(
+                        "See the R tab for more details. ")) 
                     #tags$p("At this point the missing-value indicator variables are available only within the propensity-score estimation function") 
                 )
             ) # end column
@@ -371,18 +388,38 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     tabPanel("R",
         fluidRow(
             column(12,
-                h4('You can ignore this tab if you are not interested in the R packages or source code used in making this app.'),
+                #h4('You can ignore this tab if you are not interested in the R packages or source code used in making this app.'),
+                HTML(paste0(tags$span(class="text-info", 
+                    "You can ignore this tab if you are not interested in the R packages or source code used in making this app."))),
                 tags$hr()
             ) # end column
         ), # end fluidRow 
         fluidRow(
+            h3('R session information'),
             column(12,
-                h4('R session information:'),
                 verbatimTextOutput("sessionInf"),
                 tags$hr()
             ) # end column
         ), # end fluidRow 
+        tags$hr(),
         fluidRow(
+            h3('Auxiliary files (scroll down for main server.R and ui.R files)'),
+            column(4,
+                h4('plottingFunctions.R'),
+                verbatimTextOutput("plottingFuncCode")
+            ), # end column
+            column(4,
+                h4('psFunctions.R'),
+                verbatimTextOutput("psFuncCode")
+            ), # end column
+            column(4,
+                h4('smdFunctions.R'),
+                verbatimTextOutput("smdFuncCode")
+            ) # end column
+        ), # end fluidRow 
+        tags$hr(),
+        fluidRow(
+            h3('Main files'),
             column(6,
                 h4('server.R'),
                 verbatimTextOutput("serverCode")

@@ -27,3 +27,4 @@ makeWeightedTableOne <- function(dat, wtvarname, vars, strata, factorVars) {
         smd        = TRUE
     )
 }
+

@@ -588,8 +588,6 @@ shinyServer(function(input, output, session) {
             tags$a("R formula", 
                     href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/formula.html", 
                     target="_blank"),
-            " for ", 
-            tags$code("lrm()"), 
             ", e.g. ",
             tags$code("age + gender"), 
             "."
@@ -935,10 +933,9 @@ shinyServer(function(input, output, session) {
     output$psSummary <- renderPrint({
         req(psFit())   
         
-        # TODO: continue here
-        # Also remember to update the ps model download to include fitter
-        
+        showPSSummary(psFit(), psFitMethod())
     })
+    # TODO: Also remember to update the ps model download to include fitter
     
     ############################################################
     ############################################################
@@ -1943,6 +1940,17 @@ shinyServer(function(input, output, session) {
     # ui.R code for display
     output$uiCode <- renderPrint({
         cat(readLines(con= "ui.R"), sep= "\n")
+    })
+    
+    # other code for display
+    output$plottingFuncCode <- renderPrint({
+        cat(readLines(con= "plottingFunctions.R"), sep= "\n")
+    })
+    output$psFuncCode <- renderPrint({
+        cat(readLines(con= "psFunctions.R"), sep= "\n")
+    })
+    output$smdFuncCode <- renderPrint({
+        cat(readLines(con= "smdFunctions.R"), sep= "\n")
     })
 }) # end shiny server
     
