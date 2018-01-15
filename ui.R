@@ -18,7 +18,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 uiOutput("chooseDatafile"),
                 tags$br(),
                 h4('Treatment indicator:'),
-                uiOutput("chooseGroup")
+                uiOutput("chooseGroup"),
+                actionButton('groupChosenButton', "Click to confirm/update")
             ), # end column
             column(6,
                 h4('Dataset information:'),
@@ -232,6 +233,10 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     tabPanel("Compare",
         fluidRow(
             column(4, 
+                h4('Variables to view:'),
+                uiOutput("chooseVarsForSMD"),
+                actionButton('smdGraphUpdateButton', 
+                    HTML("(re-)Make graph using updated variable list")),
                 h4('Show the following weightings in the SMD plot:'),
                 checkboxInput('showATE',
                     label= 'ATE',
@@ -252,7 +257,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     )
             ), # end column
             column(8, 
-                uiOutput('noSMDText'),
+                #uiOutput('noSMDText'),
                 plotOutput('SMDPlot',
                     height= 800,
                     width= 'auto'

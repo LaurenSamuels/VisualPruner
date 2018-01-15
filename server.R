@@ -61,7 +61,7 @@ shinyServer(function(input, output, session) {
         datInfo$newDataNoVarsChosen <- TRUE
         datInfo$newDataNotYetPruned <- TRUE
     })    
-    observeEvent(input$psTypedButton, {
+    observeEvent(input$groupChosenButton, {
         if (!is.null(dsetOrig())) {
             datInfo$newData <- FALSE
         }
@@ -233,12 +233,14 @@ shinyServer(function(input, output, session) {
             )
     })
     groupVarName <- reactive({
+        # -- contains an isolate -- #
         req(dsetOrig())
-
+        input$groupChosenButton
+        
         # TODO: May be able to take out this next line at some point
         if (input$useExampleData == 0 & is.null(datInfo$inFileInfo)) return(NULL)
         
-        input$treatmentVarName
+        isolate(input$treatmentVarName)
     })
     groupVarFactorName <- reactive({
         # The name produced by this function will be used as
@@ -424,7 +426,6 @@ shinyServer(function(input, output, session) {
     dsetGroupvar <- reactive({
         # A dataset with two columns, id and group.
         # Contains all rows from original dataset.
-        # Not created until after the PS formula is typed.
         if (datInfo$newData == TRUE) return(NULL)
         req(dsetOrig())
         req(groupVarFactorName())
@@ -1772,40 +1773,103 @@ shinyServer(function(input, output, session) {
         input$drawLinesSMD
     })
     
+    output$chooseVarsForSMD <- renderUI({
+        req(possVarsToRestrict())
+        
+        if (!is.null(varsToView())) {
+            vlist <- unique(c(varsToView(), possVarsToRestrict()))  
+        } else {
+            vlist <- possVarsToRestrict()
+        }
+
+        selectizeInput('varsForSMD', 
+            NULL, 
+            choices= vlist, 
+            selected = NULL,
+            multiple= TRUE,
+            width= '100%'
+        )
+    })
+
+    varsToViewSMD <- reactive({
+        # -- contains an isolate -- #
+        #dependencies
+        if (datInfo$newData == TRUE) return(NULL)
+        cat("\nhere\n")
+        req(dsetOrig())
+        cat("\nhere2\n")
+        req(possVarsToRestrict())
+        cat("\nhere3\n")
+
+        input$smdGraphUpdateButton
+        
+        vec <- isolate(input$varsForSMD)
+        vec
+    })
+    varIsContinuousSMD <- reactive({
+        # vector of booleans, same length as varsToViewSMD()
+        
+        # -- contains an isolate -- #
+        if (datInfo$newData == TRUE) return(NULL)
+        cat("\nhere7a\n")
+        req(varsToViewSMD())
+        cat("\nhere7b\n")
+
+        vnames <- varsToViewSMD()
+        myvec  <- rep(FALSE, length(vnames))
+        
+        for(i in seq_along(vnames)) {
+            varname <- vnames[i]
+            
+            if (is.numeric(dsetOrig()[[varname]]) & 
+                length(unique(dsetOrig()[[varname]])) >= 
+                isolate(input$numCont)) myvec[i] <- TRUE
+        }
+        names(myvec) <- vnames
+        myvec
+    })    
+    catVarsToViewSMD <- reactive({
+        req(varsToViewSMD())
+        req(varIsContinuousSMD())
+        
+        varsToViewSMD()[!varIsContinuousSMD()[varsToViewSMD()]]
+    })
+    
     # adapted from https://github.com/kaz-yos/tableone/blob/master/vignettes/smd.Rmd
     tabOrig <- reactive({
-        req(varsToView())
+        req(varsToViewSMD())
 
         makeTableOne(dsetOrig(), 
-            vars       = varsToView(),
+            vars       = varsToViewSMD(),
             strata     = groupVarName(),
-            factorVars = catVarsToView()
+            factorVars = catVarsToViewSMD()
         )
     })    
     tabPruned <- reactive({
-        req(varsToView())
+        req(varsToViewSMD())
         req(idsToKeepAfterPruning())
 
         makeTableOne(dsetOrig()[idsToKeepAfterPruning()], 
-            vars       = varsToView(),
+            vars       = varsToViewSMD(),
             strata     = groupVarName(),
-            factorVars = catVarsToView()
+            factorVars = catVarsToViewSMD()
         )
     })    
     dsetForSMDs <- reactive({
-        req(varsToView())
+        req(varsToViewSMD())
         req(idsToKeepAfterPruning())
-        req(dsetPSGraphs())
         if (input$showATE == FALSE & 
             input$showATT == FALSE &
             input$showATM == FALSE) return(NULL)
+        # we don't want req() here
+        if (is.null(dsetPSGraphs())) return(NULL)
 
         # merge covariate data w/ weight data
         # TODO: consider making this a free-standing dataset 
         #    (outside of these functions)
         dat <- merge(
             dsetOrig()[idsToKeepAfterPruning()][, c(idVarName(), 
-                varsToView(), groupVarName()), with= FALSE],
+                varsToViewSMD(), groupVarName()), with= FALSE],
             dsetPSGraphs(),
             suffixes= c("", ".y")
         )
@@ -1820,9 +1884,9 @@ shinyServer(function(input, output, session) {
 
         makeWeightedTableOne(dsetForSMDs(), 
             wtvarname  = ateWtVarName(),
-            vars       = varsToView(),
+            vars       = varsToViewSMD(),
             strata     = groupVarName(),
-            factorVars = catVarsToView()
+            factorVars = catVarsToViewSMD()
         )
     })    
     tabATT <- reactive({
@@ -1832,9 +1896,9 @@ shinyServer(function(input, output, session) {
 
         makeWeightedTableOne(dsetForSMDs(), 
             wtvarname  = attWtVarName(),
-            vars       = varsToView(),
+            vars       = varsToViewSMD(),
             strata     = groupVarName(),
-            factorVars = catVarsToView()
+            factorVars = catVarsToViewSMD()
         )
     })    
     tabATM <- reactive({
@@ -1844,9 +1908,9 @@ shinyServer(function(input, output, session) {
 
         makeWeightedTableOne(dsetForSMDs(), 
             wtvarname  = atmWtVarName(),
-            vars       = varsToView(),
+            vars       = varsToViewSMD(),
             strata     = groupVarName(),
-            factorVars = catVarsToView()
+            factorVars = catVarsToViewSMD()
         )
     })    
 
@@ -1874,13 +1938,13 @@ shinyServer(function(input, output, session) {
             ))) 
         )))
     })
-    output$noSMDText <- renderUI({
-        req(dsetOrig())
-        if (datInfo$newDataNoVarsChosen) {
-            HTML(paste0(tags$span(class="text-warning", 
-                "To view SMD plot, first generate graphs on the 'Prune' page.")))
-        } else return(NULL)
-    })
+    #output$noSMDText <- renderUI({
+    #    req(dsetOrig())
+    #    if (datInfo$newDataNoVarsChosen) {
+    #        HTML(paste0(tags$span(class="text-warning", 
+    #            "To view SMD plot, first specify a propensity score model on the 'Specify' page.")))
+    #    } else return(NULL)
+    #})
     #output$tabonetest <- renderPrint({
     #    if (is.null(tabOrig())) return(NULL)
 
