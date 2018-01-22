@@ -7,7 +7,6 @@ output: html_document
 
 # Sooner
 
-
 * Have SMD plots include missingness indicators & squared terms
 
 * 17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
@@ -20,11 +19,13 @@ output: html_document
 
 * Add error handling for while() statements used in naming
 
-* For boolean variables uploaded in rds datasets: need to convert to factor
+* Add blue text as reminder to choose/confirm tx group
+
+* Change how-to-cite info when paper is published.
 
 
 # Later
-* Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app; in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables
+* Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app (and in the app, in the SMD plots); in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables
 
 * Allow > 2 tx groups
 
@@ -42,8 +43,9 @@ output: html_document
 
 * Incorporate some sort of "rollback" button or a temporary "test PS" button so that graphs aren't totally lost when PS model can't be fit on new sample
 
-* Add option to save a file of all the steps (written every time PS is recalculated).  
-This might help with the "rollback" too.
+* Add option to save a file of all the steps (written every time PS is recalculated). This might help with the "rollback" too.
+
+* The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Think about changing this.
 
 # Maybe
 * Maybe: Add option to use prognostic score instead?
@@ -51,8 +53,6 @@ This might help with the "rollback" too.
 * Maybe: put in binwidth controls for histograms
 
 * Maybe: add KDE & % overlap (see Tomarken)
-
-* Maybe: allow choice of PS or logitPS on Prune page
 
 * Possibly make the actual call to lrm() exportable (rather than just the formula RHS) (MS)
 
@@ -67,5 +67,3 @@ This might help with the "rollback" too.
 * For the histograms & bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance). I think this might not be a good idea though because of the zooming you get when you prune. 
 
 * Have PS formula automatically get revised if user prunes a categorical variable (that was originally in the formula) down to one category
-
-* The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Think about changing this.

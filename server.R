@@ -38,9 +38,9 @@ shinyServer(function(input, output, session) {
     #   I think an easier way is coming w/ new versions of Shiny.
     datInfo$inFileInfo          <- NULL
     # Flags 
-    datInfo$newData             <- NULL
-    datInfo$newDataNoVarsChosen <- NULL
-    datInfo$newDataNotYetPruned <- NULL
+    datInfo$newData              <- NULL
+    datInfo$newDataNoVarsChosen  <- NULL
+    datInfo$newDataNotYetPruned  <- NULL
 
     observe({
         if (input$useExampleData == 0) {
@@ -50,9 +50,9 @@ shinyServer(function(input, output, session) {
     observe({
         input$useExampleData
 
-        datInfo$newData             <- TRUE
-        datInfo$newDataNoVarsChosen <- TRUE
-        datInfo$newDataNotYetPruned <- TRUE
+        datInfo$newData              <- TRUE
+        datInfo$newDataNoVarsChosen  <- TRUE
+        datInfo$newDataNotYetPruned  <- TRUE
     })
     observeEvent(input$changeUpFileButton, {
         datInfo$inFileInfo <- NULL
@@ -71,7 +71,7 @@ shinyServer(function(input, output, session) {
             datInfo$newDataNoVarsChosen <- FALSE
         }
     })
-    observeEvent(input$xgraphsUpdateButton | input$PSCalcUpdateButton, {
+    observeEvent(input$xgraphsUpdateButton | input$PSCalcAndXGraphsUpdateButton, {
         if (!(datInfo$newData | datInfo$newDataNoVarsChosen)) {
             datInfo$newDataNotYetPruned <- FALSE
         }
@@ -648,7 +648,7 @@ shinyServer(function(input, output, session) {
         # -- contains an isolate -- #
         # dependencies
         if (datInfo$newData == TRUE) return(NULL)
-        if (input$PSCalcUpdateButton == 0) return(idsWithVarsOKForPS()) 
+        if (input$PSCalcAndXGraphsUpdateButton == 0) return(idsWithVarsOKForPS()) 
         
         intersect(idsWithVarsOKForPS(), isolate(idsToKeepAfterPruning()))
     })
@@ -725,6 +725,7 @@ shinyServer(function(input, output, session) {
         origvars <- unique(gsub(paste0("^", naPrefix()), "", varnamesFromRHS()))
         myvars <- c(idVarName(), origvars, groupVarName())
         dat <- copy(dsetOrig()[PSIDs(), myvars, with= FALSE])
+        
         # have to convert character vars to factors before imputing
         for (varname in origvars) {
             if (is.character(dat[[varname]])) {
@@ -855,7 +856,7 @@ shinyServer(function(input, output, session) {
         # dependencies
         if (datInfo$newData == TRUE) return(FALSE)
         if (psNotChecked() |  
-            input$PSCalcUpdateButton  == 0) return (FALSE)
+            input$PSCalcAndXGraphsUpdateButton  == 0) return (FALSE)
 
         if (is.null(isolate(psFit()))) {
             TRUE
@@ -1093,7 +1094,7 @@ shinyServer(function(input, output, session) {
         if (datInfo$newDataNotYetPruned == TRUE) return(NULL)
         req(varsToView())
         if (input$xgraphsUpdateButton == 0 & 
-            input$PSCalcUpdateButton == 0) {
+            input$PSCalcAndXGraphsUpdateButton == 0) {
             return(NULL)
         }
         

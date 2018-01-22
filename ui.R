@@ -19,7 +19,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$br(),
                 h4('Treatment indicator:'),
                 uiOutput("chooseGroup"),
-                actionButton('groupChosenButton', "Click to confirm/update")
+                actionButton('groupChosenButton', "Click to confirm/update"),
+                uiOutput('chooseGroupText')
             ), # end column
             column(6,
                 h4('Dataset information:'),
@@ -199,7 +200,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 )
             ), # end column
             column(width= 4, offset= 2,
-                actionButton('PSCalcUpdateButton', 
+                actionButton('PSCalcAndXGraphsUpdateButton', 
                     HTML("Recalculate PS for pruned sample<br/>(will also update all graphs)"),
                     class="btn btn-primary"
                 ),
@@ -335,7 +336,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     ##################################################
     tabPanel("About",
         fluidRow(
-            column(12,
+            column(6,
                 #h2("About Visual Pruner"),
                 'Visual Pruner is a study-design tool for use with observational studies.', 
                 tags$br(),
@@ -365,6 +366,13 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$br(),
                 'We welcome bug reports, suggestions, and requests.',
                 tags$hr(),
+                h4('Citing Visual Pruner'),
+                HTML(paste0(
+                    'Please use the following to cite Visual Pruner in publications: ',
+                    'Samuels, LR and Greevy, RA. Visual Pruner: Visually Guided Cohort Selection for Observational Studies. ',
+                    'http://biostat.mc.vanderbilt.edu/VisualPruner.'
+                )),
+                tags$hr(),
                 h4('Acknowledgements'),
                 HTML(paste0(
                     'Visual Pruner is built using the ', 
@@ -379,7 +387,11 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     ' (slightly modified).'
                 )),
                 tags$br(),
-                'Many thanks to Meira Epplein, Qi Liu, Dale Plummer, Bryan Shepherd, and Matt Shotwell for their valuable suggestions.'
+                HTML(paste0(
+                    'Many thanks to Meira Epplein, Shawn Garbett, Qi Liu, Dale Plummer, ',
+                    'Bryan Shepherd, Matt Shotwell, and two anonymous reviewers ',
+                    'for their valuable suggestions.'
+                ))
             ) # end column
         ) # end fluidRow
     ), # end About panel
