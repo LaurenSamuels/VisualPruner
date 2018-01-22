@@ -1775,16 +1775,10 @@ shinyServer(function(input, output, session) {
     
     output$chooseVarsForSMD <- renderUI({
         req(possVarsToRestrict())
-        
-        if (!is.null(varsToView())) {
-            vlist <- unique(c(varsToView(), possVarsToRestrict()))  
-        } else {
-            vlist <- possVarsToRestrict()
-        }
 
         selectizeInput('varsForSMD', 
             NULL, 
-            choices= vlist, 
+            choices= possVarsToRestrict(), 
             selected = NULL,
             multiple= TRUE,
             width= '100%'
@@ -1795,11 +1789,8 @@ shinyServer(function(input, output, session) {
         # -- contains an isolate -- #
         #dependencies
         if (datInfo$newData == TRUE) return(NULL)
-        cat("\nhere\n")
         req(dsetOrig())
-        cat("\nhere2\n")
         req(possVarsToRestrict())
-        cat("\nhere3\n")
 
         input$smdGraphUpdateButton
         
@@ -1811,9 +1802,7 @@ shinyServer(function(input, output, session) {
         
         # -- contains an isolate -- #
         if (datInfo$newData == TRUE) return(NULL)
-        cat("\nhere7a\n")
         req(varsToViewSMD())
-        cat("\nhere7b\n")
 
         vnames <- varsToViewSMD()
         myvec  <- rep(FALSE, length(vnames))
@@ -1877,6 +1866,22 @@ shinyServer(function(input, output, session) {
 
         dat
     })
+    output$introduceWeightingCheckboxes <- renderUI({
+        # we don't want req() here
+        if (is.null(dsetPSGraphs())) return(NULL)
+
+        HTML(paste0(tags$h4('Show the following weightings in the SMD plot:')))
+    })
+    output$chooseToShowATE <- renderUI({
+        # we don't want req() here
+        if (is.null(dsetPSGraphs())) return(NULL)
+
+        checkboxInput(
+            'showATE',
+            label= 'ATE',
+            value = FALSE
+        )
+    })
     tabATE <- reactive({
         # we don't want req in the line below
         if(is.null(dsetForSMDs())) return(NULL)
@@ -1889,6 +1894,16 @@ shinyServer(function(input, output, session) {
             factorVars = catVarsToViewSMD()
         )
     })    
+    output$chooseToShowATT <- renderUI({
+        # we don't want req() here
+        if (is.null(dsetPSGraphs())) return(NULL)
+
+        checkboxInput(
+            'showATT',
+            label= 'ATT',
+            value = FALSE
+        )
+    })
     tabATT <- reactive({
         # we don't want req in the line below
         if(is.null(dsetForSMDs())) return(NULL)
@@ -1901,6 +1916,16 @@ shinyServer(function(input, output, session) {
             factorVars = catVarsToViewSMD()
         )
     })    
+    output$chooseToShowATM <- renderUI({
+        # we don't want req() here
+        if (is.null(dsetPSGraphs())) return(NULL)
+
+        checkboxInput(
+            'showATM',
+            label= 'ATM',
+            value = FALSE
+        )
+    })
     tabATM <- reactive({
         # we don't want req in the line below
         if(is.null(dsetForSMDs())) return(NULL)
