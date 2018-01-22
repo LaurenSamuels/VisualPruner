@@ -1963,32 +1963,32 @@ shinyServer(function(input, output, session) {
             ))) 
         )))
     })
-    #output$noSMDText <- renderUI({
-    #    req(dsetOrig())
-    #    if (datInfo$newDataNoVarsChosen) {
-    #        HTML(paste0(tags$span(class="text-warning", 
-    #            "To view SMD plot, first specify a propensity score model on the 'Specify' page.")))
-    #    } else return(NULL)
-    #})
-    #output$tabonetest <- renderPrint({
-    #    if (is.null(tabOrig())) return(NULL)
-
-    #    print(tabATE(), smd= TRUE)
-    #})
 
     ## Construct a data frame containing variable name and SMD from all methods
     dsetOfSMDs <- reactive({
         req(tabOrig())
+        cat("\nstr1", str(ExtractSmd(tabOrig())), "\n")
 
+        # Problem with ExtractSmd: no names when only one variable in list
+        vnames <- if (length(varsToViewSMD()) == 1) {
+            varsToViewSMD()
+        } else {
+            names(ExtractSmd(tabOrig()))
+        }
+        
         dat <- data.table(
-            variable  = names(ExtractSmd(tabOrig())),
+            variable  = vnames,
             Original  = ExtractSmd(tabOrig())
         )
+        cat("\ndim1", dim(dat), "\n")
         if (!is.null(tabPruned())) {
             dat[, Pruned := ExtractSmd(tabPruned())]
+            cat("\ndim2", dim(dat), "\n")
         }
         if (!is.null(tabATE())) {
+            cat("\nHereA\n")
             dat[, WeightedATE := ExtractSmd(tabATE())]
+            cat("\ndim3", dim(dat), "\n")
         }
         if (!is.null(tabATT())) {
             dat[, WeightedATT := ExtractSmd(tabATT())]
