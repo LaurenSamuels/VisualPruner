@@ -7,15 +7,12 @@ output: html_document
 
 # Sooner
 
-* add plotting code to About tab
 
 * Have SMD plots include missingness indicators & squared terms
 
 * 17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
 
 * This may or may not be related: sometimes people will model s.t. the propensity scores give the probability of being in the larger group (depends on how factor is set up). Can I do something with the factor levels?
-
-* For list of vars to choose from on Prune tab, can I sort the list so that the ones in the PS model show up first? 
 
 * Add button to reset all pruning, and/or provide the original sample limits
 
@@ -25,7 +22,6 @@ output: html_document
 
 * For boolean variables uploaded in rds datasets: need to convert to factor
 
-* On compare tab, add orange text if no PS model specified (currently we do have orange text when PS model specified but no variables selected)
 
 # Later
 * Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app; in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables

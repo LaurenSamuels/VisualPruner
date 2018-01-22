@@ -1300,8 +1300,9 @@ shinyServer(function(input, output, session) {
                     varIsCont <- varIsContinuous()[varname]
                     wantShading <- input$shadeBrushedArea == TRUE & !is.null(psbrushmin())
                     
-                    # convert character & discrete numeric to factor
+                    # convert character & boolean & discrete numeric to factor
                     if (is.character(datx[[varname]]) | 
+                            is.logical(datx[[varname]]) |
                             (is.numeric(datx[[varname]]) & 
                             !(varIsCont))) {
                         datx[, eval(varname) := 
@@ -1883,8 +1884,9 @@ shinyServer(function(input, output, session) {
         )
     })
     tabATE <- reactive({
-        # we don't want req in the line below
-        if(is.null(dsetForSMDs())) return(NULL)
+        # we don't want req in the lines below
+        if (is.null(input$showATE)) return(NULL)
+        if (is.null(dsetForSMDs())) return(NULL)
         if (input$showATE == FALSE) return(NULL)
 
         makeWeightedTableOne(dsetForSMDs(), 
@@ -1905,7 +1907,8 @@ shinyServer(function(input, output, session) {
         )
     })
     tabATT <- reactive({
-        # we don't want req in the line below
+        # we don't want req in the lines below
+        if (is.null(input$showATT)) return(NULL)
         if(is.null(dsetForSMDs())) return(NULL)
         if (input$showATT == FALSE) return(NULL)
 
@@ -1927,7 +1930,8 @@ shinyServer(function(input, output, session) {
         )
     })
     tabATM <- reactive({
-        # we don't want req in the line below
+        # we don't want req in the lines below
+        if (is.null(input$showATM)) return(NULL)
         if(is.null(dsetForSMDs())) return(NULL)
         if (input$showATM == FALSE) return(NULL)
 
@@ -1967,7 +1971,6 @@ shinyServer(function(input, output, session) {
     ## Construct a data frame containing variable name and SMD from all methods
     dsetOfSMDs <- reactive({
         req(tabOrig())
-        cat("\nstr1", str(ExtractSmd(tabOrig())), "\n")
 
         # Problem with ExtractSmd: no names when only one variable in list
         vnames <- if (length(varsToViewSMD()) == 1) {
@@ -1980,15 +1983,11 @@ shinyServer(function(input, output, session) {
             variable  = vnames,
             Original  = ExtractSmd(tabOrig())
         )
-        cat("\ndim1", dim(dat), "\n")
         if (!is.null(tabPruned())) {
             dat[, Pruned := ExtractSmd(tabPruned())]
-            cat("\ndim2", dim(dat), "\n")
         }
         if (!is.null(tabATE())) {
-            cat("\nHereA\n")
             dat[, WeightedATE := ExtractSmd(tabATE())]
-            cat("\ndim3", dim(dat), "\n")
         }
         if (!is.null(tabATT())) {
             dat[, WeightedATT := ExtractSmd(tabATT())]
