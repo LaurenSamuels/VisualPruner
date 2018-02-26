@@ -757,6 +757,14 @@ shinyServer(function(input, output, session) {
             NA    
         }
     })
+    psCall <- reactive({
+        if (datInfo$newData == TRUE) return(NULL)
+    
+        req(psForm())
+        req(varnamesFromRHS())
+        
+        getPSCall(psFitMethod(), psForm())
+    })
     psFit <- reactive({
         # fit the PS model using the chosen method
         
@@ -764,6 +772,7 @@ shinyServer(function(input, output, session) {
     
         req(psForm())
         req(varnamesFromRHS())
+        req(psCall())
         
         if (psUseCompleteCasesOnly()) {
             dat <- dsetOrig()[PSIDs()]
@@ -773,7 +782,8 @@ shinyServer(function(input, output, session) {
         # now merge in the factor groupvar variable
         dat <- dplyr::left_join(dat, dsetGroupvar(), by= idVarName())
 
-        tryCatch(getPSFit(dat, psFitMethod(), psForm()),
+        #tryCatch(getPSFit(dat, psFitMethod(), psForm()),
+        tryCatch(eval(psCall()),
             error = function(e) return(NULL)
         )
     })
@@ -784,11 +794,11 @@ shinyServer(function(input, output, session) {
         if (is.null(psFit())) return(NULL)
     
         HTML(paste0(
-            tags$code(isolate(stringFormula())) 
+            tags$code(format(isolate(psCall())))
         ))
     })
     output$downloadPS <- downloadHandler(
-        # Download PS formula
+        # Download PS call
         
         filename = function() {
             paste('VisualPruner_PSFormula_', Sys.Date(), '.txt', sep='')
@@ -800,7 +810,7 @@ shinyServer(function(input, output, session) {
             if (is.null(psFit())) { 
                 cat("NULL", file= myfile)
             } else {
-                cat(isolate(stringFormula()), file= myfile)
+                cat(format(isolate(psCall())), file= myfile, append= TRUE)
             }
         }
     )
@@ -937,7 +947,7 @@ shinyServer(function(input, output, session) {
         
         showPSSummary(psFit(), psFitMethod())
     })
-    # TODO: Also remember to update the ps model download to include fitter
+    # TODO: Also update the ps model download to include fitter
     
     ############################################################
     ############################################################
@@ -1856,8 +1866,6 @@ shinyServer(function(input, output, session) {
         if (is.null(dsetPSGraphs())) return(NULL)
 
         # merge covariate data w/ weight data
-        # TODO: consider making this a free-standing dataset 
-        #    (outside of these functions)
         dat <- merge(
             dsetOrig()[idsToKeepAfterPruning()][, c(idVarName(), 
                 varsToViewSMD(), groupVarName()), with= FALSE],
@@ -1973,28 +1981,34 @@ shinyServer(function(input, output, session) {
     dsetOfSMDs <- reactive({
         req(tabOrig())
 
-        # Problem with ExtractSmd: no names when only one variable in list
+        # Workaround for problem with ExtractSmd: no names when only one variable in list
         vnames <- if (length(varsToViewSMD()) == 1) {
             varsToViewSMD()
         } else {
-            names(ExtractSmd(tabOrig()))
+            #names(ExtractSmd(tabOrig()))
+            unlist(dimnames(ExtractSmd(tabOrig()))[1])
         }
         
         dat <- data.table(
             variable  = vnames,
-            Original  = ExtractSmd(tabOrig())
+            #Original  = ExtractSmd(tabOrig())
+            Original  = ExtractSmd(tabOrig())[, 1]
         )
         if (!is.null(tabPruned())) {
+            #dat[, Pruned := ExtractSmd(tabPruned())]
             dat[, Pruned := ExtractSmd(tabPruned())]
         }
         if (!is.null(tabATE())) {
-            dat[, WeightedATE := ExtractSmd(tabATE())]
+            #dat[, WeightedATE := ExtractSmd(tabATE())]
+            dat[, WeightedATE := ExtractSmd(tabATE())[, 1]]
         }
         if (!is.null(tabATT())) {
-            dat[, WeightedATT := ExtractSmd(tabATT())]
+            #dat[, WeightedATT := ExtractSmd(tabATT())]
+            dat[, WeightedATT := ExtractSmd(tabATT())[, 1]]
         }
         if (!is.null(tabATM())) {
-            dat[, WeightedATM := ExtractSmd(tabATM())]
+            #dat[, WeightedATM := ExtractSmd(tabATM())]
+            dat[, WeightedATM := ExtractSmd(tabATM())[, 1]]
         }
         setkey(dat, variable)
         

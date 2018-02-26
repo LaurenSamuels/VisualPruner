@@ -1,20 +1,21 @@
 # functions related to PS estimation
 
 
-getPSFit <- function(dat, Method, form) {
+getPSCall <- function(Method, form) {
     # todo: keep in mind:
     #   advantage of using glm instead: don't have to use
     #       is.na_ prefix (can use is.na()).
     #   disadvantage: need binary exposure indicator
     #glm(psForm(), data = dsetImputed(), family= 'binomial')
     if (Method == "logistic") {
-        fit <- lrm(form, data= dat)
+        mycall <- call("lrm", form, data= quote(dat))
     } else if (Method == "probit") {
-        fit <- Glm(form, family= binomial(link= "probit"), data= dat)
+        mycall <- call("Glm", form, data= quote(dat), 
+            family= quote(binomial(link= "probit")))
     } else {
-        fit <- NULL    
+        mycall <- NULL    
     }
-    return(fit)
+    return(mycall)
 }
 
 getPS <- function(fit, Method) {
@@ -30,7 +31,7 @@ getPS <- function(fit, Method) {
 
 showPSSummary <- function(fit, Method) {
     if (Method == "logistic") {
-       print(fit) 
+        print(fit) 
     } else if (Method == "probit") {
         print(fit)
         #print(summary.glm(fit))

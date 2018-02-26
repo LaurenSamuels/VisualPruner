@@ -54,8 +54,6 @@ output: html_document
 
 * Maybe: add KDE & % overlap (see Tomarken)
 
-* Possibly make the actual call to lrm() exportable (rather than just the formula RHS) (MS)
-
 * Add button to select all vars?
 
 * For Compare tab: consider ading K-S test statistics (MS) 

@@ -301,10 +301,10 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         tags$hr(),
         fluidRow(
             column(6,
-                h4('Current propensity score formula:'),
+                h4('Current propensity score call:'),
                 uiOutput("psCopyText"),
                 tags$br(),
-                downloadButton("downloadPS", "Download PS formula as .txt file")
+                downloadButton("downloadPS", "Download PS call as .txt file")
             ) # end column
         ), # end fluidRow 
         tags$hr(),
