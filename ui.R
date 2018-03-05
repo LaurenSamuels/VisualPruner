@@ -18,7 +18,9 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 uiOutput("chooseDatafile"),
                 tags$br(),
                 h4('Treatment indicator:'),
-                uiOutput("chooseGroup")
+                uiOutput("chooseGroup"),
+                actionButton('groupChosenButton', "Click to confirm/update"),
+                uiOutput('chooseGroupText')
             ), # end column
             column(6,
                 h4('Dataset information:'),
@@ -53,6 +55,18 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6, offset = 1,
                 uiOutput("dataNonmissingDimText1"),
                 textOutput("dataNonmissingDimText2")
+            ) # end column
+        ), # end fluidRow 
+        fluidRow(
+            column(5,
+                h4('Propensity-score estimation method:'),
+                radioButtons('psMethod', NULL,
+                    c(
+                        "Logistic regression" = 0,
+                        "Probit regression" = 1
+                    ),
+                    0
+                )
             ) # end column
         ), # end fluidRow 
         fluidRow(
@@ -101,6 +115,13 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 plotOutput("logitpsPlot",
                     height= 300,
                     width= 'auto')
+            ) # end column
+        ), # end fluidRow 
+        tags$hr(),
+        fluidRow(
+            column(12,
+                h3('Summary information from PS estimation procedure'),
+                verbatimTextOutput("psSummary")
             ) # end column
         ), # end fluidRow 
         tags$hr(),
@@ -179,7 +200,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 )
             ), # end column
             column(width= 4, offset= 2,
-                actionButton('PSCalcUpdateButton', 
+                actionButton('PSCalcAndXGraphsUpdateButton', 
                     HTML("Recalculate PS for pruned sample<br/>(will also update all graphs)"),
                     class="btn btn-primary"
                 ),
@@ -206,23 +227,23 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 )
             ) # end column
         ) # end fluidRow 
-    ), # end variable-selection panel
+    ), # end Prune panel
     ##################################################
     ##################################################
     ##################################################
     tabPanel("Compare",
         fluidRow(
             column(4, 
-                h4('Show the following weightings in the SMD plot:'),
-                checkboxInput('showATE',
-                    label= 'ATE',
-                    value = FALSE),
-                checkboxInput('showATT',
-                    label= 'ATT',
-                    value = FALSE),
-                checkboxInput('showATM',
-                    label= 'ATM',
-                    value = FALSE),
+                h4('Variables to view:'),
+                uiOutput("chooseVarsForSMD"),
+                actionButton('smdGraphUpdateButton', 
+                    HTML("(re-)Make graph using updated variable list")
+                ),
+                #h4('Show the following weightings in the SMD plot:'),
+                uiOutput('introduceWeightingCheckboxes'),
+                uiOutput('chooseToShowATE'),
+                uiOutput('chooseToShowATT'),
+                uiOutput('chooseToShowATM'),
                 HTML(paste0(tags$span(class="text-info", 
                     "Note that each one may take several minutes."))),
                 #verbatimTextOutput("tabonetest")
@@ -233,7 +254,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     )
             ), # end column
             column(8, 
-                uiOutput('noSMDText'),
+                #uiOutput('noSMDText'),
                 plotOutput('SMDPlot',
                     height= 800,
                     width= 'auto'
@@ -280,10 +301,10 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
         tags$hr(),
         fluidRow(
             column(6,
-                h4('Current propensity score formula:'),
+                h4('Current propensity score call:'),
                 uiOutput("psCopyText"),
                 tags$br(),
-                downloadButton("downloadPS", "Download PS formula as .txt file")
+                downloadButton("downloadPS", "Download PS call as .txt file")
             ) # end column
         ), # end fluidRow 
         tags$hr(),
@@ -291,10 +312,20 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
             column(6,
                 h3("Notes"),
                 tags$div(
-                    tags$p(paste0("Visual Pruner uses rms::lrm() to fit the propensity score model, ",
-                        "after first imputing missing values with Hmisc::impute() if imputation is selected ",
-                        "on the Specify tab. Missingness indicator variables are then created using ",
-                        "Hmisc::is.imputed(). See the R tab for more details. "))#, 
+                    tags$p(paste0(
+                        "If the treatment indicator is not a factor, ",
+                        "it is converted to one before model fitting, ",
+                        "and the name in the formula above will be changed ",
+                        "to reflect this."
+                        )),
+                    tags$p(paste0(
+                        "If imputation is selected on the Specify tab, ",
+                        "Visual Pruner first imputes missing covariate values ", 
+                        "with Hmisc::impute() before fitting the propensity score model. ",
+                        "Missingness indicator variables are then created using ",
+                        "Hmisc::is.imputed(). ")),
+                    tags$p(paste0(
+                        "See the R tab for more details. ")) 
                     #tags$p("At this point the missing-value indicator variables are available only within the propensity-score estimation function") 
                 )
             ) # end column
@@ -305,7 +336,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     ##################################################
     tabPanel("About",
         fluidRow(
-            column(12,
+            column(6,
                 #h2("About Visual Pruner"),
                 'Visual Pruner is a study-design tool for use with observational studies.', 
                 tags$br(),
@@ -321,7 +352,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev; I'm doing major.minor.patch
-                '0.9',
+                '0.10',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
@@ -334,6 +365,13 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 )),
                 tags$br(),
                 'We welcome bug reports, suggestions, and requests.',
+                tags$hr(),
+                h4('Citing Visual Pruner'),
+                HTML(paste0(
+                    'Please use the following to cite Visual Pruner in publications: ',
+                    'Samuels, LR and Greevy, RA. Visual Pruner: Visually Guided Cohort Selection for Observational Studies. ',
+                    'http://biostat.mc.vanderbilt.edu/VisualPruner.'
+                )),
                 tags$hr(),
                 h4('Acknowledgements'),
                 HTML(paste0(
@@ -349,7 +387,11 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     ' (slightly modified).'
                 )),
                 tags$br(),
-                'Many thanks to Meira Epplein, Qi Liu, Dale Plummer, Bryan Shepherd, and Matt Shotwell for their valuable suggestions.'
+                HTML(paste0(
+                    'Many thanks to Meira Epplein, Shawn Garbett, Qi Liu, Dale Plummer, ',
+                    'Bryan Shepherd, Matt Shotwell, and two anonymous reviewers ',
+                    'for their valuable suggestions.'
+                ))
             ) # end column
         ) # end fluidRow
     ), # end About panel
@@ -359,18 +401,38 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
     tabPanel("R",
         fluidRow(
             column(12,
-                h4('You can ignore this tab if you are not interested in the R packages or source code used in making this app.'),
+                #h4('You can ignore this tab if you are not interested in the R packages or source code used in making this app.'),
+                HTML(paste0(tags$span(class="text-info", 
+                    "You can ignore this tab if you are not interested in the R packages or source code used in making this app."))),
                 tags$hr()
             ) # end column
         ), # end fluidRow 
         fluidRow(
+            h3('R session information'),
             column(12,
-                h4('R session information:'),
                 verbatimTextOutput("sessionInf"),
                 tags$hr()
             ) # end column
         ), # end fluidRow 
+        tags$hr(),
         fluidRow(
+            h3('Auxiliary files (scroll down for main server.R and ui.R files)'),
+            column(4,
+                h4('plottingFunctions.R'),
+                verbatimTextOutput("plottingFuncCode")
+            ), # end column
+            column(4,
+                h4('psFunctions.R'),
+                verbatimTextOutput("psFuncCode")
+            ), # end column
+            column(4,
+                h4('smdFunctions.R'),
+                verbatimTextOutput("smdFuncCode")
+            ) # end column
+        ), # end fluidRow 
+        tags$hr(),
+        fluidRow(
+            h3('Main files'),
             column(6,
                 h4('server.R'),
                 verbatimTextOutput("serverCode")

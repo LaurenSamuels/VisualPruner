@@ -13,20 +13,21 @@ output: html_document
 
 * This may or may not be related: sometimes people will model s.t. the propensity scores give the probability of being in the larger group (depends on how factor is set up). Can I do something with the factor levels?
 
-* For list of vars to choose from on Prune tab, can I sort the list so that the ones in the PS model show up first? 
-
 * Add button to reset all pruning, and/or provide the original sample limits
 
 * Add error handling for file upload
 
 * Add error handling for while() statements used in naming
 
-* For boolean variables uploaded in rds datasets: need to convert to factor
+* Add blue text as reminder to choose/confirm tx group
 
-* On compare tab, add orange text if no PS model specified (currently we do have orange text when PS model specified but no variables selected)
+* Change how-to-cite info when paper is published.
+
+* make graphs disappear when new dataset uploaded or when changing between uploaded and example datasets
+
 
 # Later
-* Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app; in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables
+* Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app (and in the app, in the SMD plots); in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables
 
 * Allow > 2 tx groups
 
@@ -44,8 +45,9 @@ output: html_document
 
 * Incorporate some sort of "rollback" button or a temporary "test PS" button so that graphs aren't totally lost when PS model can't be fit on new sample
 
-* Add option to save a file of all the steps (written every time PS is recalculated).  
-This might help with the "rollback" too.
+* Add option to save a file of all the steps (written every time PS is recalculated). This might help with the "rollback" too.
+
+* The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Think about changing this.
 
 # Maybe
 * Maybe: Add option to use prognostic score instead?
@@ -53,10 +55,6 @@ This might help with the "rollback" too.
 * Maybe: put in binwidth controls for histograms
 
 * Maybe: add KDE & % overlap (see Tomarken)
-
-* Maybe: allow choice of PS or logitPS on Prune page
-
-* Possibly make the actual call to lrm() exportable (rather than just the formula RHS) (MS)
 
 * Add button to select all vars?
 
@@ -69,5 +67,3 @@ This might help with the "rollback" too.
 * For the histograms & bar charts, consider leaving the orig. histogram there as a shell (might mean specifying the breaks in advance). I think this might not be a good idea though because of the zooming you get when you prune. 
 
 * Have PS formula automatically get revised if user prunes a categorical variable (that was originally in the formula) down to one category
-
-* The missing values are being re-imputed before each recalculation of the propensity score (they change when PSIDs() changes). Think about changing this.
