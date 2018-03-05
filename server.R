@@ -181,7 +181,13 @@ shinyServer(function(input, output, session) {
                     data.table= TRUE
                 )
             } else if (grepl("\\.rds\\>", datInfo$inFileInfo$name)){
-                mydat <- as.data.table(readRDS(datInfo$inFileInfo$datapath))
+                mydat <- readRDS(datInfo$inFileInfo$datapath)
+                # remove labels for tidyverse argh
+                for (vname in names(mydat)) {
+                    class(mydat[[vname]]) <- setdiff(class(mydat[[vname]]), 
+                        "labelled")  
+                }
+                mydat <- as.data.table(mydat)
             }    
         }
         mydat
@@ -779,12 +785,14 @@ shinyServer(function(input, output, session) {
         } else { # use imputed data
             dat <- dsetImputed()
         }    
-        # now merge in the factor groupvar variable
-        dat <- dplyr::left_join(dat, dsetGroupvar(), by= idVarName())
+        # now merge in the factor groupvar variable, if necessary
+        if (groupVarName() != groupVarFactorName()) {
+            dat <- dplyr::left_join(dat, dsetGroupvar(), by= idVarName())
+        }
 
         #tryCatch(getPSFit(dat, psFitMethod(), psForm()),
         tryCatch(eval(psCall()),
-            error = function(e) return(NULL)
+            error = function(e) {return(NULL)}
         )
     })
     output$psCopyText <- renderUI({

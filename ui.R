@@ -313,17 +313,17 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h3("Notes"),
                 tags$div(
                     tags$p(paste0(
-                        "Before fitting the propensity score model, Visual Pruner ",
-                        "first imputes missing covariate values with Hmisc::impute() if imputation is selected ",
-                        "on the Specify tab. Missingness indicator variables are then created using ",
-                        "Hmisc::is.imputed(). ")),
-                    tags$p(paste0(
-                        "The treatment indicator is converted to a factor ",
-                        "before model fitting if it is not a factor already. ",
-                        "The treatment variable name has been changed above ",
-                        "as a reminder of this behavior, regardless of whether ",
-                        "the treatment variable was already a factor."
+                        "If the treatment indicator is not a factor, ",
+                        "it is converted to one before model fitting, ",
+                        "and the name in the formula above will be changed ",
+                        "to reflect this."
                         )),
+                    tags$p(paste0(
+                        "If imputation is selected on the Specify tab, ",
+                        "Visual Pruner first imputes missing covariate values ", 
+                        "with Hmisc::impute() before fitting the propensity score model. ",
+                        "Missingness indicator variables are then created using ",
+                        "Hmisc::is.imputed(). ")),
                     tags$p(paste0(
                         "See the R tab for more details. ")) 
                     #tags$p("At this point the missing-value indicator variables are available only within the propensity-score estimation function") 
@@ -352,7 +352,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev; I'm doing major.minor.patch
-                '0.9',
+                '0.10',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),

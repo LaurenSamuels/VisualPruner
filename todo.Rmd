@@ -23,6 +23,8 @@ output: html_document
 
 * Change how-to-cite info when paper is published.
 
+* make graphs disappear when new dataset uploaded or when changing between uploaded and example datasets
+
 
 # Later
 * Incorporate the app into a package, with dataset-preparation functions that would add in the missingness indicators and squared terms and interactions so they can be used outside of the app (and in the app, in the SMD plots); in the meantime, could add exportable code for imputation and also for creation of imputation-indicator variables

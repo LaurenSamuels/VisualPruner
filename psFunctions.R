@@ -1,5 +1,4 @@
-# functions related to PS estimation
-
+# Functions related to PS estimation
 
 getPSCall <- function(Method, form) {
     # todo: keep in mind:
