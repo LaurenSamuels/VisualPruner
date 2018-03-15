@@ -9,6 +9,10 @@ output: html_document
 
 * Have SMD plots include missingness indicators & squared terms
 
+* Remove labels attribute if I haven't done that already
+
+* Add ATO weights
+
 * 17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
 
 * This may or may not be related: sometimes people will model s.t. the propensity scores give the probability of being in the larger group (depends on how factor is set up). Can I do something with the factor levels?
