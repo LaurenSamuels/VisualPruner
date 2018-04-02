@@ -368,9 +368,15 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$hr(),
                 h4('Citing Visual Pruner'),
                 HTML(paste0(
-                    'Please use the following to cite Visual Pruner in publications: ',
-                    'Samuels, LR and Greevy, RA. Visual Pruner: Visually Guided Cohort Selection for Observational Studies. ',
-                    'http://biostat.mc.vanderbilt.edu/VisualPruner.'
+                    'Please use the following to cite Visual Pruner in publications: '
+                )),
+                tags$br(),
+                HTML(paste0(
+                    'Samuels, L. R., & Greevy, R. A., Jr. (2018). ',
+                    'Visual Pruner: Visually Guided Cohort Selection for Observational Studies. ',
+                    'Observational Studies, 4, 150–170.'
+                    #'Samuels, LR and Greevy, RA. Visual Pruner: Visually Guided Cohort Selection for Observational Studies. ',
+                    #'http://biostat.mc.vanderbilt.edu/VisualPruner.'
                 )),
                 tags$hr(),
                 h4('Acknowledgements'),
