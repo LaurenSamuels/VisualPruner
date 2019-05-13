@@ -7,7 +7,7 @@ output: html_document
 
 # Sooner
 
-* Make formula box bigger
+* Make formula box bigger (suggestion from Ahra; add her to TY's)
 
 * Have SMD plots include missingness indicators & squared terms
 
