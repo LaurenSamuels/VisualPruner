@@ -7,6 +7,8 @@ output: html_document
 
 # Sooner
 
+* Make formula box bigger
+
 * Have SMD plots include missingness indicators & squared terms
 
 * Remove labels attribute if I haven't done that already
