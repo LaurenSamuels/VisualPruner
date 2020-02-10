@@ -13,21 +13,19 @@ output: html_document
 
 * Remove labels attribute if I haven't done that already
 
-* Add ATO weights
-
 * 17 Feb 2017: With one particular dataset, Tom is getting an error in the sample size table: Class attributes at column 1 of input list at position 2 does not match...
 
 * This may or may not be related: sometimes people will model s.t. the propensity scores give the probability of being in the larger group (depends on how factor is set up). Can I do something with the factor levels?
 
 * Add button to reset all pruning, and/or provide the original sample limits
 
+* See Shawn's regex for file upload
+
 * Add error handling for file upload
 
 * Add error handling for while() statements used in naming
 
 * Add blue text as reminder to choose/confirm tx group
-
-* Change how-to-cite info when paper is published.
 
 * make graphs disappear when new dataset uploaded or when changing between uploaded and example datasets
 
