@@ -63,22 +63,22 @@ makePSPlot <- function(dat, sortedFactorLevels, grpVarFactorName,
 makeSMDPlot <- function(dat, wantLines) {
     nvars <- nrow(dat)
     allTabTypes <- c("Original", "Pruned", "WeightedATE", 
-        "WeightedATT", "WeightedATM")
+        "WeightedATT", "WeightedATM", "WeightedATO")
     myTabTypes <- intersect(allTabTypes, names(dat))  
     nTabTypes <- length(myTabTypes)      
 
     # colors from http://colorbrewer2.org
     allColors <- 
-        c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00')
+        c('#e41a1c','#377eb8','#4daf4a','#984ea3','#ff7f00', '#ffff33')
     names(allColors) <- allTabTypes
     myColors <- allColors[myTabTypes]
 
-    allShapes <- (21:25)
+    allShapes <- c(1, 21:25)
     names(allShapes) <- allTabTypes
     myShapes <- allShapes[myTabTypes]
 
     allLinetypes <- c("solid", "dashed", "dotted", 
-        "dotdash", "longdash")
+        "dotdash", "longdash", "twodash")
     names(allLinetypes) <- allTabTypes
     myLinetypes <- allLinetypes[myTabTypes]
 

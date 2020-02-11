@@ -428,6 +428,18 @@ shinyServer(function(input, output, session) {
         }    
         proposedName
     })    
+    atoWtVarName <- reactive({
+        # The name produced by this function will be used as
+        #   the name of the ATO wt var in dsetPSGraphs()
+        #   (we have to make sure it does not overlap w/ current var names)
+        req(dsetOrig())
+        
+        proposedName <- "MY__ATO"
+        while(proposedName %in% varnamesOrig()) {
+            proposedName <- paste0(proposedName, "_NEW")    
+        }    
+        proposedName
+    })    
 
     dsetGroupvar <- reactive({
         # A dataset with two columns, id and group.
@@ -529,6 +541,10 @@ shinyServer(function(input, output, session) {
             pmin(get(psVarName()), (1 - get(psVarName()))) /
             (get(treatedVarName()) * get(psVarName()) +
             (1 - get(treatedVarName())) * (1 - get(psVarName())))
+        ] 
+        dat[, eval(atoWtVarName()):= 
+            (get(treatedVarName())) * (1 - get(psVarName())) + 
+            (1 - get(treatedVarName())) * get(psVarName())  
         ] 
         
         # PSIDs() might be different from idsToKeepAfterPruning,
@@ -1959,6 +1975,30 @@ shinyServer(function(input, output, session) {
             factorVars = catVarsToViewSMD()
         )
     })    
+    
+    output$chooseToShowATO <- renderUI({
+        # we don't want req() here
+        if (is.null(dsetPSGraphs())) return(NULL)
+
+        checkboxInput(
+            'showATO',
+            label= 'ATO',
+            value = FALSE
+        )
+    })
+    tabATO <- reactive({
+        # we don't want req in the lines below
+        if (is.null(input$showATO)) return(NULL)
+        if(is.null(dsetForSMDs())) return(NULL)
+        if (input$showATO == FALSE) return(NULL)
+
+        makeWeightedTableOne(dsetForSMDs(), 
+            wtvarname  = atoWtVarName(),
+            vars       = varsToViewSMD(),
+            strata     = groupVarName(),
+            factorVars = catVarsToViewSMD()
+        )
+    })    
 
     output$explainWtsText <- renderUI({
         HTML(paste0(tags$div(
@@ -1976,9 +2016,16 @@ shinyServer(function(input, output, session) {
             "."
             ))),
             tags$p(HTML(paste0(
-                "ATM weighting is used to estimate the Average Treatment effect on the evenly Matchable units, using 'matching weights' as introduced in ",
+                "ATM weighting is used to estimate the Average Treatment effect on the Matchable units, using 'matching weights' as introduced in ",
                     a("Li, L., & Greene, T. (2013)", 
                         href="http://doi.org/10.1515/ijb-2012-0030", 
+                        target="_blank"),
+                "."
+            ))) ,
+            tags$p(HTML(paste0(
+                "ATO weighting uses 'overlap weights' as introduced in ",
+                    a("Li, F., Lock Morgan, K., & Zaslavsky, A. (2018)", 
+                        href="https://www.tandfonline.com/doi/pdf/10.1080/01621459.2016.1260466", 
                         target="_blank"),
                 "."
             ))) 
@@ -2017,6 +2064,9 @@ shinyServer(function(input, output, session) {
         if (!is.null(tabATM())) {
             #dat[, WeightedATM := ExtractSmd(tabATM())]
             dat[, WeightedATM := ExtractSmd(tabATM())[, 1]]
+        }
+        if (!is.null(tabATO())) {
+            dat[, WeightedATO := ExtractSmd(tabATO())[, 1]]
         }
         setkey(dat, variable)
         

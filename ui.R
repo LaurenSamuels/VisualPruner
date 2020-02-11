@@ -244,6 +244,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 uiOutput('chooseToShowATE'),
                 uiOutput('chooseToShowATT'),
                 uiOutput('chooseToShowATM'),
+                uiOutput('chooseToShowATO'),
                 HTML(paste0(tags$span(class="text-info", 
                     "Note that each one may take several minutes."))),
                 #verbatimTextOutput("tabonetest")
@@ -352,7 +353,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 h4('Version'),
                 # see http://r-pkgs.had.co.nz/release.html
                 # major.minor.patch.dev; I'm doing major.minor.patch
-                '0.10',
+                '0.11',
                 h4('License'),
                 'GPL-3',
                 h4('Authors'),
