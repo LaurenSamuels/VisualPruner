@@ -1795,6 +1795,8 @@ shinyServer(function(input, output, session) {
     ############################################################
     ############################################################
     ## SMD plots
+    
+    # 12 Feb 2020: I'm not sure these 4 are actually used anywhere...
     wantATEWts <- reactive({
         input$showATE
     })
@@ -1803,6 +1805,9 @@ shinyServer(function(input, output, session) {
     })
     wantATMWts <- reactive({
         input$showATM
+    })
+    wantATOWts <- reactive({
+        input$showATO
     })
     
     wantLinesSMD <- reactive({
@@ -1885,7 +1890,8 @@ shinyServer(function(input, output, session) {
         req(idsToKeepAfterPruning())
         if (input$showATE == FALSE & 
             input$showATT == FALSE &
-            input$showATM == FALSE) return(NULL)
+            input$showATM == FALSE &
+            input$showATO == FALSE) return(NULL)
         # we don't want req() here
         if (is.null(dsetPSGraphs())) return(NULL)
 
@@ -1952,6 +1958,7 @@ shinyServer(function(input, output, session) {
             factorVars = catVarsToViewSMD()
         )
     })    
+    
     output$chooseToShowATM <- renderUI({
         # we don't want req() here
         if (is.null(dsetPSGraphs())) return(NULL)
