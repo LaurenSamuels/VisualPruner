@@ -1048,6 +1048,7 @@ shinyServer(function(input, output, session) {
         names(myvec) <- vnames
         myvec
     })    
+    
     catVarsToView <- reactive({
         req(varsToView())
         req(varIsContinuous())
@@ -1615,10 +1616,12 @@ shinyServer(function(input, output, session) {
     }) # end observe    
 
     observe({
-        if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
+        if (datInfo$newDataNoVarsChosen == FALSE) {for (i in seq_along(varsToView())) {
             local({
                 my_i <- i
+                #cat(my_i, "\n")
                 varname         <- varsToView()[my_i]
+                #cat(varname, "\n")
 
                 pruner1name      <- paste0("pruner1_", varname)
                 pruner2name      <- paste0("pruner2_", varname)
@@ -1628,10 +1631,9 @@ shinyServer(function(input, output, session) {
                 # Create input functions for each variable
                 output[[pruner1name]] <- renderUI({
                     req(varIsContinuous())
-                    req(varIsContinuous()[varname])
                     req(idsToKeepAfterPruning())
-
-                    if (varIsContinuous()[varname]) {
+                    
+                    if (varIsContinuous()[varname] == TRUE) {
                         #textInputRow(
                         textInput(
                             inputId= input1name, 
@@ -1642,11 +1644,10 @@ shinyServer(function(input, output, session) {
                                     eval(varname), with= FALSE]), 
                                     na.rm = TRUE)) / 10^xdig()
                         )
-                        
                     } else { # we have categorical var, either factor or char
                         checkboxGroupInput(
-                            input1name, 
-                            NULL,
+                            inputId= input1name, 
+                            label= NULL,
                             # as.character corrects the printing of factor levels
                             choices=  as.character(sort(unique(na.omit(unlist(
                                 dsetOrig()[, eval(varname), with= FALSE]))))),
@@ -1655,14 +1656,13 @@ shinyServer(function(input, output, session) {
                                     eval(varname), with= FALSE]))))
                         )
                     }
-                }) # end renderUI
+                }) # end renderUI for pruner1name
 
                 output[[pruner2name]] <- renderUI({
                     req(varIsContinuous())
-                    req(varIsContinuous()[varname])
                     req(idsToKeepAfterPruning())
 
-                    if (varIsContinuous()[varname]) {
+                    if (varIsContinuous()[varname] == TRUE) {
                         textInput(
                             inputId= input2name, 
                             label="Max:", 
@@ -1679,7 +1679,7 @@ shinyServer(function(input, output, session) {
                 }) # end renderUI
             }) # end local
         } # end for
-    }) # end observe    
+    }}) # end observe    
 
     observe({
         if (datInfo$newDataNoVarsChosen == FALSE) for (i in seq_along(varsToView())) {
@@ -1719,7 +1719,7 @@ shinyServer(function(input, output, session) {
                 output[[textCheck1Name]] <- renderUI({
                     # give the dependencies time to catch up
                     req(varIsContinuous())
-                    req(varIsContinuous()[varname])
+                    #req(varIsContinuous()[varname])
                     req(input[[input1name]])
                     req(input[[input2name]])
                     
