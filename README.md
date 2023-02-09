@@ -1,9 +1,10 @@
 # VisualPruner
+
 Visual Pruner is a Shiny app for cohort selection in observational studies.
 
-To use the app online (free): https://statcomp2.vanderbilt.edu/VisualPruner/.
+To use the app online (free): https://statcomp2.app.vumc.org/VisualPruner/.
 
-For more information, please visit http://biostat.mc.vanderbilt.edu/VisualPruner.
+For more information, please visit https://biostat.app.vumc.org/VisualPruner.
 
 # Changes in version 0.10:
 + On Upload tab, now need to click to confirm after choosing exposure group. 
