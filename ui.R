@@ -344,8 +344,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 tags$br(),
                 HTML(paste0(
                     'Instructions for running locally and additional information can be found at ',
-                    a("http://biostat.mc.vanderbilt.edu/VisualPruner", 
-                        href="http://biostat.mc.vanderbilt.edu/VisualPruner", 
+                    a("http://biostat.app.vumc.org/VisualPruner", 
+                        href="http://biostat.app.vumc.org/VisualPruner", 
                         target="_blank"),
                     '.' 
                 )),
@@ -360,8 +360,8 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                 'Lauren R. Samuels and Robert A. Greevy, Jr.',
                 h4('Contact'),
                 HTML(paste0(
-                    a("http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
-                        href="http://biostat.mc.vanderbilt.edu/LaurieSamuels", 
+                    a("https://biostat.app.vumc.org/LaurieSamuels", 
+                        href="https://biostat.app.vumc.org/LaurieSamuels", 
                         target="_blank")
                 )),
                 tags$br(),
@@ -377,7 +377,7 @@ shinyUI(navbarPage("Visual Pruner", id= "mainNavbarPage",
                     'Visual Pruner: Visually Guided Cohort Selection for Observational Studies. ',
                     'Observational Studies, 4, 150–170.'
                     #'Samuels, LR and Greevy, RA. Visual Pruner: Visually Guided Cohort Selection for Observational Studies. ',
-                    #'http://biostat.mc.vanderbilt.edu/VisualPruner.'
+                    #'https://biostat.app.vumc.org/VisualPruner.'
                 )),
                 tags$hr(),
                 h4('Acknowledgements'),
